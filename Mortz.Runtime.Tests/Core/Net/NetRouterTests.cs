@@ -1,6 +1,7 @@
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Chat;
 using Mortz.Protocol.Net.Lobby;
+using Mortz.Protocol.Net.Match;
 using Xunit;
 
 namespace Mortz.Runtime.Tests.Core.Net;
@@ -8,6 +9,46 @@ namespace Mortz.Runtime.Tests.Core.Net;
 /// <summary>The generated router: registration, decode guards, and the boot log line.</summary>
 public class NetRouterTests
 {
+    [Theory]
+    [InlineData(-1, -1, false)]
+    [InlineData(-1, 0, false)]
+    [InlineData(-1, 7, false)]
+    [InlineData(7, 6, false)]
+    [InlineData(7, 8, false)]
+    [InlineData(7, 7, true)]
+    public void ClientRequiresAnActiveMatchingGeneration(int active, int incoming, bool accepted)
+    {
+        NetRouter router = new();
+        Assert.Equal(-1, router.MatchGeneration);
+        router.MatchGeneration = active;
+        ClientProbe<MatchEndMsg> probe = new();
+        router.Add(probe);
+        MatchEndMsg message = new(false, 1, incoming);
+
+        Assert.Equal(accepted, router.Dispatch(MatchEndMsg.MsgId, MatchEndMsg.Serialize(message)));
+        Assert.Equal(accepted ? 1 : 0, probe.Messages.Count);
+    }
+
+    [Theory]
+    [InlineData(-1, -1, false)]
+    [InlineData(-1, 0, false)]
+    [InlineData(-1, 7, false)]
+    [InlineData(7, 6, false)]
+    [InlineData(7, 8, false)]
+    [InlineData(7, 7, true)]
+    public void ServerRequiresAnActiveMatchingGeneration(int active, int incoming, bool accepted)
+    {
+        NetRouter<int> router = new();
+        Assert.Equal(-1, router.MatchGeneration);
+        router.MatchGeneration = active;
+        Probe<EndMatchRequestMsg> probe = new();
+        router.Add(probe);
+        EndMatchRequestMsg message = new(1, [], incoming);
+
+        Assert.Equal(accepted, router.Dispatch(EndMatchRequestMsg.MsgId, 42, EndMatchRequestMsg.Serialize(message)));
+        Assert.Equal(accepted ? 1 : 0, probe.Deliveries.Count);
+    }
+
     [Fact]
     public void RegistryNamesMessagesWithoutAManualLookupTable()
     {

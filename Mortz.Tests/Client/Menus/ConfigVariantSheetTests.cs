@@ -57,7 +57,7 @@ public class ConfigVariantSheetTests
             sheet.Build<RespawnRules>(respawn, _ => { });
             Assert.Same(respawn, sheet.Rules);
             Assert.Equal(typeof(FixedRespawnRules), properties.BoundModelType);
-            Assert.Equal(1, picker.ItemCount);
+            Assert.Equal(RespawnRulesMetadata.Variants.Count, picker.ItemCount);
         }
         finally
         {

@@ -32,7 +32,7 @@ public class NetMessageTests
 {
     private const int SENDER = 42;
 
-    private static NetRouter UseClientLoopback() => new();
+    private static NetRouter UseClientLoopback() => new() { MatchGeneration = 0 };
 
     /// <summary>Loopback into a server router, where client-to-server lands.
     /// Register the probes before sending.</summary>

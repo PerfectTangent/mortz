@@ -1,4 +1,5 @@
 using Mortz.Core.Match.Configuration;
+using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
@@ -50,6 +51,8 @@ public sealed class MatchRuntime : IDisposable
 
     public MatchStage Stage => Context.Stage;
 
+    public ObjectiveState Objective => _mode.Objective;
+
     public Victor? Winner => _ending.Winner;
 
     public FinalKillEvent? FinalKill => _ending.FinalKill;
@@ -67,6 +70,7 @@ public sealed class MatchRuntime : IDisposable
     public Team? Seat(Player player, Team? lobbyTeam = null)
     {
         EnsureOpen();
+        EnsurePlaying();
         Team? team = null;
         if (Config.Rules.Teams)
         {
@@ -84,6 +88,7 @@ public sealed class MatchRuntime : IDisposable
     public void AddJipSpectator(Player player)
     {
         EnsureOpen();
+        EnsurePlaying();
         _participation.AddJipSpectator(player);
     }
 
@@ -125,7 +130,8 @@ public sealed class MatchRuntime : IDisposable
         if (Stage == MatchStage.VICTORY_LAP)
         {
             return new MatchUpdate(World.Tick, time, [], [], [], [], [],
-                _mode.Standing(new GameModeContext(World, _scoring.Rows(), _scoring.TeamKills, _scoring.TeamDeaths)), [], [], null, null, _ending.AdvanceVictoryLap(Context));
+                _mode.Standing(new GameModeContext(World, _scoring.Rows(), _scoring.TeamKills,
+                    _scoring.TeamDeaths, Objective)), [], [], null, null, _ending.AdvanceVictoryLap(Context));
         }
 
         World.Step();
@@ -137,7 +143,7 @@ public sealed class MatchRuntime : IDisposable
         return new MatchUpdate(World.Tick, time, [.. World.MortarEvents],
             [.. World.Explosions], [.. World.ShellRetirements], [.. World.Deaths],
             [.. mode.Eliminations], mode.Standing, [.. judgments], [.. participation],
-            ending.Winner, ending.FinalKill, false, [.. World.DrainModifierChanges()]);
+            ending.Winner, ending.FinalKill, _ending.ReturnToLobby, [.. World.DrainModifierChanges()]);
     }
 
     /// <summary>Players credited with the win: the winner itself, or everyone
@@ -163,6 +169,14 @@ public sealed class MatchRuntime : IDisposable
         }
 
         _disposed = true;
+    }
+
+    private void EnsurePlaying()
+    {
+        if (Stage != MatchStage.PLAYING)
+        {
+            throw new InvalidOperationException("The completed match is closed to new participants.");
+        }
     }
 
     private void EnsureOpen()

@@ -1,3 +1,4 @@
+using Mortz.Core.Sim;
 using Mortz.Server.Diagnostics;
 using Mortz.Server.Players;
 using Mortz.Server.Settings;
@@ -26,6 +27,8 @@ public sealed class MatchDependencies
     public required ServerClock Clock { get; init; }
 
     public required bool NetStats { get; init; }
+
+    public int VictoryLapTicks { get; init; } = 7 * SimConfig.TICK_RATE;
 
     public required bool AllowJoinInProgress { get; init; }
 }

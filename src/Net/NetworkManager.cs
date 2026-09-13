@@ -256,7 +256,7 @@ public partial class NetworkManager : Node, INetwork, IClientSender, IServerAdmi
 
     public void Send<TMsg>(in TMsg message) where TMsg : struct, INetMessage<TMsg>
     {
-        TMsg outgoing = TMsg.InMatch(message, Router.MatchGeneration ?? 0);
+        TMsg outgoing = TMsg.InMatch(message, Router.MatchGeneration);
         SendEnvelope(TMsg.MsgId, TMsg.Serialize(outgoing), NetConfig.SERVER_PEER_ID,
             TMsg.MsgChannel);
     }

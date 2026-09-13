@@ -22,6 +22,8 @@ public sealed class SnapshotInterpolator
 
     public void Add(MatchSnapshot snapshot) => _snapshots.Add(snapshot);
 
+    public bool IsNewer(MatchSnapshot snapshot) => _snapshots.IsNewer(snapshot);
+
     /// <summary>Step the clock by one rendered frame and sample the world at it.</summary>
     public InterpolatedState? Advance(float delta)
     {

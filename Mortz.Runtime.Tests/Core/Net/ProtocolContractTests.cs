@@ -6,14 +6,14 @@ namespace Mortz.Runtime.Tests.Core.Net;
 public class ProtocolContractTests
 {
     [Fact]
-    public void AdmissionHandshakeBreakIsVersion47()
+    public void LobbyWaitingProtocolIsVersion49()
     {
-        Assert.Equal(48, NetConfig.PROTOCOL_VERSION);
+        Assert.Equal(49, NetConfig.PROTOCOL_VERSION);
     }
 
     [Fact]
-    public void GeneratedMessageSchemaMatchesVersion45()
+    public void GeneratedMessageSchemaMatchesVersion49()
     {
-        Assert.Equal(0xA3F539E47FD5609AUL, NetRegistry.SCHEMA_HASH);
+        Assert.Equal(0x8A62377FE1AF70D7UL, NetRegistry.SCHEMA_HASH);
     }
 }

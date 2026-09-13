@@ -80,6 +80,30 @@ public class RuntimeScopeTests
     }
 
     [Fact]
+    public void AdmissionAtTheBootstrapTickAddsTheLocalSpawnOnce()
+    {
+        NetRouter router = new();
+        Sender sender = new();
+        using ClientConnectionScope session = new(router, sender, () => 1, sender);
+        ClientMatchRuntime match = session.OpenMatch(new ClientMatchState(7, MatchParticipation.Active),
+            EmptyTerrain(), new MatchConfig(), MapZones.None, 1, _ => { }, () => 0);
+        Assert.True(match.InitializeSnapshot(new MatchSnapshot(10, [], 7, 1).Serialize(), -1));
+        Assert.False(match.Predictor.Initialized);
+        match.Handle(new MatchStartMsg(7));
+        match.Tick(new PlayerInput(InputButtons.RIGHT));
+        Assert.Equal(0, match.Predictor.NextSeq);
+        session.Players.Handle(new RosterMsg([new RosterEntry(1, "player", 0, null, 1)], Revision: 2));
+        MatchSnapshot admitted = new(10,
+            [new ReplicatedPlayer(new PlayerState { PeerId = 1, Health = 100, Position = new Vec2(12, 12) }, default)],
+            Generation: 7, RosterRevision: 2);
+        Assert.True(match.AcceptSnapshot(admitted.SerializeFor(1), -1));
+        Assert.True(match.Predictor.Initialized);
+        Assert.Single(match.Interpolator.Advance(0)!.Players);
+        Assert.False(match.AcceptSnapshot(admitted.SerializeFor(1), -1));
+        Assert.False(match.AcceptSnapshot((admitted with { RosterRevision = 1 }).SerializeFor(1), -1));
+    }
+
+    [Fact]
     public void ScopeRejectsDuplicateRegistrationAndLateStateClaims()
     {
         using FeatureScope scope = new(_ => { }, _ => { });

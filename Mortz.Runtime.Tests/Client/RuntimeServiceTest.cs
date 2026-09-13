@@ -7,7 +7,7 @@ public abstract class RuntimeServiceTest : IDisposable
 {
     private readonly List<object> _features = [];
     protected TestClientSender Sender { get; } = new();
-    protected NetRouter Router { get; } = new();
+    protected NetRouter Router { get; } = new() { MatchGeneration = 0 };
 
     protected T RegisterRuntime<T>(T feature) where T : class
     {

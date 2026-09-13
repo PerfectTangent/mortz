@@ -20,7 +20,8 @@ internal sealed class TestServer : IDisposable
 
     public TestServer(string adminPassword = "", MatchConfig? rules = null,
         IMatchObserver? observer = null, IMatchControl? control = null,
-        bool allowJoinInProgress = true, string applicationVersion = "1.2.3-test")
+        bool allowJoinInProgress = true, string applicationVersion = "1.2.3-test",
+        int victoryLapTicks = 7 * SimConfig.TICK_RATE)
     {
         Maps.Add(Map("arena", "Arena"));
         Boot = new ServerBoot
@@ -35,6 +36,7 @@ internal sealed class TestServer : IDisposable
             Seed = 1,
             NetStats = false,
             AllowJoinInProgress = allowJoinInProgress,
+            VictoryLapTicks = victoryLapTicks,
         };
         Server = new GameServer(Boot, Link, Maps, Logger.None,
             observer ?? new NullMatchObserver(), control ?? new NullMatchControl(), applicationVersion);

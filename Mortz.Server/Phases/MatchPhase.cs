@@ -14,8 +14,6 @@ namespace Mortz.Server.Phases;
 /// <summary>Everything whose lifetime is exactly one match.</summary>
 public sealed class MatchPhase : ServerPhase
 {
-    private const float MATCH_END_SECONDS = 7;
-
     private readonly MatchRuntime _runtime;
     private readonly MatchStateKeys _keys;
     private readonly MatchServices _services;
@@ -36,12 +34,11 @@ public sealed class MatchPhase : ServerPhase
         _allowJoinInProgress = dependencies.AllowJoinInProgress;
         _seats = seats;
 
-        int victoryLapTicks = (int)(MATCH_END_SECONDS * SimConfig.TICK_RATE);
         _keys = new MatchStateKeys(generation);
         _runtime = new MatchRuntime(
             _map.BuildMask(),
             dependencies.Settings.Config,
-            victoryLapTicks,
+            dependencies.VictoryLapTicks,
             _keys,
             _map.SpawnPoints,
             _map.Zones);
@@ -57,6 +54,8 @@ public sealed class MatchPhase : ServerPhase
             }
         }, _keys.Describe);
     }
+
+    public bool AcceptsJoins => _runtime.Stage == MatchStage.PLAYING;
 
     public override ServerPhaseKind Kind => ServerPhaseKind.MATCH;
 
@@ -83,8 +82,12 @@ public sealed class MatchPhase : ServerPhase
         _services.RosterChanged();
     }
 
-    public override void PlayerJoined(Player player)
+    public bool TryAdmit(Player player)
     {
+        if (!AcceptsJoins)
+        {
+            return false;
+        }
         if (_allowJoinInProgress)
         {
             Seat(player, null);
@@ -96,6 +99,7 @@ public sealed class MatchPhase : ServerPhase
         }
 
         _services.RosterChanged();
+        return true;
     }
 
     public override void Load(Player player, int generation, bool initialPhase) =>

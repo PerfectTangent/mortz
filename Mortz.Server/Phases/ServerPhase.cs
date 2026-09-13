@@ -16,7 +16,7 @@ public abstract class ServerPhase : IDisposable
     /// <summary>Called once every roster player has this phase's state open. Joins after this use PlayerJoined instead.</summary>
     public abstract void Begin();
 
-    public abstract void PlayerJoined(Player player);
+    public virtual void PlayerJoined(Player player) { }
 
     public abstract void PlayerLeft(Player player);
 

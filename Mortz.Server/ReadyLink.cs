@@ -14,6 +14,7 @@ public sealed class ReadyLink(IServerTransport transport) : IServerLink
         public Queue<Action> Pending { get; } = new();
         public Action? Snapshot { get; set; }
         public bool Ready { get; set; }
+        public bool WaitingForLobby { get; set; }
         public bool Disconnecting { get; set; }
     }
 
@@ -26,11 +27,28 @@ public sealed class ReadyLink(IServerTransport transport) : IServerLink
         _peers[peerId] = new PeerState(generation, nowMs + NetConfig.PHASE_READY_TIMEOUT_MS);
     }
 
+    public void WaitForLobby(int peerId, int generation)
+    {
+        if (!_peers.TryGetValue(peerId, out PeerState? peer) || peer.Generation != generation ||
+            peer.Disconnecting || peer.WaitingForLobby)
+        {
+            return;
+        }
+        peer.WaitingForLobby = true;
+        peer.Pending.Clear();
+        peer.Snapshot = null;
+        transport.Send(peerId, new LobbyWaitMsg(generation));
+    }
+
+    public bool CanReady(int peerId, int generation) =>
+        _peers.TryGetValue(peerId, out PeerState? peer) && !peer.Ready && !peer.Disconnecting &&
+        !peer.WaitingForLobby && peer.Generation == generation;
+
     public bool Ready(int peerId, int generation)
     {
-        if (!_peers.TryGetValue(peerId, out PeerState? peer) || peer.Ready || peer.Disconnecting ||
-            peer.Generation != generation)
+        if (!CanReady(peerId, generation))
             return false;
+        PeerState peer = _peers[peerId];
         peer.Ready = true;
         while (peer.Pending.TryDequeue(out Action? send))
         {
@@ -47,7 +65,7 @@ public sealed class ReadyLink(IServerTransport transport) : IServerLink
     {
         foreach ((int peerId, PeerState peer) in _peers.ToArray())
         {
-            if (!peer.Ready && !peer.Disconnecting && nowMs >= peer.Deadline)
+            if (!peer.Ready && !peer.Disconnecting && !peer.WaitingForLobby && nowMs >= peer.Deadline)
             {
                 transport.Disconnect(peerId, "phase readiness timed out");
                 peer.Disconnecting = true;
@@ -66,7 +84,7 @@ public sealed class ReadyLink(IServerTransport transport) : IServerLink
     public void Broadcast<TMsg>(in TMsg message) where TMsg : struct, INetMessage<TMsg>
     {
         TMsg copy = TMsg.InMatch(message, _generation);
-        if (_peers.Count == 0 || _peers.Values.All(peer => peer.Ready))
+        if (_peers.Count == 0 || _peers.Values.All(peer => peer.Ready && !peer.WaitingForLobby))
         {
             transport.Broadcast(in copy);
             return;
@@ -106,7 +124,7 @@ public sealed class ReadyLink(IServerTransport transport) : IServerLink
     {
         if (_peers.TryGetValue(peerId, out PeerState? peer))
         {
-            if (peer.Disconnecting)
+            if (peer.Disconnecting || peer.WaitingForLobby)
                 return;
             if (!peer.Ready)
             {
@@ -128,7 +146,7 @@ public sealed class ReadyLink(IServerTransport transport) : IServerLink
             send();
             return;
         }
-        if (peer.Disconnecting)
+        if (peer.Disconnecting || peer.WaitingForLobby)
             return;
         if (peer.Ready || bootstrap)
         {

@@ -1,6 +1,5 @@
 using Mortz.Protocol.Net.Stats;
 using Mortz.Server.Players;
-using Mortz.Server.Services;
 using Serilog;
 
 namespace Mortz.Server.Wins;
@@ -11,14 +10,12 @@ public sealed class WinsService(
     ServerStateKeys keys,
     Roster roster,
     IServerLink link,
-    ILogger log) : IObservePlayers
+    ILogger log)
 {
     private readonly ServerStateKey<SessionWins> _wins = keys.Claim<SessionWins>(typeof(WinsService));
 
-    public void PlayerJoined(Player jipPlayer) =>
-        link.Send(jipPlayer.PeerId, SessionStatsProtocol.Encode(Table()));
-
-    public void PlayerLeft(Player player) { }
+    public void SendTo(int peerId) =>
+        link.Send(peerId, SessionStatsProtocol.Encode(Table()));
 
     public void Record(IReadOnlyList<Player> winners)
     {
@@ -28,10 +25,8 @@ public sealed class WinsService(
             wins.Count++;
             log.Information("{PlayerName} now has {Wins} session win(s)", player.Name, wins.Count);
         }
-        link.Broadcast(SessionStatsProtocol.Encode(Table()));
     }
 
-    // Match end and join only, never per tick.
     private PeerWins[] Table()
     {
         PeerWins[] table = new PeerWins[roster.Count];

@@ -6,8 +6,10 @@ namespace Mortz.Server.Match;
 /// <summary>Owns the winning transition and victory-lap countdown.</summary>
 public class EndingStep(int victoryLapTicks)
 {
-    private readonly int _victoryLapTicks = Math.Max(1, victoryLapTicks);
+    private readonly int _victoryLapTicks = Math.Max(0, victoryLapTicks);
     private int _ticksUntilLobby;
+
+    public bool ReturnToLobby => Winner != null && _ticksUntilLobby == 0;
 
     public Victor? Winner { get; private set; }
 

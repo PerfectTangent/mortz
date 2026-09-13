@@ -378,7 +378,7 @@ public sealed class NetMessageGenerator : IIncrementalGenerator
         sb.AppendLine("/// declares IHandle for it. Decodes once, then invokes in add order.</summary>");
         sb.AppendLine("public sealed class NetRouter<TSender>");
         sb.AppendLine("{");
-        sb.AppendLine("    public int? MatchGeneration { get; set; }");
+        sb.AppendLine("    public int MatchGeneration { get; set; } = -1;");
         foreach (MessageModel m in inbound)
         {
             string fqn = $"global::{m.Namespace}.{m.Name}";
@@ -439,7 +439,7 @@ public sealed class NetMessageGenerator : IIncrementalGenerator
             sb.AppendLine("                    return false;");
             if (m.Fields.Any(member => member.Name == "MatchGeneration"))
             {
-                sb.AppendLine("                if (MatchGeneration is int generation && message.MatchGeneration != generation)");
+                sb.AppendLine("                if (MatchGeneration < 0 || message.MatchGeneration != MatchGeneration)");
                 sb.AppendLine("                    return false;");
             }
             sb.AppendLine($"                for (int i = 0; i < {field}.Count; i++)");
@@ -501,7 +501,7 @@ public sealed class NetMessageGenerator : IIncrementalGenerator
         sb.AppendLine("/// declares IHandle for it. Decodes once, then invokes in add order.</summary>");
         sb.AppendLine("public sealed class NetRouter");
         sb.AppendLine("{");
-        sb.AppendLine("    public int? MatchGeneration { get; set; }");
+        sb.AppendLine("    public int MatchGeneration { get; set; } = -1;");
         foreach (MessageModel m in inbound)
         {
             string fqn = $"global::{m.Namespace}.{m.Name}";
@@ -550,7 +550,7 @@ public sealed class NetMessageGenerator : IIncrementalGenerator
             sb.AppendLine("                    return false;");
             if (m.Fields.Any(field => field.Name == "MatchGeneration"))
             {
-                sb.AppendLine("                if (MatchGeneration is int generation && message.MatchGeneration != generation)");
+                sb.AppendLine("                if (MatchGeneration < 0 || message.MatchGeneration != MatchGeneration)");
                 sb.AppendLine("                    return false;");
             }
             sb.AppendLine($"                for (int i = 0; i < {field}.Count; i++)");

@@ -20,7 +20,7 @@ public class MatchProtocolTests
     /// messages send by hand.</summary>
     private static Victor? SendRawEnd(MatchEndMsg message)
     {
-        NetRouter router = new();
+        NetRouter router = new() { MatchGeneration = 0 };
         ClientProbe<MatchEndMsg> probe = new();
         router.Add(probe);
         message.Broadcast(router);
@@ -30,7 +30,7 @@ public class MatchProtocolTests
 
     private static MatchPoint? SendRawMatchPoint(MatchPointMsg message)
     {
-        NetRouter router = new();
+        NetRouter router = new() { MatchGeneration = 0 };
         ClientProbe<MatchPointMsg> probe = new();
         router.Add(probe);
         message.Broadcast(router);

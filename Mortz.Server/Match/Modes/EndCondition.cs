@@ -68,3 +68,15 @@ public class TimeLimitCondition(TimeLimitRules rules) : EndCondition
     public override EndDecision? Evaluate(GameModeContext context, IReadOnlyList<ContenderScore> scores) =>
         context.Tick >= _ticks ? new EndDecision(EndReason.TIME) : null;
 }
+
+[EndConditionFor(typeof(ObjectiveCompletionRules))]
+public class ObjectiveCompletionCondition(ObjectiveCompletionRules _) : EndCondition
+{
+    public override EndDecision? Evaluate(GameModeContext context, IReadOnlyList<ContenderScore> scores) =>
+        context.Objective.CapturedBy is { } team
+            ? new EndDecision(EndReason.OBJECTIVE, new Victor.Team(team))
+            : null;
+
+    public override MatchStanding Standing(GameModeContext context, IReadOnlyList<ContenderScore> scores) =>
+        new(Evaluate(context, scores)?.Qualifier, -1);
+}

@@ -18,6 +18,21 @@ public static class ModeComposition
         {
             errors.Add("rules.end_condition 'time_limit' requires rules.evaluation = 'tick'.");
         }
+        if (rules.EndCondition is ObjectiveCompletionRules)
+        {
+            if (rules.Objective?.CanComplete != true)
+            {
+                errors.Add("rules.end_condition 'objective_completion' requires an objective capable of completing.");
+            }
+            if (rules.Evaluation != EvaluationTiming.TICK)
+            {
+                errors.Add("rules.end_condition 'objective_completion' requires rules.evaluation = 'tick'.");
+            }
+        }
+        if (rules.Winner == WinnerRule.QUALIFYING && rules.EndCondition?.SuppliesQualifier != true)
+        {
+            errors.Add("rules.winner 'qualifying' requires an end condition that supplies a qualifier.");
+        }
         return errors;
     }
 
@@ -33,7 +48,7 @@ public static class ModeComposition
     private static void CheckVariant<T>(T? rules, IReadOnlyList<ConfigVariantDescriptor<T>> variants,
         string path, List<string> errors) where T : class
     {
-        if (rules == null || !variants.Any(variant => variant.RulesType == rules.GetType()))
+        if (rules == null || variants.All(variant => variant.RulesType != rules.GetType()))
         {
             errors.Add($"{path} has unknown variant '{rules?.GetType().Name ?? "null"}'. " +
                        $"Expected: {string.Join(", ", variants.Select(variant => variant.Id))}.");

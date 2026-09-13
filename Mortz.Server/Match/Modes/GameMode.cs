@@ -1,26 +1,34 @@
 using Mortz.Core.Match.Configuration;
+using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Sim;
 using Mortz.Server.Match.Scoring;
 
 namespace Mortz.Server.Match.Modes;
 
-/// <summary>Composes scoring, end conditions, winner selection, and replay into a match outcome.</summary>
+/// <summary>Composes objectives, scoring, end conditions, winner selection, and replay into a match outcome.</summary>
 public class GameMode(
     IScoreSource scores,
     EndCondition endCondition,
     IWinnerSelection winner,
     EvaluationTiming timing,
-    IReplayPolicy replay)
+    IReplayPolicy replay,
+    IMatchObjective? objective = null)
 {
-    public static GameMode Create(ModeRulesSnapshot rules) => new(
+    private readonly IMatchObjective _objective = objective ?? new NoObjective();
+
+    public ObjectiveState Objective => _objective.State;
+
+    public static GameMode Create(ModeRulesSnapshot rules, IMatchObjective? objective = null) => new(
         ScoreSources.Create(rules.Score), EndCondition.Create(rules.EndCondition.ToMutable()),
-        WinnerSelections.Create(rules.Winner), rules.Evaluation, ReplayPolicies.Create(rules.Replay));
+        WinnerSelections.Create(rules.Winner), rules.Evaluation, ReplayPolicies.Create(rules.Replay),
+        objective ?? MatchObjectives.Create(rules.Objective));
 
     public GameModeUpdate Advance(MatchContext match, ScoringStep scoring, IReadOnlyList<Death> deaths)
     {
+        _objective.Advance(match.World);
         List<ScoredKill> eliminations = [];
-        GameModeContext Context() => new(match.World, scoring.Rows(), scoring.TeamKills, scoring.TeamDeaths);
+        GameModeContext Context() => new(match.World, scoring.Rows(), scoring.TeamKills, scoring.TeamDeaths, Objective);
         GameModeUpdate Complete(MatchOutcome? outcome) => new(eliminations, Standing(Context()), outcome);
 
         if (timing == EvaluationTiming.TICK)
@@ -57,6 +65,10 @@ public class GameMode(
     {
         IReadOnlyList<ContenderScore> contenders = scores.Read(context);
         MatchStanding standing = endCondition.Standing(context, contenders);
+        if (endCondition is ObjectiveCompletionCondition || winner is QualifyingWinner)
+        {
+            return standing with { Remaining = -1 };
+        }
         // Match-point announcements currently describe a winning kill.
         return standing.Remaining >= 0 && context.Rules.Score == ScoreMetric.KILLS &&
                context.Rules.Winner == WinnerRule.HIGHEST_SCORE

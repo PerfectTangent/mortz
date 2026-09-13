@@ -17,6 +17,16 @@ public sealed class ClientSession
         return true;
     }
 
+    public bool TryWaitForLobby()
+    {
+        if (Stage is ClientSessionStage.MENU or ClientSessionStage.LOBBY)
+        {
+            return false;
+        }
+        Stage = ClientSessionStage.WAITING_FOR_LOBBY;
+        return true;
+    }
+
     public bool TryEnterLobby()
     {
         if (Stage == ClientSessionStage.MENU)

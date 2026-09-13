@@ -24,7 +24,7 @@ public abstract class NodeServiceTest : IDisposable
 
     /// <summary>The client-side router every hosted handler registers with,
     /// the same instance the loopback dispatches into.</summary>
-    protected NetRouter Router { get; } = new();
+    protected NetRouter Router { get; } = new() { MatchGeneration = 0 };
 
     protected TestClientSender Sender { get; }
 

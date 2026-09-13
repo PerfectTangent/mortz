@@ -14,6 +14,7 @@ public static class WinnerSelections
     {
         WinnerRule.HIGHEST_SCORE => new RankedWinner(highest: true),
         WinnerRule.LOWEST_SCORE => new RankedWinner(highest: false),
+        WinnerRule.QUALIFYING => new QualifyingWinner(),
         _ => throw new ArgumentOutOfRangeException(nameof(rule)),
     };
 }

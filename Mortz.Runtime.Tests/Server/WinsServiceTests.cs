@@ -35,6 +35,8 @@ public class WinsServiceTests
         _wins.Record([seven]);
         _wins.Record([nine]);
 
+        Assert.Empty(_transport.Messages);
+        _wins.SendTo(seven.PeerId);
         Dictionary<int, int> table = LatestTable();
         Assert.Equal(2, table[7]);
         Assert.Equal(1, table[9]);
@@ -46,11 +48,12 @@ public class WinsServiceTests
     {
         Player seven = _roster.Join(7, "seven");
         _wins.Record([seven]);
+        _wins.SendTo(seven.PeerId);
         Assert.Equal(1, LatestTable()[7]);
 
         _roster.Leave(7);
         seven.Close(ServerPhaseKind.LOBBY);
-        _wins.PlayerJoined(_roster.Join(7, "seven"));
+        _wins.SendTo(_roster.Join(7, "seven").PeerId);
 
         Assert.Equal(0, LatestTable()[7]);
     }

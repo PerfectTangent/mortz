@@ -15,13 +15,27 @@ public sealed class SnapshotBuffer
     private readonly List<MatchSnapshot> _snapshots = [];
     private const int MAX_KEPT = 64;
 
+    private int NewestRosterRevision => _snapshots.Count > 0 ? _snapshots[^1].RosterRevision : -1;
+
     public int NewestTick => _snapshots.Count > 0 ? _snapshots[^1].Tick : -1;
+
+    public bool IsNewer(MatchSnapshot snapshot) => snapshot.Tick == NewestTick
+        ? snapshot.RosterRevision > NewestRosterRevision
+        : snapshot.Tick > NewestTick;
 
     public void Add(MatchSnapshot snapshot)
     {
         int i = _snapshots.FindLastIndex(s => s.Tick < snapshot.Tick);
         if (i == _snapshots.Count - 1) _snapshots.Add(snapshot);
-        else if (_snapshots[i + 1].Tick == snapshot.Tick) return; // duplicate
+        else if (_snapshots[i + 1].Tick == snapshot.Tick)
+        {
+            // A join can add its spawn at the bootstrap tick without advancing the world.
+            if (snapshot.RosterRevision > _snapshots[i + 1].RosterRevision)
+            {
+                _snapshots[i + 1] = snapshot;
+            }
+            return;
+        }
         else _snapshots.Insert(i + 1, snapshot);
 
         if (_snapshots.Count > MAX_KEPT)

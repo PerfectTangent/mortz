@@ -66,8 +66,8 @@ public class GameServerConnectTests : IDisposable
             "7:LobbyLoadMsg",
             "7:LobbySettingsMsg",
             "7:ChatMsg",
-            "7:SessionWinsMsg",
             "7:LobbyStateMsg",
+            "7:SessionWinsMsg",
         ], _server.Link.Trace());
     }
 

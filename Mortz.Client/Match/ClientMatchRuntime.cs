@@ -105,8 +105,12 @@ public class ClientMatchRuntime : IDisposable, IHandle<MatchStartMsg>, IHandle<C
             return false;
         }
         if (snapshot.Generation != State.Generation ||
-            snapshot.RosterRevision != _players.RosterRevision ||
-            snapshot.Tick <= Interpolator.NewestTick)
+            snapshot.RosterRevision != _players.RosterRevision)
+        {
+            return false;
+        }
+
+        if (!Interpolator.IsNewer(snapshot))
             return false;
         ApplySnapshot(snapshot, ack);
         return true;
@@ -134,7 +138,7 @@ public class ClientMatchRuntime : IDisposable, IHandle<MatchStartMsg>, IHandle<C
         if (!CanAdvance)
             return;
         Mortars.Tick();
-        if (State.Participation.Seat == MatchSeat.SPECTATOR)
+        if (State.Participation.Seat == MatchSeat.SPECTATOR || !Predictor.Initialized)
             return;
         if (State.Participation.Activity != MatchActivity.ACTIVE)
             input = input with { Buttons = InputButtons.NONE };
@@ -243,8 +247,10 @@ public class ClientMatchRuntime : IDisposable, IHandle<MatchStartMsg>, IHandle<C
     private void OnStatsChanged(ClientPlayer player)
     {
         if (player.PeerId == _localPeerId && player.Match != null)
+        {
             Predictor.SetModifiers(player.Match.Modifiers, player.Match.ModifierEffectiveTick,
                 player.Match.ModifierRevision);
+        }
     }
 
     public void Dispose()

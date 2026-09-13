@@ -1,4 +1,5 @@
 using Mortz.Core.Match.Configuration;
+using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Sim;
 using Mortz.Server.Match.Scoring;
@@ -6,8 +7,9 @@ using Mortz.Server.Match.Scoring;
 namespace Mortz.Server.Match.Modes;
 
 public class GameModeContext(SimWorld world, IReadOnlyList<SeatedScore> rows, TeamKills teamKills,
-    TeamDeaths teamDeaths = default)
+    TeamDeaths teamDeaths = default, ObjectiveState? objective = null)
 {
+    public ObjectiveState Objective { get; } = objective ?? NoObjectiveState.Instance;
     public SimWorld World { get; } = world;
     public int Tick => World.Tick;
     public ModeRulesSnapshot Rules => World.Config.Rules;

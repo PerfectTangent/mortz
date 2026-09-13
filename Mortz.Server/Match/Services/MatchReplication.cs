@@ -31,7 +31,8 @@ public class MatchReplication(
     TerrainHistory terrainHistory,
     IServerLink link,
     ILogger log,
-    bool printNetStats)
+    bool printNetStats,
+    bool allowJoinInProgress = true)
     : IObserveMatchRoster,
         IEnterMatch,
         IObserveMatchInput,
@@ -47,11 +48,18 @@ public class MatchReplication(
     private readonly Dictionary<int, byte> _slots = [];
 
     public void Sync(Player jipPlayer)
-        => SendCurrentState(jipPlayer);
+    {
+        MatchParticipation participation = runtime.ParticipationOf(jipPlayer);
+        link.Send(jipPlayer.PeerId, new MatchParticipationMsg(participation.Seat,
+            participation.Activity, participation.Reason, participation.ReturnTick));
+        SendCurrentState(jipPlayer);
+        // Admission creates the player after bootstrap; send its authoritative spawn now.
+        link.SendSnapshot(jipPlayer.PeerId, CaptureSnapshot().SerializeFor(jipPlayer.PeerId), -1);
+    }
 
     public void Enter(Player player, int generation, bool initialPhase)
     {
-        SendWelcome(player, generation);
+        SendWelcome(player, generation, initialPhase);
         if (initialPhase)
             SendCurrentState(player);
     }
@@ -255,7 +263,7 @@ public class MatchReplication(
         _ => throw new ArgumentOutOfRangeException(nameof(victor)),
     };
 
-    private void SendWelcome(Player jipPlayer, int generation)
+    private void SendWelcome(Player jipPlayer, int generation, bool initialPhase)
     {
         int peerId = jipPlayer.PeerId;
         TerrainSyncPayload terrain = terrainHistory.Build(runtime.World.Terrain);
@@ -264,7 +272,9 @@ public class MatchReplication(
         int chunkCount = Math.Max(1,
             (terrain.Data.Length + NetConfig.TERRAIN_CHUNK_BYTES - 1) / NetConfig.TERRAIN_CHUNK_BYTES);
         int transferId = ++_nextTerrainTransferId;
-        MatchParticipation participation = runtime.ParticipationOf(jipPlayer);
+        MatchParticipation participation = initialPhase
+            ? runtime.ParticipationOf(jipPlayer)
+            : allowJoinInProgress ? MatchParticipation.Active : MatchParticipation.JipSpectator;
         MatchSnapshot initialSnapshot = CaptureSnapshot();
         int ack = runtime.World.Players.TryGetValue(peerId, out PlayerState player)
             ? player.LastInputSeq

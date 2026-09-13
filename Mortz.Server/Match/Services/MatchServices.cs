@@ -82,7 +82,8 @@ public class MatchServices : IDisposable
             terrainHistory,
             dependencies.Link,
             dependencies.Log,
-            dependencies.NetStats);
+            dependencies.NetStats,
+            dependencies.AllowJoinInProgress);
 
         IMatchService[] services =
         [

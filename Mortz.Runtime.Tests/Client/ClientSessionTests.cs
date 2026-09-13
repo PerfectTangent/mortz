@@ -5,6 +5,33 @@ namespace Mortz.Runtime.Tests.Client;
 
 public class ClientSessionTests
 {
+    [Theory]
+    [InlineData(ClientSessionStage.CONNECTING)]
+    [InlineData(ClientSessionStage.LOADING_MATCH)]
+    [InlineData(ClientSessionStage.PLAYING)]
+    public void WaitingCancelsMatchEntryAndAcceptsOnlyTheNextLobby(ClientSessionStage stage)
+    {
+        ClientSession session = new();
+        session.TryBeginConnecting();
+        if (stage != ClientSessionStage.CONNECTING)
+        {
+            session.TryBeginMatchLoad();
+        }
+        if (stage == ClientSessionStage.PLAYING)
+        {
+            session.TryEnterMatch();
+        }
+        Assert.True(session.TryWaitForLobby());
+        Assert.Equal(ClientSessionStage.WAITING_FOR_LOBBY, session.Stage);
+        Assert.False(session.TryBeginConnecting());
+        Assert.False(session.TryBeginMatchLoad());
+        Assert.False(session.TryEnterMatch());
+        Assert.True(session.TryEnterLobby());
+        Assert.False(session.TryWaitForLobby());
+        Assert.True(session.TryBeginMatchLoad());
+        Assert.True(session.TryEnterMatch());
+    }
+
     [Fact]
     public void SessionTracksTheClientFlow()
     {

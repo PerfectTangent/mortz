@@ -34,6 +34,7 @@ public sealed class GameServer : IDisposable, IHandle<Player, PhaseReadyMsg>
     private readonly SettingsService _settings;
     private readonly AdminService _admin;
     private readonly ChatService _chat;
+    private readonly WinsService _wins;
     private readonly MatchDependencies _matchDependencies;
 
     private bool _disposed;
@@ -58,21 +59,21 @@ public sealed class GameServer : IDisposable, IHandle<Player, PhaseReadyMsg>
         _admin = new AdminService(slots, _link, _clock, _host, log, boot.AdminPassword);
         _chat = new ChatService(slots, _link, _clock, new Random(boot.Seed));
         TypingService typing = new(slots, _link);
-        WinsService wins = new(slots, _roster, _link, log);
+        _wins = new WinsService(slots, _roster, _link, log);
         PingService pings = new(_link);
         EndMatchService endMatch = new(_admin, _chat, _host, _host);
         _scope.Register(_settings);
         _scope.Register(_admin);
         _scope.Register(_chat);
         _scope.Register(typing);
-        _scope.Register(wins);
+        _scope.Register(_wins);
         _scope.Register(pings);
         _scope.Register(endMatch);
         slots.Seal();
         _matchDependencies = new MatchDependencies
         {
             Settings = _settings,
-            Wins = wins,
+            Wins = _wins,
             Roster = _roster,
             Link = _link,
             Log = _log,
@@ -81,6 +82,7 @@ public sealed class GameServer : IDisposable, IHandle<Player, PhaseReadyMsg>
             Clock = _clock,
             NetStats = _boot.NetStats,
             AllowJoinInProgress = _boot.AllowJoinInProgress,
+            VictoryLapTicks = _boot.VictoryLapTicks,
         };
 
         _host.OpenInitial(LobbyPhase.Open(
@@ -151,9 +153,12 @@ public sealed class GameServer : IDisposable, IHandle<Player, PhaseReadyMsg>
 
     public void Handle(Player player, in PhaseReadyMsg message)
     {
-        if (!_link.Ready(player.PeerId, message.Generation))
+        Execute(_host.CloseMatchLoads(_roster));
+        if (!_link.CanReady(player.PeerId, message.Generation))
             return;
-        Execute(_host.Ready(player, message.Generation, _roster.Count));
+        IReadOnlyList<PhaseHostAction> actions = _host.Ready(player, message.Generation, _roster.Count);
+        _link.Ready(player.PeerId, message.Generation);
+        Execute(actions);
     }
 
     public void Inputs(int peerId, byte[] packet)
@@ -175,7 +180,9 @@ public sealed class GameServer : IDisposable, IHandle<Player, PhaseReadyMsg>
             feature.Advance(time);
         }
 
-        Execute(_host.Advance(time));
+        PhaseHostAction? action = _host.Advance(time);
+        Execute(_host.CloseMatchLoads(_roster));
+        Execute(action);
     }
 
     public IEnumerable<Player> PublicationPlayers => _roster;
@@ -246,9 +253,13 @@ public sealed class GameServer : IDisposable, IHandle<Player, PhaseReadyMsg>
         {
             case PhaseHostAction.SendLobbyLoad load:
                 _link.Send(load.Player.PeerId, new LobbyLoadMsg(load.Generation));
+                _wins.SendTo(load.Player.PeerId);
                 break;
             case PhaseHostAction.SendMatchLoad load:
                 _host.LoadMatch(load.Player, load.Generation, load.Initial);
+                break;
+            case PhaseHostAction.SendLobbyWait wait:
+                _link.WaitForLobby(wait.Player.PeerId, wait.Generation);
                 break;
             case PhaseHostAction.SyncJip sync:
                 foreach (ISyncJip feature in _host.Features.Implementing<ISyncJip>())

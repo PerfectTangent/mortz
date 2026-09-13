@@ -1,5 +1,6 @@
 using Mortz.Content;
 using Mortz.Core.Match.Configuration;
+using Mortz.Core.Sim;
 using Mortz.Server.Content;
 
 namespace Mortz.Server;
@@ -21,6 +22,8 @@ public sealed record ServerBoot
     public required int Seed { get; init; }
 
     public required bool NetStats { get; init; }
+
+    public int VictoryLapTicks { get; init; } = 7 * SimConfig.TICK_RATE;
 
     public required bool AllowJoinInProgress { get; init; }
 }

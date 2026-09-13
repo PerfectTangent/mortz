@@ -31,6 +31,7 @@ namespace Mortz.Client.Session;
 [Meta(typeof(IAutoNode))]
 public partial class ClientSessionController : Node, ISessionExit,
     IHandle<LobbyLoadMsg>,
+    IHandle<LobbyWaitMsg>,
     IHandle<MatchLoadMsg>,
     IHandle<TerrainChunkMsg>,
     IProvide<ISessionExit>, IProvide<ServerBrowserController>
@@ -233,7 +234,7 @@ public partial class ClientSessionController : Node, ISessionExit,
 
     private void CancelMenuConnection()
     {
-        if (_session.Stage == ClientSessionStage.CONNECTING)
+        if (_session.Stage is ClientSessionStage.CONNECTING or ClientSessionStage.WAITING_FOR_LOBBY)
             ReturnToMenu("", stopLocalServer: true);
     }
 
@@ -344,9 +345,28 @@ public partial class ClientSessionController : Node, ISessionExit,
         ReturnToMenu(AdmissionReasons.Describe(reason), stopLocalServer: true);
     }
 
+    public void Handle(in LobbyWaitMsg message)
+    {
+        if (message.Generation < Network.Router.MatchGeneration)
+        {
+            return;
+        }
+        if (!_session.TryWaitForLobby())
+        {
+            return;
+        }
+        _pendingMatch = null;
+        DisposeGameView();
+        Network.Router.MatchGeneration = message.Generation;
+        DisposeLobby();
+        CreateMenu(autoStartIntro: false);
+        _menu!.ShowHome();
+        _menu.SetStatus("Match ended. Waiting for the lobby...");
+    }
+
     public void Handle(in LobbyLoadMsg message)
     {
-        if (Network.Router.MatchGeneration is int current && message.Generation < current)
+        if (message.Generation < Network.Router.MatchGeneration)
             return;
         bool returningFromMatch = _session.Stage is
             ClientSessionStage.LOADING_MATCH or ClientSessionStage.PLAYING;
@@ -364,7 +384,7 @@ public partial class ClientSessionController : Node, ISessionExit,
 
     public void Handle(in MatchLoadMsg message)
     {
-        if (Network.Router.MatchGeneration is int current && message.Generation < current)
+        if (message.Generation < Network.Router.MatchGeneration)
             return;
         if (!_session.TryBeginMatchLoad())
             return;

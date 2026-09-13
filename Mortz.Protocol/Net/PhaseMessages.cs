@@ -32,3 +32,7 @@ public readonly partial record struct PhaseReadyMsg(int Generation);
 /// <summary>Starts prediction and the match after every lobby player loads.</summary>
 [NetMessage(NetChannel.RELIABLE, NetDirection.SERVER_TO_CLIENT)]
 public readonly partial record struct MatchStartMsg(int Generation);
+
+/// <summary>Cancels match loading and keeps the connection waiting for the next lobby.</summary>
+[NetMessage(NetChannel.RELIABLE, NetDirection.SERVER_TO_CLIENT)]
+public readonly partial record struct LobbyWaitMsg(int Generation);

@@ -22,6 +22,8 @@ public abstract record PhaseHostAction
 
     public sealed record SendMatchLoad(Player Player, int Generation, bool Initial) : PhaseHostAction;
 
+    public sealed record SendLobbyWait(Player Player, int Generation) : PhaseHostAction;
+
     public sealed record SyncJip(Player Player) : PhaseHostAction;
 
     public sealed record SendMatchStart(Player Player, int Generation) : PhaseHostAction;
@@ -72,6 +74,10 @@ public sealed class PhaseTransitionCoordinator(int generation) : ICurrentPhase, 
         if (Kind == ServerPhaseKind.LOBBY)
             return new PhaseHostAction.SendLobbyLoad(player, Generation);
 
+        if (Phase is MatchPhase { AcceptsJoins: false })
+        {
+            return new PhaseHostAction.SendLobbyWait(player, Generation);
+        }
         _loading[player.PeerId] = PhaseLoadPurpose.JOIN_IN_PROGRESS;
         return new PhaseHostAction.SendMatchLoad(player, Generation, Initial: false);
     }
@@ -86,6 +92,23 @@ public sealed class PhaseTransitionCoordinator(int generation) : ICurrentPhase, 
 
     public void LoadMatch(Player player, int generation, bool initial) =>
         Phase.Load(player, generation, initial);
+
+    public IReadOnlyList<PhaseHostAction> CloseMatchLoads(IEnumerable<Player> players)
+    {
+        if (Phase is not MatchPhase { AcceptsJoins: false })
+        {
+            return [];
+        }
+        List<PhaseHostAction> actions = [];
+        foreach (Player player in players)
+        {
+            if (_loading.Remove(player.PeerId))
+            {
+                actions.Add(new PhaseHostAction.SendLobbyWait(player, Generation));
+            }
+        }
+        return actions;
+    }
 
     public PhaseHostAction? Advance(ServerTime time)
     {
@@ -156,6 +179,10 @@ public sealed class PhaseTransitionCoordinator(int generation) : ICurrentPhase, 
 
         if (purpose == PhaseLoadPurpose.JOIN_IN_PROGRESS)
         {
+            if (Phase is not MatchPhase match || !match.TryAdmit(player))
+            {
+                return [new PhaseHostAction.SendLobbyWait(player, Generation)];
+            }
             return _matchRunning
                 ?
                 [

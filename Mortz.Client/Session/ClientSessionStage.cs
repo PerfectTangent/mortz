@@ -7,4 +7,5 @@ public enum ClientSessionStage
     LOBBY,
     LOADING_MATCH,
     PLAYING,
+    WAITING_FOR_LOBBY,
 }

@@ -11,6 +11,46 @@ namespace Mortz.Runtime.Tests.Core.Match;
 
 public class ConfigurationVariantTests
 {
+    [Theory]
+    [InlineData(false, WinnerRule.QUALIFYING, EvaluationTiming.TICK, "qualifier")]
+    [InlineData(true, WinnerRule.QUALIFYING, EvaluationTiming.TICK, "objective capable")]
+    [InlineData(true, WinnerRule.QUALIFYING, EvaluationTiming.ELIMINATION, "evaluation")]
+    public void UnsupportedObjectiveCompositionsFailAtEveryEntryPoint(bool completion, WinnerRule winner,
+        EvaluationTiming timing, string error)
+    {
+        MatchConfig config = new()
+        {
+            Rules = new ModeRules
+            {
+                EndCondition = completion ? new ObjectiveCompletionRules() : new ScoreTargetRules(),
+                Winner = winner,
+                Evaluation = timing,
+            }
+        };
+        Assert.Contains(ModeComposition.Errors(config.Rules), message => message.Contains(error));
+        Assert.Throws<InvalidDataException>(() => MatchConfigCodec.FromBytes(config.ToBytes()));
+        ContentReadResult<RulesetManifest> read = TomlModel.Read<RulesetManifest>(
+            TomlModel.Write(new RulesetManifest { Rules = config.Rules }));
+        Assert.Null(read.Value);
+        Assert.Contains(read.Diagnostics, diagnostic => diagnostic.Message.Contains(error));
+        Assert.Throws<ArgumentException>(() => new MatchRuntime(
+            new TerrainMask(8, 8, (_, _) => false, (_, _) => false), config, 0, new MatchStateKeys(1)));
+    }
+
+    [Fact]
+    public void ObjectiveCompletionVariantHasNoTuningPayloadAndProjectsItsCapability()
+    {
+        ObjectiveCompletionRules rules = new();
+        Assert.True(rules.SuppliesQualifier);
+        Assert.IsType<ObjectiveCompletionRulesSnapshot>(rules.ToSnapshot());
+        Assert.IsType<ObjectiveCompletionRules>(rules.ToSnapshot().ToMutable());
+        Assert.IsType<ObjectiveCompletionRules>(EndConditionRulesCodec.FromBytes(EndConditionRulesCodec.ToBytes(rules)));
+        Assert.Empty(ObjectiveCompletionRulesCodec.ToBytes(rules));
+        Assert.Empty(EndConditionRulesMetadata.For(rules).Categories);
+        Assert.Contains(EndConditionRulesMetadata.Variants, variant => variant.Id == "objective_completion");
+        Assert.False(new NoObjectiveRules().CanComplete);
+    }
+
     [Fact]
     public void ActiveVariantsSurviveAllConfigurationProjections()
     {

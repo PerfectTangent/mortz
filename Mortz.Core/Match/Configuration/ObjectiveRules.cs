@@ -3,6 +3,8 @@ namespace Mortz.Core.Match.Configuration;
 [ConfigVariant("none", "None", typeof(NoObjectiveRules))]
 public abstract class ObjectiveRules
 {
+    public virtual bool CanComplete => false;
+
     public abstract ObjectiveRulesSnapshot ToSnapshot();
 }
 

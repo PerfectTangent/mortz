@@ -48,6 +48,8 @@ public class MatchWinRecorderTests
 
         new MatchWinRecorder(runtime, wins).MatchUpdated(update, default);
 
+        Assert.Empty(transport.Messages);
+        wins.SendTo(winner.PeerId);
         SessionWinsMsg message = transport.Messages
             .Select(sent => sent.Message)
             .OfType<SessionWinsMsg>()
