@@ -36,6 +36,10 @@ project/assembly_name="Mortz"
 
 enabled=PackedStringArray("res://addons/anthonyec.camera_preview/plugin.cfg", "res://addons/asset_placer/plugin.cfg")
 
+[gui]
+
+theme/custom="res://src/Shared/UI/MortzTheme.tres"
+
 [input]
 
 move_left={
@@ -156,11 +160,3 @@ multiplayer_peer/max_channels=4
 [steam_server]
 
 initialization/embed_callbacks=false
-
-[autoload]
-
-
-
-[gui]
-
-theme/custom="res://src/Shared/UI/MortzTheme.tres"

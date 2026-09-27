@@ -1,10 +1,11 @@
 [gd_scene format=3 uid="uid://c1hboxabt4e4b"]
 
-[ext_resource type="Script" uid="uid://ca7dhedcdj2cq" path="res://src/Client/Menus/MainMenu.cs" id="1_menu"]
-[ext_resource type="Script" uid="uid://bingu8fm6o7on" path="res://src/Client/Menus/MainMenuAmbient/MenuBackdrop.cs" id="2_go2oq"]
-[ext_resource type="FontFile" uid="uid://tah7qwxd4iyq" path="res://Assets/Fonts/Metal_Mania/MetalMania-Regular.ttf" id="3_lt8ac"]
-[ext_resource type="PackedScene" uid="uid://dd6fbi60r5yiv" path="res://src/Shared/UI/Menus/ServerBrowser.tscn" id="4_browser"]
-[ext_resource type="PackedScene" uid="uid://b86jqbl2lr84v" path="res://src/Shared/UI/Menus/Settings.tscn" id="5_settings"]
+[ext_resource type="Script" uid="uid://ca7dhedcdj2cq" path="res://src/Client/Menus/MainMenu.cs" id="1_ldg5h"]
+[ext_resource type="Script" uid="uid://bingu8fm6o7on" path="res://src/Client/Menus/MainMenuAmbient/MenuBackdrop.cs" id="2_ni2vt"]
+[ext_resource type="FontFile" uid="uid://d0beohx8ly6m8" path="res://Assets/Fonts/Barlow_Condensed/BarlowCondensed-Black.ttf" id="3_0l28m"]
+[ext_resource type="FontFile" uid="uid://tah7qwxd4iyq" path="res://Assets/Fonts/Metal_Mania/MetalMania-Regular.ttf" id="4_bweax"]
+[ext_resource type="PackedScene" uid="uid://dd6fbi60r5yiv" path="res://src/Shared/UI/Menus/ServerBrowser.tscn" id="5_5r7pb"]
+[ext_resource type="PackedScene" uid="uid://b86jqbl2lr84v" path="res://src/Shared/UI/Menus/Settings.tscn" id="6_q4ni7"]
 
 [sub_resource type="Animation" id="Animation_duaim"]
 length = 0.001
@@ -52,7 +53,7 @@ grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-script = ExtResource("1_menu")
+script = ExtResource("1_ldg5h")
 _backdrop = NodePath("MenuBackdrop")
 _homePanel = NodePath("HomePanel")
 _browser = NodePath("ServerBrowser")
@@ -73,7 +74,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-script = ExtResource("2_go2oq")
+script = ExtResource("2_ni2vt")
 
 [node name="Fallback" type="ColorRect" parent="MenuBackdrop" unique_id=826732430]
 layout_mode = 1
@@ -105,7 +106,7 @@ theme_override_constants/separation = 12
 
 [node name="Title" type="Label" parent="MenuCenter/Menu/HostPanel" unique_id=1144463359]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("3_lt8ac")
+theme_override_fonts/font = ExtResource("3_0l28m")
 theme_override_font_sizes/font_size = 42
 text = "HOST GAME"
 horizontal_alignment = 1
@@ -189,7 +190,7 @@ size_flags_horizontal = 3
 
 [node name="Label" type="Label" parent="HomePanel/HBoxContainer/VBoxContainer" unique_id=1619911880]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("3_lt8ac")
+theme_override_fonts/font = ExtResource("4_bweax")
 theme_override_font_sizes/font_size = 150
 text = "Mortz"
 vertical_alignment = 1
@@ -225,11 +226,11 @@ text = "Settings"
 layout_mode = 2
 text = "Exit"
 
-[node name="ServerBrowser" parent="." unique_id=1204551103 instance=ExtResource("4_browser")]
+[node name="ServerBrowser" parent="." unique_id=1204551103 instance=ExtResource("5_5r7pb")]
 visible = false
 layout_mode = 1
 
-[node name="Settings" parent="." unique_id=1204551104 instance=ExtResource("5_settings")]
+[node name="Settings" parent="." unique_id=1204551104 instance=ExtResource("6_q4ni7")]
 visible = false
 layout_mode = 1
 

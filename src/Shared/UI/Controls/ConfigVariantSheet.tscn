@@ -1,12 +1,7 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://bokcp6yy8c68s"]
 
-[ext_resource type="Script" path="res://src/Client/Ui/ConfigVariantSheet.cs" id="1_4hdrv"]
-[ext_resource type="PackedScene" path="res://src/Shared/UI/Controls/UiPropertySheet.tscn" id="2_gvmw6"]
-[ext_resource type="Script" path="res://src/Client/Ui/UiPropertySheet.cs" id="3_xohxf"]
-[ext_resource type="PackedScene" path="res://src/Shared/UI/Controls/BoolPropertyControl.tscn" id="4_skhwh"]
-[ext_resource type="PackedScene" path="res://src/Shared/UI/Controls/IntPropertyControl.tscn" id="5_sdx0b"]
-[ext_resource type="PackedScene" path="res://src/Shared/UI/Controls/FloatPropertyControl.tscn" id="6_466ui"]
-[ext_resource type="PackedScene" path="res://src/Shared/UI/Controls/EnumPropertyControl.tscn" id="7_dy40j"]
+[ext_resource type="Script" uid="uid://dciahywbeimx4" path="res://src/Client/Ui/ConfigVariantSheet.cs" id="1_4hdrv"]
+[ext_resource type="PackedScene" uid="uid://pbne52ymu80j" path="res://src/Shared/UI/Controls/UiPropertySheet.tscn" id="2_gvmw6"]
 
 [node name="ConfigVariantSheet" type="VBoxContainer" unique_id=529084953 node_paths=PackedStringArray("_variant", "_properties")]
 offset_right = 420.0
@@ -18,8 +13,8 @@ _properties = NodePath("Properties")
 
 [node name="Heading" type="Label" parent="." unique_id=1575485970]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
 theme_override_colors/font_color = Color(0.796078, 0.835294, 0.882353, 1)
+theme_override_font_sizes/font_size = 18
 text = "Victory"
 
 [node name="Separator" type="HSeparator" parent="." unique_id=958400881]
@@ -40,19 +35,15 @@ vertical_alignment = 1
 custom_minimum_size = Vector2(190, 0)
 layout_mode = 2
 selected = 0
-item_count = 3
+item_count = 4
 popup/item_0/text = "Score Target"
 popup/item_0/id = 0
 popup/item_1/text = "Score Lead"
 popup/item_1/id = 1
 popup/item_2/text = "Time Limit"
 popup/item_2/id = 2
+popup/item_3/text = "Objective Completion"
+popup/item_3/id = 3
 
-[node name="Properties" type="VBoxContainer" parent="." unique_id=2001500915 instance=ExtResource("2_gvmw6")]
+[node name="Properties" parent="." unique_id=2001500915 instance=ExtResource("2_gvmw6")]
 layout_mode = 2
-theme_override_constants/separation = 12
-script = ExtResource("3_xohxf")
-_boolControl = ExtResource("4_skhwh")
-_intControl = ExtResource("5_sdx0b")
-_floatControl = ExtResource("6_466ui")
-_enumControl = ExtResource("7_dy40j")

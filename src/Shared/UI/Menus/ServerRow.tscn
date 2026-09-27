@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bfovuxg8rq0rd"]
 
-[ext_resource type="Theme" path="res://src/Shared/UI/MortzTheme.tres" id="1_5v0ek"]
+[ext_resource type="Theme" uid="uid://cea8tllh57njo" path="res://src/Shared/UI/MortzTheme.tres" id="1_5v0ek"]
 [ext_resource type="Script" uid="uid://bpnu4veoebvmx" path="res://src/Client/Menus/ServerRow.cs" id="1_row"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_normal"]
@@ -88,8 +88,8 @@ clip_text = true
 
 [node name="Detail" type="Label" parent="Margin/Row/Text" unique_id=1609194355]
 layout_mode = 2
-theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.62, 0.62, 0.65, 1)
+theme_override_font_sizes/font_size = 13
 text = "address - status"
 clip_text = true
 

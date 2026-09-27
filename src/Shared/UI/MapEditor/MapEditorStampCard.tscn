@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://clqg7w7pqgt6k"]
 
 [ext_resource type="Script" uid="uid://dhfqr6csaoaqq" path="res://src/Client/MapEditor/MapEditorStampCard.cs" id="1_s5n6u"]
-[ext_resource type="PackedScene" path="res://src/Shared/UI/MapEditor/MapEditorStampPreview.tscn" id="2_preview"]
+[ext_resource type="PackedScene" uid="uid://bk4tf4qidf6gj" path="res://src/Shared/UI/MapEditor/MapEditorStampPreview.tscn" id="2_preview"]
 
 [node name="StampCard" type="Button" unique_id=1170640696 node_paths=PackedStringArray("_preview", "_nameLabel", "_detailLabel", "_deleteButton")]
 custom_minimum_size = Vector2(180, 128)

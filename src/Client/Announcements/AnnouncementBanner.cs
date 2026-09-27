@@ -1,8 +1,8 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
+using Godot.Collections;
 using Mortz.Client.Ui;
-using Mortz.Core.Match;
 using Mortz.Core.Match.Events;
 using Mortz.Core.Match.Teams;
 using Mortz.Core.Text;
@@ -19,18 +19,21 @@ public partial class AnnouncementBanner : Control
     [Export] private int _maxLines = 2;
 
     // Newest line sits on top; pushed-down lines dim.
-    [Export] private float[] _tierBrightness = [1f, 0.6f];
-
-    // Pixel sizes behind TextScale.
-    [Export] private int[] _scalePixels = [16, 21, 28, 38, 50];
+    [Export] private float[] _tierBrightness = [1f, 0.82f];
 
     [Export] private RichTextLabel _matchPoint = null!;
     [Export] private VBoxContainer _lines = null!;
+    [Export] private PackedScene _lineScene = null!;
+    [Export] private float _lineWidth = 400f;
+
+    private float LineWidth => Math.Min(_lineWidth, Math.Max(1f, Size.X - 32f));
 
     [Dependency]
     private IAnnouncementDirector Director => this.DependOn<IAnnouncementDirector>();
 
     public override void _Notification(int what) => this.Notify(what);
+
+    public void OnReady() => Resized += FitLines;
 
     public void OnResolved()
     {
@@ -52,7 +55,7 @@ public partial class AnnouncementBanner : Control
         // Reversed so the highest-priority line lands on top.
         for (int i = batch.Count - 1; i >= 0; i--)
         {
-            if (Compose(batch[i]) is RichText line)
+            if (Compose(batch[i]) is Headline line)
                 AddLine(line);
         }
     }
@@ -62,11 +65,7 @@ public partial class AnnouncementBanner : Control
         _matchPoint.Visible = state != null;
         if (state is not MatchPointState held)
             return;
-        _matchPoint.Text = MatchPointLine(held)
-            .Wrap(new Style()
-                .Pulse(2f, RichTextColor.WHITE, 0.31f, -2f)
-                .Color(RichTextColor.BLOOD_RED)
-                .Center());
+        _matchPoint.Text = MatchPointLine(held).Wrap(new Style().Center());
     }
 
     private static RichText MatchPointLine(MatchPointState mp)
@@ -80,122 +79,51 @@ public partial class AnnouncementBanner : Control
     }
 
     /// <summary>Null for the kinds the banner stays quiet on.</summary>
-    private RichText? Compose(Announcement a) => a.Kind switch
+    private static Headline? Compose(Announcement a) => a.Kind switch
     {
-        GameEventKind.FIRST_BLOOD => BuildFirstBlood(a),
-        GameEventKind.HOLY_SHIT => BuildHolyShit(a),
+        GameEventKind.FIRST_BLOOD => new Headline("FIRST BLOOD", Player(a.Actor), "AnnouncementFirstBlood"),
+        GameEventKind.HOLY_SHIT => new Headline("HOLY SHIT!",
+            BuildDetail(a, Vocab.MultiKillTier(a.Magnitude).Loud), "AnnouncementHolyShit"),
         GameEventKind.MULTI_KILL => BuildMultiKill(a),
         GameEventKind.KILL_STREAK => BuildKillStreak(a),
-        GameEventKind.SHUTDOWN => Player(a.Actor)
-            .Add(" ")
-            .Add("SHUT DOWN", Loud(TextScale.S)
-                .Color(RichTextColor.ICE)
-                .Pulse(2.5f, RichTextColor.WHITE, 0.38f, -2f))
-            .Add(" ")
-            .Add(Player(a.Victim))
-            .Add("!")
-            .Wrap(Base(TextScale.S)),
-        GameEventKind.HUMILIATION => Player(a.Actor)
-            .Add(" ")
-            .Add("OWNED", Loud(TextScale.S))
-            .Add(" ")
-            .Add(Player(a.Victim))
-            .Wrap(Base(TextScale.S).Color(RichTextColor.ORCHID).Tornado(6f, 4f)),
-        GameEventKind.TEAM_WIPE => Player(a.Actor)
-            .Add(" got a ")
-            .Add("RAMPAGE", Loud(TextScale.S))
-            .Add("!")
-            .Wrap(Base(TextScale.S).Color(RichTextColor.FLAME)),
-        _ => null,
+        GameEventKind.SHUTDOWN => new Headline("SHUT DOWN",
+            Player(a.Actor).Add(" ended ").Add(Player(a.Victim)).Add("'s streak"), "AnnouncementShutdown"),
+        GameEventKind.HUMILIATION => new Headline("OWNED",
+            new RichText("by ").Add(Player(a.Actor)), "AnnouncementOwned", Player(a.Victim)),
+        GameEventKind.TEAM_WIPE => new Headline("RAMPAGE", Player(a.Actor), "AnnouncementRampage"),
+        _ => null
     };
 
-    private RichText BuildFirstBlood(Announcement a) => Player(a.Actor)
-        .Add(" spilled ")
-        .Add("FIRST BLOOD", Loud(TextScale.M)
-            .Color(RichTextColor.BLOOD_RED)
-            .Pulse(1.5f, RichTextColor.WHITE, 0.25f, -2f))
-        .Add("!")
-        .Wrap(Base(TextScale.S));
-
-    private RichText BuildHolyShit(Announcement a)
+    private static Headline BuildMultiKill(Announcement a)
     {
         MultiKillWording tier = Vocab.MultiKillTier(a.Magnitude);
-        return new RichText()
-            .Add("HOLY SHIT!", new Style()
-                .Wave(24f, 6f)
-                .Color(RichTextColor.BLACK)
-                .FontSize(Pixels(TextScale.L)))
-            .Add(" ")
-            .Add(tier.Loud, MultiKillLoud(tier))
-            .Add(" by ")
-            .Add(Player(a.Actor))
-            .Add("!")
-            .Wrap(Base(TextScale.M));
+        return new Headline(tier.Loud, Player(a.Actor),
+            _multiKillThemes[tier.Heat]);
     }
 
-    private RichText BuildMultiKill(Announcement a)
-    {
-        MultiKillWording tier = Vocab.MultiKillTier(a.Magnitude);
-        return Player(a.Actor)
-            .Add($" {tier.Link} ")
-            .Add(tier.Loud, MultiKillLoud(tier))
-            .Add("!")
-            .Wrap(Base(TextScale.M));
-    }
-
-    private RichText BuildKillStreak(Announcement a)
+    private static Headline BuildKillStreak(Announcement a)
     {
         StreakWording tier = Vocab.StreakTier(a.Magnitude);
-        return Player(a.Actor)
-            .Add($" {tier.StreakVerb} ")
-            .Add(tier.StreakName, StreakLoud(tier))
-            .Add("!")
-            .Wrap(Base(TextScale.XS));
+        return new Headline(tier.StreakName, BuildDetail(a, $"{a.Magnitude} KILLS"),
+            _streakThemes[tier.Heat]);
     }
 
-    // Heat ramps the loud word toward white-hot; effects join at the top tiers.
-    private static readonly RichTextColor[] _multiKillHeatColors =
+    private static readonly StringName[] _multiKillThemes =
     [
-        RichTextColor.GOLD, RichTextColor.AMBER, RichTextColor.EMBER,
-        RichTextColor.VERMILION, RichTextColor.SCARLET, RichTextColor.WHITE_HOT,
+        "AnnouncementDoubleKill", "AnnouncementTripleKill", "AnnouncementOverkill",
+        "AnnouncementUltraKill", "AnnouncementMassacre", "AnnouncementCarnage"
     ];
 
-    private static readonly RichTextColor[] _streakHeatColors =
+    private static readonly StringName[] _streakThemes =
     [
-        RichTextColor.MOSS, RichTextColor.VENOM, RichTextColor.ACID,
-        RichTextColor.ELECTRIC_LIME, RichTextColor.WHITE_HOT,
+        "AnnouncementBloodlust", "AnnouncementPunishment", "AnnouncementDominating",
+        "AnnouncementMachineGod", "AnnouncementPsycho"
     ];
 
-    private Style MultiKillLoud(MultiKillWording tier)
-    {
-        Style loud = Loud(TextScale.M).Color(_multiKillHeatColors[tier.Heat]);
-        if (tier.Heat >= 4)
-            loud.Shake(20f, 12);
-        if (tier.Heat >= 5)
-            loud.Pulse(2.5f, RichTextColor.SCARLET, 0.69f, -2f);
-        else if (tier.Heat >= 3)
-            loud.Pulse(2.5f, RichTextColor.WHITE, 0.38f, -2f);
-        return loud;
-    }
+    private record Headline(string Title, RichText Detail, StringName ThemeVariation, RichText? Victim = null);
 
-    private Style StreakLoud(StreakWording tier)
-    {
-        Style loud = Loud(TextScale.S).Color(_streakHeatColors[tier.Heat]);
-        if (tier.Heat >= 3)
-            loud.Shake(20f, 12);
-        if (tier.Heat >= 4)
-            loud.Pulse(2.5f, RichTextColor.ACID, 0.69f, -2f);
-        else if (tier.Heat >= 2)
-            loud.Pulse(2.5f, RichTextColor.WHITE, 0.38f, -2f);
-        return loud;
-    }
-
-    private Style Base(TextScale scale) => new Style().FontSize(Pixels(scale));
-
-    private Style Loud(TextScale baseScale) => new Style().Bold().FontSize(Pixels(baseScale + 2));
-
-    private int Pixels(TextScale scale) =>
-        _scalePixels[Math.Min((int)scale, _scalePixels.Length - 1)];
+    private static RichText BuildDetail(Announcement a, string caption) =>
+        Player(a.Actor).Add("  -  ").Add(caption);
 
     private static RichText Player(Combatant p) => new RichText().Add(p.Name, NameStyle(p));
 
@@ -203,24 +131,20 @@ public partial class AnnouncementBanner : Control
 
     private static Style NameStyle(Team? team)
     {
-        Style style = new Style().Bold();
+        Style style = new Style();
         if (team is Team assigned)
             style.Color(TeamColors.For(assigned));
         return style;
     }
 
-    private void AddLine(RichText text)
+    private void AddLine(Headline text)
     {
-        RichTextLabel line = new()
-        {
-            BbcodeEnabled = true,
-            FitContent = true,
-            ScrollActive = false,
-            MouseFilter = MouseFilterEnum.Ignore,
-            Text = text.Wrap(new Style().Center())
-        };
+        AnnouncementLine line = _lineScene.Instantiate<AnnouncementLine>();
+        line.CustomMinimumSize = new Vector2(LineWidth, 0);
         _lines.AddChild(line);
         _lines.MoveChild(line, 0);
+
+        line.Present(text.Title, text.Detail, text.ThemeVariation, text.Victim);
 
         Tween tween = line.CreateTween();
         tween.TweenInterval(_lineSeconds);
@@ -231,9 +155,18 @@ public partial class AnnouncementBanner : Control
         Restyle();
     }
 
+    private void FitLines()
+    {
+        foreach (Node child in _lines.GetChildren())
+        {
+            if (child is Control line && !line.IsQueuedForDeletion())
+                line.CustomMinimumSize = new Vector2(LineWidth, 0);
+        }
+    }
+
     private void TrimOverflow()
     {
-        Godot.Collections.Array<Node> children = _lines.GetChildren();
+        Array<Node> children = _lines.GetChildren();
         if (children.Count(c => !c.IsQueuedForDeletion()) <= _maxLines)
             return;
         for (int i = children.Count - 1; i >= 0; i--)
@@ -252,10 +185,10 @@ public partial class AnnouncementBanner : Control
         {
             if (child.IsQueuedForDeletion())
                 continue;
-            var line = (RichTextLabel)child;
+            var line = (Control)child;
             int tier = Math.Min(index, _tierBrightness.Length - 1);
             float brightness = _tierBrightness[tier];
-            line.SelfModulate = new Color(brightness, brightness, brightness);
+            line.Modulate = new Color(brightness, brightness, brightness, line.Modulate.A);
             index++;
         }
     }

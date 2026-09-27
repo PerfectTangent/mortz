@@ -1,0 +1,63 @@
+[gd_scene format=3 uid="uid://cun6oekgj6vbp"]
+
+[ext_resource type="Script" uid="uid://c86yube775cam" path="res://src/Client/Announcements/OwnedAnnouncementTitle.cs" id="1_q2d14"]
+[ext_resource type="Shader" uid="uid://cire5jaaddxtx" path="res://Assets/Ui/Announcements/humiliation_slash.gdshader" id="2_q2d14"]
+[ext_resource type="Shader" uid="uid://spf5r7c07scy" path="res://Assets/Ui/Announcements/stamped_ink.gdshader" id="3_c1cv0"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_mbxm3"]
+shader = ExtResource("2_q2d14")
+shader_parameter/progress = 1.0
+shader_parameter/seed = 12.0
+shader_parameter/area_size = Vector2(160, 22)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_udfm8"]
+shader = ExtResource("3_c1cv0")
+shader_parameter/seed = 12.0
+shader_parameter/blood_stain = 0.0
+shader_parameter/blood_color = Color(0.8, 0.2, 0.12, 1)
+
+[node name="OwnedAnnouncementTitle" type="Control" unique_id=148862491 node_paths=PackedStringArray("_victim", "_slash", "_ink")]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 400.0
+offset_bottom = 52.0
+mouse_filter = 2
+script = ExtResource("1_q2d14")
+_victim = NodePath("Victim")
+_slash = NodePath("Slash")
+_ink = NodePath("Ink")
+
+[node name="Victim" type="RichTextLabel" parent="." unique_id=1403682320]
+layout_mode = 0
+offset_right = 400.0
+offset_bottom = 22.0
+mouse_filter = 2
+theme_type_variation = &"AnnouncementOwnedVictim"
+bbcode_enabled = true
+text = "[center]Player 2[/center]"
+fit_content = true
+scroll_active = false
+
+[node name="Slash" type="ColorRect" parent="." unique_id=1035040799]
+material = SubResource("ShaderMaterial_mbxm3")
+layout_mode = 0
+offset_left = 160.0
+offset_right = 240.0
+offset_bottom = 22.0
+mouse_filter = 2
+color = Color(0.75686276, 0.19607843, 0.13333334, 1)
+
+[node name="Ink" type="Label" parent="." unique_id=903832792]
+material = SubResource("ShaderMaterial_udfm8")
+layout_mode = 0
+offset_top = 12.0
+offset_right = 400.0
+offset_bottom = 52.0
+rotation = -0.13962634
+pivot_offset = Vector2(200, 20)
+theme_type_variation = &"AnnouncementOwned"
+text = "OWNED"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true

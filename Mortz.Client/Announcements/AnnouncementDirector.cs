@@ -13,8 +13,8 @@ namespace Mortz.Client.Announcements;
 public class AnnouncementDirector : IAnnouncementDirector, IHandle<GameEventMsg>,
     IClientFrameFeature, IDisposable
 {
-    private readonly ClientPlayers Players;
-    private readonly ClientMatchState MatchState;
+    private readonly ClientPlayers _players;
+    private readonly ClientMatchState _matchState;
     private bool _closed;
 
     private readonly List<GameEventMsg> _pending = new();
@@ -27,24 +27,24 @@ public class AnnouncementDirector : IAnnouncementDirector, IHandle<GameEventMsg>
 
     public AnnouncementDirector(ClientPlayers players, ClientMatchState matchState)
     {
-        Players = players;
-        MatchState = matchState;
-        MatchState.MatchPointChanged += OnMatchPointChanged;
-        OnMatchPointChanged(MatchState.MatchPoint);
+        _players = players;
+        _matchState = matchState;
+        _matchState.MatchPointChanged += OnMatchPointChanged;
+        OnMatchPointChanged(_matchState.MatchPoint);
     }
 
     public void Dispose()
     {
         _closed = true;
         _pending.Clear();
-        MatchState.MatchPointChanged -= OnMatchPointChanged;
+        _matchState.MatchPointChanged -= OnMatchPointChanged;
     }
 
     public void Advance(float delta)
     {
         if (_closed || _pending.Count == 0)
             return;
-        Announcement[] batch = Describe(_pending, Players.NameOf, Players.TeamOf);
+        Announcement[] batch = Describe(_pending, _players.NameOf, _players.TeamOf);
         _pending.Clear();
         BatchReady?.Invoke(batch);
     }
@@ -57,7 +57,7 @@ public class AnnouncementDirector : IAnnouncementDirector, IHandle<GameEventMsg>
 
     private void OnMatchPointChanged(MatchPoint? state)
     {
-        MatchPoint = state is MatchPoint held ? Describe(held, Players.NameOf, Players.TeamOf) : null;
+        MatchPoint = state is MatchPoint held ? Describe(held, _players.NameOf, _players.TeamOf) : null;
         MatchPointChanged?.Invoke(MatchPoint);
     }
 

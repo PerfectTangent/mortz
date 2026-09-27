@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bxjeqfdo1sml8"]
 
-[ext_resource type="Script" uid="uid://bittit1m6m76" path="res://src/Client/MapEditor/MapEditorFlowHud.cs" id="1_flow_hud"]
-[ext_resource type="FontFile" uid="uid://tah7qwxd4iyq" path="res://Assets/Fonts/Metal_Mania/MetalMania-Regular.ttf" id="2_font"]
+[ext_resource type="Script" uid="uid://bittit1m6m76" path="res://src/Client/MapEditor/MapEditorFlowHud.cs" id="1_udqtr"]
+[ext_resource type="FontFile" uid="uid://d0beohx8ly6m8" path="res://Assets/Fonts/Barlow_Condensed/BarlowCondensed-Black.ttf" id="2_dsn36"]
 
 [node name="MapEditorFlowHud" type="Control" unique_id=1416404324 node_paths=PackedStringArray("_packScreen", "_mapScreen", "_packRows", "_mapRows", "_packEmpty", "_mapEmpty", "_mapTitle", "_mapHint", "_status", "_createPackDialog", "_packName", "_packId", "_createMapDialog", "_mapName", "_mapId", "_mapWidth", "_mapHeight", "_suggestedPlayers")]
 layout_mode = 3
@@ -10,7 +10,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_flow_hud")
+script = ExtResource("1_udqtr")
 _packScreen = NodePath("PackScreen")
 _mapScreen = NodePath("MapScreen")
 _packRows = NodePath("PackScreen/Margin/Column/Scroll/Rows")
@@ -66,7 +66,7 @@ theme_override_constants/separation = 12
 
 [node name="Title" type="Label" parent="PackScreen/Margin/Column" unique_id=1051850615]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("2_font")
+theme_override_fonts/font = ExtResource("2_dsn36")
 theme_override_font_sizes/font_size = 42
 text = "CONTENT PACKS"
 
@@ -137,7 +137,7 @@ theme_override_constants/separation = 12
 
 [node name="Title" type="Label" parent="MapScreen/Margin/Column" unique_id=1982256981]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("2_font")
+theme_override_fonts/font = ExtResource("2_dsn36")
 theme_override_font_sizes/font_size = 42
 text = "MAPS"
 

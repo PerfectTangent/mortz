@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://d4e5uxg8yueq"]
 
-[ext_resource type="Script" path="res://src/Client/Menus/LobbySettingsPanel.cs" id="1"]
-[ext_resource type="PackedScene" path="res://src/Shared/UI/Controls/UiPropertySheet.tscn" id="2"]
-[ext_resource type="PackedScene" path="res://src/Shared/UI/Controls/ConfigVariantSheet.tscn" id="2_wc76u"]
+[ext_resource type="Script" uid="uid://ccv87mfb0uwoq" path="res://src/Client/Menus/LobbySettingsPanel.cs" id="1"]
+[ext_resource type="PackedScene" uid="uid://pbne52ymu80j" path="res://src/Shared/UI/Controls/UiPropertySheet.tscn" id="2"]
+[ext_resource type="PackedScene" uid="uid://bokcp6yy8c68s" path="res://src/Shared/UI/Controls/ConfigVariantSheet.tscn" id="2_wc76u"]
 
 [node name="LobbySettingsPanel" type="PanelContainer" unique_id=289524066 node_paths=PackedStringArray("_modePicker", "_mapPicker", "_mapPreview", "_mapStatus", "_rulesSheet", "_victoryRulesSheet", "_objectiveRulesSheet", "_respawnRulesSheet", "_physicsSheet", "_combatSheet")]
 custom_minimum_size = Vector2(440, 0)
@@ -46,8 +46,8 @@ theme_override_constants/separation = 7
 
 [node name="SetupTitle" type="Label" parent="Margin/Column/Header/MapInfo" unique_id=406979141]
 layout_mode = 2
-theme_override_font_sizes/font_size = 27
 theme_override_colors/font_color = Color(0.886, 0.925, 0.973, 1)
+theme_override_font_sizes/font_size = 27
 text = "MATCH SETUP"
 
 [node name="ModeTitle" type="Label" parent="Margin/Column/Header/MapInfo" unique_id=1734920581]
@@ -98,8 +98,8 @@ layout_mode = 2
 [node name="SettingsTitle" type="Label" parent="Margin/Column/SettingsHeader" unique_id=1452904282]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(0.886, 0.925, 0.973, 1)
+theme_override_font_sizes/font_size = 22
 text = "MATCH SETTINGS"
 
 [node name="SettingsTabs" type="TabContainer" parent="Margin/Column" unique_id=354916062]
@@ -131,6 +131,10 @@ text = "Objective"
 [node name="Label" parent="Margin/Column/SettingsTabs/Rules/Sheets/ObjectiveRulesSheet/Variant" parent_id_path=PackedInt32Array(477082097, 543611745) index="0" unique_id=1851709228]
 text = "Objective"
 
+[node name="Value" parent="Margin/Column/SettingsTabs/Rules/Sheets/ObjectiveRulesSheet/Variant" parent_id_path=PackedInt32Array(477082097, 543611745) index="1" unique_id=860994235]
+item_count = 1
+popup/item_0/text = "None"
+
 [node name="RespawnRulesSheet" parent="Margin/Column/SettingsTabs/Rules/Sheets" unique_id=1401620205 instance=ExtResource("2_wc76u")]
 layout_mode = 2
 Family = 2
@@ -140,6 +144,11 @@ text = "Respawn"
 
 [node name="Label" parent="Margin/Column/SettingsTabs/Rules/Sheets/RespawnRulesSheet/Variant" parent_id_path=PackedInt32Array(1401620205, 543611745) index="0" unique_id=1851709228]
 text = "Respawn"
+
+[node name="Value" parent="Margin/Column/SettingsTabs/Rules/Sheets/RespawnRulesSheet/Variant" parent_id_path=PackedInt32Array(1401620205, 543611745) index="1" unique_id=860994235]
+item_count = 2
+popup/item_0/text = "Fixed"
+popup/item_1/text = "None"
 
 [node name="RulesSheet" parent="Margin/Column/SettingsTabs/Rules/Sheets" unique_id=995309611 instance=ExtResource("2")]
 layout_mode = 2

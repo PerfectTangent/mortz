@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://b86jqbl2lr84v"]
 
-[ext_resource type="Script" uid="uid://c8gie3xcpplkw" path="res://src/Client/Menus/SettingsScreen.cs" id="1_settings"]
-[ext_resource type="FontFile" uid="uid://tah7qwxd4iyq" path="res://Assets/Fonts/Metal_Mania/MetalMania-Regular.ttf" id="2_font"]
-[ext_resource type="Texture2D" uid="uid://bixaxn83876w6" path="res://Assets/ScifiCritters4.PNG" id="3_skins"]
+[ext_resource type="Script" uid="uid://c8gie3xcpplkw" path="res://src/Client/Menus/SettingsScreen.cs" id="1_vv0nd"]
+[ext_resource type="Texture2D" uid="uid://bixaxn83876w6" path="res://Assets/ScifiCritters4.PNG" id="2_tc3nx"]
+[ext_resource type="FontFile" uid="uid://d0beohx8ly6m8" path="res://Assets/Fonts/Barlow_Condensed/BarlowCondensed-Black.ttf" id="3_mmid4"]
 
 [node name="Settings" type="Control" unique_id=1644661506 node_paths=PackedStringArray("_playerNameEdit", "_skinPreview", "_skinPosition", "_status")]
 layout_mode = 3
@@ -11,11 +11,11 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_settings")
+script = ExtResource("1_vv0nd")
 _playerNameEdit = NodePath("Center/Panel/Margin/Column/PlayerNameEdit")
 _skinPreview = NodePath("Center/Panel/Margin/Column/SkinPicker/PreviewPanel/PreviewMargin/SkinPreview")
 _skinPosition = NodePath("Center/Panel/Margin/Column/SkinPosition")
-_skinSheet = ExtResource("3_skins")
+_skinSheet = ExtResource("2_tc3nx")
 _status = NodePath("Center/Panel/Margin/Column/Status")
 
 [node name="Background" type="ColorRect" parent="." unique_id=1541445504]
@@ -53,7 +53,7 @@ theme_override_constants/separation = 12
 
 [node name="Title" type="Label" parent="Center/Panel/Margin/Column" unique_id=1535745843]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("2_font")
+theme_override_fonts/font = ExtResource("3_mmid4")
 theme_override_font_sizes/font_size = 42
 text = "SETTINGS"
 horizontal_alignment = 1

@@ -1,13 +1,7 @@
 [gd_scene format=3 uid="uid://bkx20bfq77ejk"]
 
 [ext_resource type="Script" uid="uid://wj2mcsbosk7g" path="res://src/Client/Announcements/AnnouncementBanner.cs" id="1_banner"]
-
-[sub_resource type="Theme" id="Theme_lines"]
-RichTextLabel/colors/font_outline_color = Color(0.08, 0.06, 0.1, 1)
-RichTextLabel/colors/font_shadow_color = Color(0, 0, 0, 0.45)
-RichTextLabel/constants/outline_size = 8
-RichTextLabel/constants/shadow_offset_x = 0
-RichTextLabel/constants/shadow_offset_y = 4
+[ext_resource type="PackedScene" path="res://src/Shared/UI/Hud/AnnouncementLine.tscn" id="2_d3lcr"]
 
 [node name="AnnouncementBanner" type="Control" unique_id=1379281400 node_paths=PackedStringArray("_matchPoint", "_lines")]
 layout_mode = 3
@@ -20,16 +14,17 @@ mouse_filter = 2
 script = ExtResource("1_banner")
 _matchPoint = NodePath("MatchPoint")
 _lines = NodePath("Lines")
+_lineScene = ExtResource("2_d3lcr")
 
 [node name="MatchPoint" type="RichTextLabel" parent="." unique_id=351443301]
 visible = false
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 36.0
+offset_top = 20.0
 grow_horizontal = 2
 mouse_filter = 2
-theme_override_font_sizes/normal_font_size = 26
+theme_type_variation = &"AnnouncementMatchPoint"
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
@@ -38,6 +33,7 @@ scroll_active = false
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 76.0
+offset_top = 52.0
 grow_horizontal = 2
-theme = SubResource("Theme_lines")
+mouse_filter = 2
+theme_type_variation = &"AnnouncementStack"

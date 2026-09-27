@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://oqlp4dycn1yy" path="res://src/Client/Menus/ServerBrowser.cs" id="1_5oah7"]
 [ext_resource type="PackedScene" uid="uid://bfovuxg8rq0rd" path="res://src/Shared/UI/Menus/ServerRow.tscn" id="2_xfrap"]
-[ext_resource type="FontFile" uid="uid://tah7qwxd4iyq" path="res://Assets/Fonts/Metal_Mania/MetalMania-Regular.ttf" id="3_ujx05"]
+[ext_resource type="FontFile" uid="uid://d0beohx8ly6m8" path="res://Assets/Fonts/Barlow_Condensed/BarlowCondensed-Black.ttf" id="3_ujx05"]
 [ext_resource type="PackedScene" uid="uid://i48m8fxwjjq1" path="res://src/Shared/UI/Menus/DirectConnectPanel.tscn" id="4_0rl6n"]
 
 [node name="ServerBrowser" type="Control" unique_id=381885011 node_paths=PackedStringArray("_rows", "_status", "_joinButton", "_favoriteButton", "_directPanel")]
