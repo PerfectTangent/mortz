@@ -1,0 +1,86 @@
+name = "Control Bay"
+suggested_players = 8
+[[spawn_points]]
+x = 752
+y = 320
+team = "blue"
+[[spawn_points]]
+x = 824
+y = 320
+team = "blue"
+[[spawn_points]]
+x = 208
+y = 448
+team = "blue"
+[[spawn_points]]
+x = 312
+y = 448
+team = "blue"
+[[spawn_points]]
+x = 1168
+y = 320
+team = "red"
+[[spawn_points]]
+x = 1232
+y = 320
+team = "red"
+[[spawn_points]]
+x = 1680
+y = 448
+team = "red"
+[[spawn_points]]
+x = 1752
+y = 448
+team = "red"
+[[zones]]
+name = "accel"
+tags = []
+[zones.shape]
+type = "rect"
+x = 864
+y = 920
+width = 216
+height = 96
+rotation = 0.0
+[[zones.effects]]
+stat = "mortar_gravity"
+op = "mul"
+value = 0.0
+[[zones.effects]]
+stat = "dash_speed"
+op = "mul"
+value = 2.0
+[[zones.effects]]
+stat = "ground_friction"
+op = "mul"
+value = 0.200000003
+[[zones]]
+name = "zone-1"
+tags = []
+[zones.shape]
+type = "rect"
+x = 608
+y = 768
+width = 728
+height = 576
+rotation = 0.0
+[[zones]]
+name = "zone-2"
+tags = []
+[zones.shape]
+type = "rect"
+x = 96
+y = 968
+width = 512
+height = 384
+rotation = 0.0
+[[zones]]
+name = "control-3"
+tags = ["control"]
+[zones.shape]
+type = "rect"
+x = 1336
+y = 968
+width = 520
+height = 376
+rotation = 0.0
