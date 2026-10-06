@@ -1,3 +1,4 @@
+using Mortz.Core.Match.Objectives;
 using Mortz.Core.Sim;
 using Mortz.Protocol.Net;
 
@@ -6,11 +7,12 @@ namespace Mortz.Protocol.Replication;
 /// <summary>Fixed binary layout for the outer match snapshot.</summary>
 public static class MatchSnapshotWire
 {
-    public static byte[] Serialize(MatchSnapshot snapshot, int? localPeerId) =>
-        PacketEncoder.Encode(snapshot, localPeerId, Write);
+    public static byte[] Serialize(MatchSnapshot snapshot, int? localPeerId, ObjectiveSnapshotCodec? codec = null) =>
+        PacketEncoder.Encode(snapshot, (localPeerId, codec ?? ObjectiveSnapshotCodec.None), Write);
 
-    private static void Write(ref PacketWriter writer, MatchSnapshot snapshot, int? localPeerId)
+    private static void Write(ref PacketWriter writer, MatchSnapshot snapshot, (int? Peer, ObjectiveSnapshotCodec Codec) options)
     {
+        int? localPeerId = options.Peer;
         writer.Write(snapshot.Generation);
         writer.Write(snapshot.RosterRevision);
         SnapshotWire.WritePlayersHeader(ref writer, snapshot.Tick, snapshot.Players.Length, localPeerId != null);
@@ -26,9 +28,10 @@ public static class MatchSnapshotWire
             writer.Write(player.Presentation.IsBleeding);
             writer.Write(player.Skin);
         }
+        options.Codec.Write(ref writer, snapshot.Objective);
     }
 
-    public static MatchSnapshot Deserialize(byte[] data, IPeerSlots? slots)
+    public static MatchSnapshot Deserialize(byte[] data, IPeerSlots? slots, ObjectiveSnapshotCodec? codec = null)
     {
         using MemoryStream stream = new(data, writable: false);
         using BinaryReader reader = new(stream);
@@ -42,9 +45,10 @@ public static class MatchSnapshotWire
                 simulationPlayers[i],
                 ReadPresentation(reader), Skin: reader.ReadByte());
         }
+        ObjectiveState objective = (codec ?? ObjectiveSnapshotCodec.None).Read(reader);
         if (stream.Position != stream.Length)
             throw new InvalidDataException("Trailing bytes in match snapshot.");
-        return new MatchSnapshot(tick, players, generation, revision);
+        return new MatchSnapshot(tick, players, generation, revision) { Objective = objective };
     }
 
     private static PlayerPresentationState ReadPresentation(BinaryReader reader)

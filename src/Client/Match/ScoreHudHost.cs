@@ -3,6 +3,7 @@ using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Setup;
 using Mortz.Client.Ui;
+using Mortz.Core.Match.Configuration;
 
 namespace Mortz.Client.Match;
 
@@ -22,21 +23,30 @@ public partial class ScoreHudHost : ViewVariantHost<ScoreHudKind>
 
     public void OnResolved()
     {
-        Setup.TeamsChanged += Refresh;
+        Setup.ConfigChanged += RefreshScores;
         _subscribed = true;
-        Refresh();
+        RefreshScores();
     }
 
     public void OnExitTree()
     {
         if (!_subscribed)
             return;
-        Setup.TeamsChanged -= Refresh;
+        Setup.ConfigChanged -= RefreshScores;
         _subscribed = false;
     }
 
     protected override ScoreHudKind CurrentKey() =>
         Setup.Config.Rules.Teams ? ScoreHudKind.TEAM_KILLS : ScoreHudKind.PLAYER_KILLS;
+
+    private void RefreshScores()
+    {
+        Visible = Setup.Config.Rules.Objective is not DeadlockObjectiveRules;
+        if (Visible)
+        {
+            Refresh();
+        }
+    }
 
     protected override PackedScene SceneFor(ScoreHudKind key) =>
         key == ScoreHudKind.TEAM_KILLS ? _teamKills : _playerKills;

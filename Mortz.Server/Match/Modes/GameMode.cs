@@ -2,6 +2,7 @@ using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Sim;
+using Mortz.Core.Sim.Modifiers;
 using Mortz.Server.Match.Scoring;
 
 namespace Mortz.Server.Match.Modes;
@@ -19,10 +20,11 @@ public class GameMode(
 
     public ObjectiveState Objective => _objective.State;
 
-    public static GameMode Create(ModeRulesSnapshot rules, IMatchObjective? objective = null) => new(
+    public static GameMode Create(ModeRulesSnapshot rules, IMatchObjective? objective = null,
+        MapZones? zones = null) => new(
         ScoreSources.Create(rules.Score), EndCondition.Create(rules.EndCondition.ToMutable()),
         WinnerSelections.Create(rules.Winner), rules.Evaluation, ReplayPolicies.Create(rules.Replay),
-        objective ?? MatchObjectives.Create(rules.Objective));
+        objective ?? MatchObjectives.Create(rules.Objective, zones ?? MapZones.None));
 
     public GameModeUpdate Advance(MatchContext match, ScoringStep scoring, IReadOnlyList<Death> deaths)
     {

@@ -32,6 +32,7 @@ public sealed class SettingsService : IObservePlayers, IObservePhase
         Map = boot.Map;
         ModeComposition.Validate(boot.Rules.Rules);
         Config = boot.Rules.ToSnapshot().ToMutable();
+        ModeComposition.ValidateMap(Config.Rules.Objective.ToSnapshot(), Map.Zones);
         LoadCatalog(boot.Catalog);
     }
 
@@ -68,6 +69,11 @@ public sealed class SettingsService : IObservePlayers, IObservePhase
             return new SettingsMutationResult.Rejected(SettingsRejectReason.INVALID_RULES);
         }
 
+        if (ModeComposition.MapError(next.Rules.Objective.ToSnapshot(), Map.Zones) is { } error)
+        {
+            return new SettingsMutationResult.Rejected(SettingsRejectReason.INCOMPATIBLE_MAP, error);
+        }
+
         LobbySettings before = CreateState();
         MatchConfigSnapshot nextSnapshot = next.ToSnapshot();
         LobbySettingDelta[] deltas = LobbySettingsDiff.Between(Config.ToSnapshot(), nextSnapshot);
@@ -86,6 +92,10 @@ public sealed class SettingsService : IObservePlayers, IObservePhase
         MatchConfig next = mode.Manifest.ToMatchConfigSnapshot().ToMutable();
         ModeComposition.Validate(next.Rules);
         next.Clamp();
+        if (ModeComposition.MapError(next.Rules.Objective.ToSnapshot(), Map.Zones) is { } error)
+        {
+            return new SettingsMutationResult.Rejected(SettingsRejectReason.INCOMPATIBLE_MAP, error);
+        }
         Config = next.ToSnapshot().ToMutable();
         string nextMode = ModeName;
         LobbySettingDelta[] deltas = previousMode == nextMode
@@ -104,6 +114,11 @@ public sealed class SettingsService : IObservePlayers, IObservePhase
         {
             _log.Warning("failed to load map '{MapId}'", mapId);
             return new SettingsMutationResult.Rejected(SettingsRejectReason.MAP_LOAD_FAILED);
+        }
+
+        if (ModeComposition.MapError(Config.Rules.Objective.ToSnapshot(), selected.Zones) is { } error)
+        {
+            return new SettingsMutationResult.Rejected(SettingsRejectReason.INCOMPATIBLE_MAP, error);
         }
 
         LobbySettings before = CreateState();

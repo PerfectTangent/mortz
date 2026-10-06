@@ -22,7 +22,8 @@ namespace Mortz.Client.E2E;
 [Meta(typeof(IAutoNode))]
 public partial class E2EMatchProbe : Node,
     IHandle<EliminationMsg>,
-    IHandle<MatchEndMsg>
+    IHandle<MatchEndMsg>,
+    IHandle<ObjectiveMatchEndMsg>
 {
     private static readonly ILogger _log = MortzLog.For("client");
 
@@ -83,6 +84,9 @@ public partial class E2EMatchProbe : Node,
                 m.KillerId, m.VictimId, m.KillerKills, m.BlueKills, m.RedKills);
         }
     }
+
+    public void Handle(in ObjectiveMatchEndMsg message) =>
+        Handle(new MatchEndMsg(message.ByTeam, message.WinnerId, message.MatchGeneration));
 
     public void Handle(in MatchEndMsg message)
     {

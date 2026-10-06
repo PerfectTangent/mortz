@@ -16,6 +16,7 @@
 [ext_resource type="Script" uid="uid://bxev1av5gpki2" path="res://src/Client/Announcements/GameAnnouncer.cs" id="16_announcer"]
 [ext_resource type="Script" uid="uid://6aqxhxbup147" path="res://src/Client/Replay/FinalKillReplay.cs" id="17_replay"]
 [ext_resource type="PackedScene" uid="uid://budfcpa7b1byw" path="res://src/Shared/UI/Hud/ScoreHudHost.tscn" id="18_scorehost"]
+[ext_resource type="PackedScene" path="res://src/Shared/UI/Hud/DeadlockHud.tscn" id="21_upikf"]
 [ext_resource type="PackedScene" uid="uid://jdflpktp0k7t" path="res://src/Shared/UI/Chat/GameChat.tscn" id="23_gamechat"]
 [ext_resource type="PackedScene" uid="uid://bkx20bfq77ejk" path="res://src/Shared/UI/Hud/AnnouncementBanner.tscn" id="25_banner"]
 [ext_resource type="Script" uid="uid://cukwng3fiyn6t" path="res://src/Client/Announcements/AnnouncementChat.cs" id="26_annchat"]
@@ -29,7 +30,7 @@ Label/constants/outline_size = 4
 RichTextLabel/colors/font_outline_color = Color(0, 0, 0, 0.9)
 RichTextLabel/constants/outline_size = 4
 
-[node name="GameView" type="Node2D" unique_id=1808596722 node_paths=PackedStringArray("_ropes", "_localPlayer", "_players", "_mortarClient", "_hud", "_finalKillReplay", "_spectator")]
+[node name="GameView" type="Node2D" unique_id=1808596722 node_paths=PackedStringArray("_ropes", "_localPlayer", "_players", "_mortarClient", "_hud", "_objectiveHud", "_finalKillReplay", "_spectator")]
 script = ExtResource("1_gview")
 _gameMapScene = ExtResource("2_gmap")
 _ropes = NodePath("RopeOverlay")
@@ -37,6 +38,7 @@ _localPlayer = NodePath("LocalPlayer")
 _players = NodePath("Players")
 _mortarClient = NodePath("MortarClient")
 _hud = NodePath("Hud/PlayerStatus")
+_objectiveHud = NodePath("Hud/DeadlockHud")
 _finalKillReplay = NodePath("FinalKillReplay")
 _spectator = NodePath("SpectatorController")
 
@@ -111,6 +113,13 @@ offset_right = 392.0
 offset_bottom = -56.0
 grow_vertical = 0
 theme = SubResource("Theme_outline")
+
+[node name="DeadlockHud" parent="Hud" unique_id=1691840778 instance=ExtResource("21_upikf")]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
 
 [node name="Diagnostics" type="Node" parent="." unique_id=576473914]
 

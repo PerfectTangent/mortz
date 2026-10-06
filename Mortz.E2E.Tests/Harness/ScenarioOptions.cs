@@ -18,6 +18,8 @@ public sealed record ScenarioOptions
 
     public string? RulesetPath { get; init; }
 
+    public bool? AllowJoinInProgress { get; init; }
+
     /// <summary>Clamped to [1, 4] by the game; loopback only. Measured inert on
     /// Godot 4.7.1: Engine.TimeScale does not change the physics tick rate, so
     /// the default is 1 until a mechanism that really compresses time exists.</summary>

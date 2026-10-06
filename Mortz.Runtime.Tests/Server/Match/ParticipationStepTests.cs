@@ -13,6 +13,33 @@ namespace Mortz.Runtime.Tests.Server.Match;
 public class ParticipationStepTests
 {
     [Fact]
+    public void EscalatingCountdownAndSpectatorReturnAgreeAtTheCeiling()
+    {
+        EscalatingRespawnStrategy respawns = new(new EscalatingRespawnRules
+        {
+            BaseDelay = 0,
+            Increase = 20,
+            MaximumDelay = 6,
+        });
+        Fixture fixture = new(0, respawns);
+        fixture.Kill();
+        fixture.World.Step();
+        fixture.Advance([]);
+        MatchParticipationChange death = Assert.Single(fixture.Kill());
+        Assert.Equal(6 * SimConfig.TICK_RATE, fixture.World.Players[1].RespawnTicks);
+        Assert.Equal(fixture.World.Tick + 6 * SimConfig.TICK_RATE, death.State.ReturnTick);
+        for (int tick = 0; tick < ParticipationStep.DEATH_VIEW_DURATION_TICKS; tick++)
+        {
+            fixture.World.Step();
+            fixture.Advance([]);
+            Assert.Equal(fixture.World.Tick + fixture.World.Players[1].RespawnTicks,
+                fixture.Participation.Of(fixture.Player).ReturnTick);
+        }
+        Assert.Equal(MatchActivity.SPECTATING, fixture.Participation.Of(fixture.Player).Activity);
+        Assert.Equal(death.State.ReturnTick, fixture.Participation.Of(fixture.Player).ReturnTick);
+    }
+
+    [Fact]
     public void BlockedReturnCanEnterSpectatingAndLaterPublishAnAuthoritativeSchedule()
     {
         SimWorldTests.ControlledRespawns respawns = new();

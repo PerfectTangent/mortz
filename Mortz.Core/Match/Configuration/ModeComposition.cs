@@ -1,3 +1,5 @@
+using Mortz.Core.Sim.Modifiers;
+
 namespace Mortz.Core.Match.Configuration;
 
 public static class ModeComposition
@@ -13,6 +15,35 @@ public static class ModeComposition
         CheckEnum(rules.Evaluation, "rules.evaluation", errors);
         CheckEnum(rules.Replay, "rules.replay", errors);
         CheckEnum(rules.SuicidePenalty, "rules.suicide_penalty", errors);
+
+        if (rules.Respawn is EscalatingRespawnRules { ValidationError: { } respawnError })
+        {
+            errors.Add(respawnError);
+        }
+
+        if (rules.Objective is DeadlockObjectiveRules)
+        {
+            if (!rules.Teams)
+            {
+                errors.Add("rules.objective 'deadlock' requires rules.teams = true.");
+            }
+            if (rules.EndCondition is not ObjectiveCompletionRules)
+            {
+                errors.Add("rules.objective 'deadlock' requires rules.end_condition = 'objective_completion'.");
+            }
+            if (rules.Winner != WinnerRule.QUALIFYING)
+            {
+                errors.Add("rules.objective 'deadlock' requires rules.winner = 'qualifying'.");
+            }
+            if (rules.Evaluation != EvaluationTiming.TICK)
+            {
+                errors.Add("rules.objective 'deadlock' requires rules.evaluation = 'tick'.");
+            }
+            if (rules.Replay != ReplayRule.NONE)
+            {
+                errors.Add("rules.objective 'deadlock' requires rules.replay = 'none'.");
+            }
+        }
 
         if (rules.EndCondition is TimeLimitRules && rules.Evaluation != EvaluationTiming.TICK)
         {
@@ -42,6 +73,20 @@ public static class ModeComposition
         if (errors.Count > 0)
         {
             throw new ArgumentException(string.Join(" ", errors), nameof(rules));
+        }
+    }
+
+    public static string? MapError(ObjectiveRulesSnapshot objective, MapZones zones) =>
+        objective is DeadlockObjectiveRulesSnapshot &&
+        !zones.All.Any(zone => zone.HasTag(DeadlockObjectiveRules.CONTROL_TAG))
+            ? "Deadlock requires at least one map zone tagged 'control'. Choose a map with control zones."
+            : null;
+
+    public static void ValidateMap(ObjectiveRulesSnapshot objective, MapZones zones)
+    {
+        if (MapError(objective, zones) is { } error)
+        {
+            throw new ArgumentException(error, nameof(zones));
         }
     }
 

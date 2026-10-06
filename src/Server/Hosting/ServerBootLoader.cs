@@ -39,6 +39,12 @@ public static class ServerBootLoader
         if (rules == null || serverConfig == null)
             return null;
 
+        if (ModeComposition.MapError(rules.Rules.Objective.ToSnapshot(), map.Zones) is { } mapError)
+        {
+            _log.Error("cannot start on map '{MapId}': {Error}", mapId, mapError);
+            return null;
+        }
+
         string adminPassword = CmdArgs.GetValue("--admin-password") ?? serverConfig.AdminPassword;
         if (adminPassword.Length > 0)
             _log.Information("admin password set");

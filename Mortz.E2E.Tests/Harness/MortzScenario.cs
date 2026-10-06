@@ -183,7 +183,7 @@ public sealed class MortzScenario : IAsyncDisposable
         }
     }
 
-    private async Task AddClientAsync(string name, CancellationToken cancellationToken)
+    public async Task AddClientAsync(string name, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         E2EProcess client = StartProcess(name, _godot, ClientArguments(name, _clients.Count),
@@ -397,6 +397,8 @@ public sealed class MortzScenario : IAsyncDisposable
             arguments.AddRange(["--ruleset", options.RulesetPath]);
         else if (options.Mode != null)
             arguments.AddRange(["--mode", options.Mode]);
+        if (options.AllowJoinInProgress is bool allowJoinInProgress)
+            arguments.Add(allowJoinInProgress ? "--allow-jip" : "--no-jip");
         if (options.QueryPort is int queryPort)
             arguments.AddRange(["--query-port", queryPort.ToString()]);
         return arguments;

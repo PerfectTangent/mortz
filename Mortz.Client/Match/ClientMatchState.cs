@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Match.Scoring;
 
@@ -45,6 +46,8 @@ public sealed class ClientMatchState
     public MatchParticipation Participation { get; private set; }
     public MatchPoint? MatchPoint { get; private set; }
     public Victor? Winner { get; private set; }
+    public ObjectiveState Objective { get; private set; } = NoObjectiveState.Instance;
+    public int ObjectiveTick { get; private set; } = -1;
     public MatchScoreSnapshot Scores { get; private set; } = MatchScoreSnapshot.Empty;
 
     public event Action<MatchParticipation>? ParticipationChanged;
@@ -75,6 +78,31 @@ public sealed class ClientMatchState
         ArgumentNullException.ThrowIfNull(winner);
         if (!Accepts(generation) || Winner != null)
             return false;
+        Winner = winner;
+        WinnerChanged?.Invoke(winner);
+        return true;
+    }
+
+    public bool TryApplyObjective(int generation, int tick, ObjectiveState objective)
+    {
+        if (!Accepts(generation) || Winner != null || tick <= ObjectiveTick || Objective.CapturedBy != null)
+        {
+            return false;
+        }
+        ObjectiveTick = tick;
+        Objective = objective;
+        return true;
+    }
+
+    public bool TryCompleteObjective(int generation, int tick, ObjectiveState objective, Victor winner)
+    {
+        if (!Accepts(generation) || Winner != null || tick < 0 || tick < ObjectiveTick ||
+            objective.CapturedBy is not { } team || winner != new Victor.Team(team))
+        {
+            return false;
+        }
+        ObjectiveTick = tick;
+        Objective = objective;
         Winner = winner;
         WinnerChanged?.Invoke(winner);
         return true;

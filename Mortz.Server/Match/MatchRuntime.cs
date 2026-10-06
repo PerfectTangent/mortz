@@ -33,11 +33,12 @@ public sealed class MatchRuntime : IDisposable
     {
         Generation = keys.Generation;
         World = new SimWorld(terrain, config, spawnPoints, zones);
+        ModeComposition.ValidateMap(World.Config.Rules.Objective, World.Zones);
         Context = new MatchContext(World, _seated);
 
         _participation = new ParticipationStep(keys);
         _scoring = new ScoringStep(World.Config.Rules.ToMutable(), keys, _seated);
-        _mode = mode ?? GameMode.Create(World.Config.Rules);
+        _mode = mode ?? GameMode.Create(World.Config.Rules, zones: World.Zones);
         _gameEvents = new GameEventsStep(
             new GameEventJudge(keys, _seated, _scoring.TeamOf));
         _ending = new EndingStep(victoryLapTicks);

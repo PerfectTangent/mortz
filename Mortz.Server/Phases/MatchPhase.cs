@@ -136,7 +136,7 @@ public sealed class MatchPhase : ServerPhase
 
         _control.ApplyBefore(_runtime.World);
         MatchUpdate update = _runtime.Advance(time);
-        _control.CompleteAfter(_runtime.World);
+        _control.CompleteAfter(_runtime.World, _runtime.Objective);
         _services.MatchUpdated(update, time);
         return update.ReturnToLobby ? PhaseRequest.RETURN_TO_LOBBY : PhaseRequest.NONE;
     }

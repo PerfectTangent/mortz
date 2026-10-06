@@ -1,4 +1,5 @@
 using Mortz.Core.Match.Configuration;
+using Mortz.Core.Match.Objectives;
 using Mortz.Core.Sim;
 
 namespace Mortz.Server.Diagnostics;
@@ -58,7 +59,7 @@ public sealed class E2EMatchControl : IMatchControl
         _setupReads.Clear();
     }
 
-    public void CompleteAfter(SimWorld world)
+    public void CompleteAfter(SimWorld world, ObjectiveState? objective = null)
     {
         foreach (PlacementRequest request in _placementsInFlight)
         {
@@ -85,7 +86,7 @@ public sealed class E2EMatchControl : IMatchControl
 
         if (_readsInFlight.Count == 0)
             return;
-        WorldStateOutcome state = Describe(world);
+        WorldStateOutcome state = Describe(world) with { Objective = objective };
         foreach (Action<WorldStateOutcome> done in _readsInFlight)
         {
             done(state);

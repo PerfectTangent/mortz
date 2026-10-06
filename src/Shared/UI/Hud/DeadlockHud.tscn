@@ -1,0 +1,105 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/Client/Ui/DeadlockHud.cs" id="1_gvhj4"]
+
+[node name="DeadlockHud" type="Control" unique_id=1691840778 node_paths=PackedStringArray("_blue", "_red", "_blueProgress", "_redProgress", "_blueStatus", "_redStatus", "_status")]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+mouse_filter = 2
+script = ExtResource("1_gvhj4")
+_blue = NodePath("Panel/Bar/Blue")
+_red = NodePath("Panel/Bar/Red")
+_blueProgress = NodePath("Panel/BlueProgress")
+_redProgress = NodePath("Panel/RedProgress")
+_blueStatus = NodePath("Panel/BlueStatus")
+_redStatus = NodePath("Panel/RedStatus")
+_status = NodePath("Panel/Status")
+
+[node name="Panel" type="ColorRect" parent="." unique_id=654955001]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -240.0
+offset_top = 18.0
+offset_right = 240.0
+offset_bottom = 124.0
+mouse_filter = 2
+color = Color(0.07450981, 0.09803922, 0.12156863, 0.91764706)
+
+[node name="Status" type="Label" parent="Panel" unique_id=924203191]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 10.0
+offset_right = 330.0
+offset_bottom = 34.0
+theme_override_font_sizes/font_size = 16
+text = "CONTROL"
+horizontal_alignment = 1
+
+[node name="BlueProgress" type="Label" parent="Panel" unique_id=381095243]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 8.0
+offset_right = 150.0
+offset_bottom = 36.0
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.27058825, 0.7294118, 1, 1)
+text = "BLUE  30%"
+
+[node name="RedProgress" type="Label" parent="Panel" unique_id=984302040]
+layout_mode = 0
+offset_left = 330.0
+offset_top = 8.0
+offset_right = 460.0
+offset_bottom = 36.0
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1, 0.38431373, 0.41568628, 1)
+text = "20%  RED"
+horizontal_alignment = 2
+
+[node name="Bar" type="ColorRect" parent="Panel" unique_id=440486283]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 46.0
+offset_right = 460.0
+offset_bottom = 64.0
+mouse_filter = 2
+color = Color(0.20784314, 0.24313726, 0.2784314, 1)
+
+[node name="Blue" type="ColorRect" parent="Panel/Bar" unique_id=419056226]
+layout_mode = 0
+anchor_right = 0.3
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.27058825, 0.7294118, 1, 1)
+
+[node name="Red" type="ColorRect" parent="Panel/Bar" unique_id=230877350]
+layout_mode = 0
+anchor_left = 0.8
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(1, 0.38431373, 0.41568628, 1)
+
+[node name="BlueStatus" type="Label" parent="Panel" unique_id=105801399]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 74.0
+offset_right = 235.0
+offset_bottom = 94.0
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.8352941, 0.9098039, 0.95686275, 1)
+text = "Capturing"
+
+[node name="RedStatus" type="Label" parent="Panel" unique_id=1933699324]
+layout_mode = 0
+offset_left = 245.0
+offset_top = 74.0
+offset_right = 460.0
+offset_bottom = 94.0
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.95686275, 0.8627451, 0.8784314, 1)
+text = "Capturing"
+horizontal_alignment = 2

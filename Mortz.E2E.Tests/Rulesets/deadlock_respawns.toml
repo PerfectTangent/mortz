@@ -1,0 +1,22 @@
+[rules]
+teams = true
+score = "kills"
+winner = "qualifying"
+evaluation = "tick"
+replay = "none"
+spawn_immunity = 0.0
+
+[rules.end_condition]
+type = "objective_completion"
+
+[rules.objective]
+type = "deadlock"
+capture_speed = 5
+decay_speed = 5
+absence_delay = 2.0
+
+[rules.respawn]
+type = "escalating"
+base_delay = 0.5
+increase = 0.5
+maximum_delay = 1.5

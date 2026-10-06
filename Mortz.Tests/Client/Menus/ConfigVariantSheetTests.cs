@@ -58,6 +58,17 @@ public class ConfigVariantSheetTests
             Assert.Same(respawn, sheet.Rules);
             Assert.Equal(typeof(FixedRespawnRules), properties.BoundModelType);
             Assert.Equal(RespawnRulesMetadata.Variants.Count, picker.ItemCount);
+            int escalating = Enumerable.Range(0, RespawnRulesMetadata.Variants.Count)
+                .Single(index => RespawnRulesMetadata.Variants[index].Id == "escalating");
+            sheet.SetEditable(true);
+            picker.EmitSignal(OptionButton.SignalName.ItemSelected, escalating);
+            Assert.IsType<EscalatingRespawnRules>(sheet.Rules);
+            Assert.Equal(typeof(EscalatingRespawnRules), properties.BoundModelType);
+            Assert.Equal(3, properties.ControlCount);
+            sheet.Family = ConfigVariantSheet.RuleFamily.OBJECTIVE;
+            sheet.Build<ObjectiveRules>(new DeadlockObjectiveRules(), _ => { });
+            Assert.Equal(typeof(DeadlockObjectiveRules), properties.BoundModelType);
+            Assert.Equal(3, properties.ControlCount);
         }
         finally
         {

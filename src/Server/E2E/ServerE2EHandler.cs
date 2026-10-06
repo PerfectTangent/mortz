@@ -1,5 +1,6 @@
 #if TOOLS
 using Godot;
+using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Sim;
 using Mortz.E2E.Protocol;
@@ -126,7 +127,10 @@ public partial class ServerE2EHandler : Node, IE2EHandler, IMatchObserver
             request.Id, E2EPhase.MATCH, outcome.Tick,
             outcome.Players.Select(player => new E2EServerPlayer(
                 player.PeerId, Name(player.PeerId), player.Position, player.Velocity,
-                player.Health, player.RespawnTicks)).ToArray())));
+                player.Health, player.RespawnTicks)).ToArray())
+        {
+            Objective = outcome.Objective as DeadlockObjectiveState,
+        }));
     }
 
     /// <summary>A mutation outside a match never reaches a tick boundary.

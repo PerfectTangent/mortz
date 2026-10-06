@@ -1,6 +1,7 @@
 namespace Mortz.Core.Match.Configuration;
 
 [ConfigVariant("none", "None", typeof(NoObjectiveRules))]
+[ConfigVariant("deadlock", "Deadlock", typeof(DeadlockObjectiveRules))]
 public abstract class ObjectiveRules
 {
     public virtual bool CanComplete => false;

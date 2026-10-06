@@ -10,6 +10,7 @@ public abstract class RespawnStrategy
     {
         NoRespawnRules => new NoRespawnStrategy(),
         FixedRespawnRules fixedRules => new FixedRespawnStrategy(fixedRules.DelayTicks),
+        EscalatingRespawnRules escalating => new EscalatingRespawnStrategy(escalating),
         _ => throw new ArgumentOutOfRangeException(nameof(rules)),
     };
 

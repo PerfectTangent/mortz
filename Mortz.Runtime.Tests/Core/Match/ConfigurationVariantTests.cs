@@ -11,6 +11,120 @@ namespace Mortz.Runtime.Tests.Core.Match;
 
 public class ConfigurationVariantTests
 {
+    [Fact]
+    public void EscalatingRespawnsRoundTripAndExposeOnlyTheirSettings()
+    {
+        MatchConfig config = new()
+        {
+            Rules = new ModeRules
+            {
+                Respawn = new EscalatingRespawnRules { BaseDelay = 1.25f, Increase = 0.5f, MaximumDelay = 7.5f },
+            },
+        };
+        MatchConfigSnapshot snapshot = config.ToSnapshot();
+        Assert.Equal(snapshot, snapshot.ToMutable().ToSnapshot());
+        Assert.Equal(snapshot, MatchConfigCodec.FromBytes(config.ToBytes()).ToSnapshot());
+        Assert.Equal(snapshot, MatchConfigCodec.FromBytes(snapshot.ToBytes()).ToSnapshot());
+        ContentReadResult<RulesetManifest> read = TomlModel.Read<RulesetManifest>(
+            TomlModel.Write(new RulesetManifest { Rules = config.Rules }));
+        Assert.Empty(read.Diagnostics);
+        Assert.Equal(snapshot, read.Value!.ToMatchConfigSnapshot());
+        Assert.Equal(["BaseDelay", "Increase", "MaximumDelay"],
+            RespawnRulesMetadata.For(config.Rules.Respawn).Categories
+                .SelectMany(category => category.Properties).Select(property => property.Name));
+        Assert.Equal(12, EscalatingRespawnRulesCodec.ToBytes((EscalatingRespawnRules)config.Rules.Respawn).Length);
+    }
+
+    [Theory]
+    [InlineData(-1, 1, 10)]
+    [InlineData(1, -1, 10)]
+    [InlineData(2, 1, 1)]
+    [InlineData(0, 0, 0)]
+    [InlineData(0, 0, 0.001f)]
+    [InlineData(0, 1, 1093)]
+    [InlineData(float.NaN, 1, 10)]
+    [InlineData(1, float.PositiveInfinity, 10)]
+    [InlineData(1, 1, float.PositiveInfinity)]
+    public void InvalidEscalationFailsBeforeSimulation(float baseDelay, float increase, float maximum)
+    {
+        MatchConfig config = new()
+        {
+            Rules = new ModeRules
+            {
+                Respawn = new EscalatingRespawnRules { BaseDelay = baseDelay, Increase = increase, MaximumDelay = maximum },
+            },
+        };
+        Assert.Contains(ModeComposition.Errors(config.Rules), error => error.Contains("escalating"));
+        Assert.Throws<ArgumentException>(() => new SimWorld(new TerrainMask(8, 8, (_, _) => false, (_, _) => false), config));
+        ContentReadResult<RulesetManifest> read = TomlModel.Read<RulesetManifest>(
+            TomlModel.Write(new RulesetManifest { Rules = config.Rules }));
+        Assert.Null(read.Value);
+        Assert.NotEmpty(read.Diagnostics);
+    }
+
+    [Theory]
+    [InlineData(2, 1)]
+    [InlineData(0, 0)]
+    [InlineData(0, 0.001f)]
+    public void EscalationWireRejectsInvalidCeilings(float baseDelay, float maximum)
+    {
+        MatchConfig config = new()
+        {
+            Rules = new ModeRules
+            {
+                Respawn = new EscalatingRespawnRules { BaseDelay = baseDelay, MaximumDelay = maximum },
+            },
+        };
+        Assert.Throws<InvalidDataException>(() => MatchConfigCodec.FromBytes(config.ToBytes()));
+    }
+
+    [Fact]
+    public void EscalationWirePreservesExistingScalarClamping()
+    {
+        MatchConfig config = new()
+        {
+            Rules = new ModeRules
+            {
+                Respawn = new EscalatingRespawnRules { BaseDelay = -1, Increase = float.NaN, MaximumDelay = float.PositiveInfinity },
+            },
+        };
+        EscalatingRespawnRules decoded = Assert.IsType<EscalatingRespawnRules>(
+            MatchConfigCodec.FromBytes(config.ToBytes()).Rules.Respawn);
+        Assert.Equal(0, decoded.BaseDelay);
+        Assert.Equal(0, decoded.Increase);
+        Assert.Equal(EscalatingRespawnRules.MAXIMUM_DELAY_SECONDS, decoded.MaximumDelay);
+        Assert.Null(decoded.ValidationError);
+    }
+
+    [Fact]
+    public void DeadlockSettingsRoundTripThroughEveryConfigurationProjection()
+    {
+        DeadlockObjectiveRules rules = new() { CaptureSpeed = 7, DecaySpeed = 3, AbsenceDelay = 1.5f };
+        Assert.True(rules.CanComplete);
+        Assert.Equal(rules.ToSnapshot(), rules.ToSnapshot().ToMutable().ToSnapshot());
+        Assert.Equal(90, rules.AbsenceDelayTicks);
+        Assert.Contains(ObjectiveRulesMetadata.Variants, variant => variant.RulesType == typeof(DeadlockObjectiveRules));
+        Assert.Equal(rules.ToSnapshot(), ObjectiveRulesCodec.FromBytes(ObjectiveRulesCodec.ToBytes(rules)).ToSnapshot());
+        MatchConfig config = new()
+        {
+            Rules = new ModeRules
+            {
+                Teams = true,
+                Objective = rules,
+                EndCondition = new ObjectiveCompletionRules(),
+                Winner = WinnerRule.QUALIFYING,
+                Evaluation = EvaluationTiming.TICK,
+                Replay = ReplayRule.NONE,
+            },
+        };
+        Assert.Empty(ModeComposition.Errors(config.Rules));
+        Assert.Equal(config.ToSnapshot(), MatchConfigCodec.FromBytes(config.ToBytes()).ToSnapshot());
+        ContentReadResult<RulesetManifest> read = TomlModel.Read<RulesetManifest>(
+            TomlModel.Write(new RulesetManifest { Rules = config.Rules }));
+        Assert.Empty(read.Diagnostics);
+        Assert.Equal(config.ToSnapshot(), read.Value!.ToMatchConfigSnapshot());
+    }
+
     [Theory]
     [InlineData(false, WinnerRule.QUALIFYING, EvaluationTiming.TICK, "qualifier")]
     [InlineData(true, WinnerRule.QUALIFYING, EvaluationTiming.TICK, "objective capable")]
@@ -89,8 +203,8 @@ public class ConfigurationVariantTests
 
     [Theory]
     [InlineData("end_condition", "tickets")]
-    [InlineData("objective", "deadlock")]
-    [InlineData("respawn", "escalating")]
+    [InlineData("objective", "unimplemented")]
+    [InlineData("respawn", "tickets")]
     [InlineData("respawn", "disabled")]
     public void UnimplementedVariantsAreRejectedByToml(string family, string variant)
     {

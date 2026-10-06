@@ -1,3 +1,4 @@
+using Mortz.Core.Chat;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Lobby;
 using Mortz.Server.Admin;
@@ -66,6 +67,10 @@ public sealed class LobbySettingsService(
             log.Information("lobby settings mutation rejected for admin {PeerId}: {Reason}",
                 sender.PeerId, rejected.Reason);
             settings.SendTo(sender.PeerId);
+            if (rejected.Message is { } message)
+            {
+                chat.SendTo(sender.PeerId, new ChatLine.System(message));
+            }
             return;
         }
 

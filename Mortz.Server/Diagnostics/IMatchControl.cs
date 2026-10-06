@@ -1,3 +1,4 @@
+using Mortz.Core.Match.Objectives;
 using Mortz.Core.Sim;
 
 namespace Mortz.Server.Diagnostics;
@@ -11,5 +12,5 @@ public interface IMatchControl
 
     /// <summary>Completes pending callbacks with world.Tick as AppliedTick; the
     /// tick's outputs (snapshot, deaths) already include the mutation.</summary>
-    void CompleteAfter(SimWorld world);
+    void CompleteAfter(SimWorld world, ObjectiveState? objective = null);
 }

@@ -7,6 +7,7 @@ using Mortz.Protocol.Net.Chat;
 using Mortz.Protocol.Net.Lobby;
 using Mortz.Protocol.Net.Match;
 using Mortz.Protocol.Net.Roster;
+using Mortz.Runtime.Tests.Server.Match;
 using Mortz.Server.Phases;
 using Xunit;
 
@@ -15,6 +16,28 @@ namespace Mortz.Runtime.Tests.Server;
 public class GameServerLobbyMutationTests
 {
     private const string ADMIN_PASSWORD = "correct horse battery staple with entropy";
+
+    [Fact]
+    public void IncompatibleMapFeedbackGoesOnlyToTheRequestingAdmin()
+    {
+        using TestServer server = new(adminPassword: ADMIN_PASSWORD);
+        server.Connect(7, "alice");
+        server.Connect(8, "bob");
+        byte[] sessionKey = Authenticate(server, 7);
+        byte[] config = DeadlockMatchTests.Config().ToBytes();
+        byte[] tag = AdminCrypto.ComputeCommandTag(sessionKey, 7, 1, ReplaceLobbyRulesAction.ACTION,
+            ReplaceLobbyRulesAction.SignablePayload(config));
+        server.Link.Messages.Clear();
+
+        server.Receive(7, new LobbyRulesUpdateMsg(config, 1, tag));
+
+        Sent feedback = Assert.Single(server.Link.Messages, sent => sent.Message is ChatMsg);
+        Assert.Equal(7, feedback.Target);
+        Assert.Contains("control", ((ChatMsg)feedback.Message).Text);
+        Assert.Equal(7, Assert.Single(server.Link.Messages, sent => sent.Message is LobbySettingsMsg).Target);
+        Assert.Empty(Broadcasts(server));
+        Assert.Equal(ServerPhaseKind.LOBBY, server.Server.Phase);
+    }
 
     [Fact]
     public void SuccessfulReadinessMutationBroadcastsOnceAndStartsOnlyWhenResultCanStart()

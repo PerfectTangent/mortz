@@ -3,6 +3,7 @@ using Mortz.Content;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Sim;
 using Mortz.Core.Terrain;
+using Mortz.Runtime.Tests.Server.Match;
 using Mortz.Server;
 using Mortz.Server.Content;
 using Mortz.Server.Settings;
@@ -20,6 +21,43 @@ public sealed class SettingsServiceTests : IDisposable
 
     public SettingsServiceTests() => _link = new ReadyLink(_transport);
     private readonly FakeMapSource _maps = new();
+
+    [Fact]
+    public void DeadlockSelectionRequiresACompatibleMapAndRejectsLaterIncompatibleChanges()
+    {
+        MapSnapshot control = Snapshot("duel", "Control") with { Zones = DeadlockMatchTests.Zones() };
+        _maps.Add(control);
+        _maps.Add(Snapshot("arena", "Arena"));
+        SettingsService settings = Build();
+        MatchConfig original = settings.Config;
+        SettingsMutationResult.Rejected mode = Assert.IsType<SettingsMutationResult.Rejected>(settings.SetMode("deadlock"));
+        Assert.Equal(SettingsRejectReason.INCOMPATIBLE_MAP, mode.Reason);
+        Assert.Contains("control", mode.Message);
+        Assert.Same(original, settings.Config);
+        SettingsMutationResult.Rejected rules = Assert.IsType<SettingsMutationResult.Rejected>(
+            settings.SetRules(DeadlockMatchTests.Config().ToBytes()));
+        Assert.Equal(SettingsRejectReason.INCOMPATIBLE_MAP, rules.Reason);
+        Assert.Same(original, settings.Config);
+
+        Applied(settings.SetMap("duel"));
+        Applied(settings.SetMode("deadlock"));
+        Assert.Equal("Deadlock", settings.ModeName);
+        SettingsMutationResult.Rejected map = Assert.IsType<SettingsMutationResult.Rejected>(settings.SetMap("arena"));
+        Assert.Equal(SettingsRejectReason.INCOMPATIBLE_MAP, map.Reason);
+        Assert.Same(control, settings.Map);
+        Applied(settings.SetRules(DeadlockMatchTests.Config().ToBytes()));
+
+        Applied(settings.SetMode("deathmatch"));
+        Applied(settings.SetMap("arena"));
+        Assert.Equal("arena", settings.Map.MapId);
+    }
+
+    [Fact]
+    public void DirectServerBootRejectsDeadlockWithoutControlZones()
+    {
+        Assert.Contains("control", Assert.Throws<ArgumentException>(() =>
+            new TestServer(rules: DeadlockMatchTests.Config())).Message);
+    }
 
     [Fact]
     public void RulesUpdateAppliesAndReportsTheChange()
@@ -196,6 +234,16 @@ public sealed class SettingsServiceTests : IDisposable
         AddMode(pack, "deathmatch", "Deathmatch",
             "[rules.end_condition]\ntype = \"score_target\"\ntarget = 5");
         AddMode(pack, "teamdeathmatch", "Team Deathmatch", "teams = true");
+        AddMode(pack, "deadlock", "Deadlock", """
+            teams = true
+            winner = "qualifying"
+            evaluation = "tick"
+            replay = "none"
+            [rules.end_condition]
+            type = "objective_completion"
+            [rules.objective]
+            type = "deadlock"
+            """);
         ContentCatalog catalog = Assert.IsType<ContentCatalog>(ContentCatalog.Load(_root).Catalog);
         ServerBoot boot = new()
         {

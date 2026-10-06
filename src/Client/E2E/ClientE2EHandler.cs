@@ -1,6 +1,9 @@
 #if TOOLS
+using Chickensoft.AutoInject;
 using Godot;
 using Mortz.Client.Match;
+using Mortz.Client.Players;
+using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Replication;
 using Mortz.Core.Sim;
@@ -19,7 +22,8 @@ namespace Mortz.Client.E2E;
 public partial class ClientE2EHandler : Node, IE2EHandler, IE2EClientBridge,
     IHandle<LobbyStateMsg>,
     IHandle<EliminationMsg>,
-    IHandle<MatchEndMsg>
+    IHandle<MatchEndMsg>,
+    IHandle<ObjectiveMatchEndMsg>
 {
     /// <summary>Emits the first snapshot, then every 15th. Enough to anchor a
     /// convergence assertion without a line per tick.</summary>
@@ -141,8 +145,15 @@ public partial class ClientE2EHandler : Node, IE2EHandler, IE2EClientBridge,
                 "The client has no applied snapshot yet."));
             return;
         }
+        ClientMatchState state = ((IProvide<ClientMatchState>)_view!).Value();
         responder.Respond(new ClientStateResponse(
-            request.Id, snapshot.Tick, player.State.Position, Observed(snapshot)));
+            request.Id, snapshot.Tick, player.State.Position, Observed(snapshot))
+        {
+            Objective = state.Objective as DeadlockObjectiveState,
+            ObjectiveTick = state.ObjectiveTick,
+            Participation = state.Participation,
+            Team = _view.DependOn<ClientPlayers>().Find(_network.LocalPeerId)?.Team,
+        });
     }
 
     // ---- scripted input ----
@@ -190,6 +201,9 @@ public partial class ClientE2EHandler : Node, IE2EHandler, IE2EClientBridge,
             message.KillerId,
             message.VictimId,
             message.Flags.HasFlag(EliminationFlags.SUICIDE)));
+
+    public void Handle(in ObjectiveMatchEndMsg message) =>
+        Handle(new MatchEndMsg(message.ByTeam, message.WinnerId, message.MatchGeneration));
 
     public void Handle(in MatchEndMsg message)
     {

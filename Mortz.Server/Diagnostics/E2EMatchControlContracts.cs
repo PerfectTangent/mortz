@@ -1,3 +1,4 @@
+using Mortz.Core.Match.Objectives;
 using Mortz.Core.Sim;
 
 namespace Mortz.Server.Diagnostics;
@@ -33,7 +34,10 @@ public readonly record struct MatchSetupOutcome(
     int TerrainWidth,
     int TerrainHeight);
 
-public readonly record struct WorldStateOutcome(int Tick, E2EWorldPlayer[] Players);
+public readonly record struct WorldStateOutcome(int Tick, E2EWorldPlayer[] Players)
+{
+    public ObjectiveState? Objective { get; init; }
+}
 
 public readonly record struct E2EWorldPlayer(
     int PeerId,

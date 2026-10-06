@@ -15,11 +15,12 @@ public enum SettingsRejectReason
     UNKNOWN_MODE,
     UNKNOWN_MAP,
     MAP_LOAD_FAILED,
+    INCOMPATIBLE_MAP,
 }
 
 public abstract record SettingsMutationResult
 {
     public sealed record Applied(SettingsChange Change) : SettingsMutationResult;
 
-    public sealed record Rejected(SettingsRejectReason Reason) : SettingsMutationResult;
+    public sealed record Rejected(SettingsRejectReason Reason, string? Message = null) : SettingsMutationResult;
 }

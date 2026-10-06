@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Godot;
+using Mortz.Core.Match.Objectives;
 using Mortz.Core.Sim;
 
 namespace Mortz.Client.Views;
@@ -33,4 +34,7 @@ public sealed record PresentedMatchFrame(
     float Tick,
     ImmutableArray<PresentedPlayer> Players,
     ImmutableArray<PresentedMortar> Mortars,
-    ImmutableArray<RopeSegment> Ropes);
+    ImmutableArray<RopeSegment> Ropes)
+{
+    public ObjectiveState Objective { get; init; } = NoObjectiveState.Instance;
+}

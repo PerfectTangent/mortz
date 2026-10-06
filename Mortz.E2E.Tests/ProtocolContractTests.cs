@@ -1,5 +1,8 @@
 using Mortz.Core.Identity;
 using Mortz.Core.Match.Configuration;
+using Mortz.Core.Match.Objectives;
+using Mortz.Core.Match.Participation;
+using Mortz.Core.Match.Teams;
 using Mortz.Core.Sim;
 using Mortz.E2E.Protocol;
 using Xunit;
@@ -14,6 +17,26 @@ public sealed class ProtocolContractTests
     private static BotInputPlan SamplePlan() => BotInputPlan.Sequence(
         new BotInputFrame(InputButtons.RIGHT, 17, 12),
         new BotInputFrame(InputButtons.JUMP | InputButtons.FIRE, 99, 1));
+
+    [Fact]
+    public void ClientStatePreservesObjectiveAndParticipation()
+    {
+        ClientStateResponse sample = new(_requestId, 44, new Vec2(3, 4), [])
+        {
+            Objective = new DeadlockObjectiveState(6000, 3200.5m, 2799.5m,
+                true, false, 0, 90, false, false, null),
+            ObjectiveTick = 44,
+            Participation = new MatchParticipation(MatchSeat.PLAYER, MatchActivity.SPECTATING, SpectateReason.RESPAWN, 100),
+            Team = Team.RED,
+        };
+        ResponseMessage message = Assert.IsType<ResponseMessage>(
+            E2EWire.DeserializeMessage(E2EWire.Serialize(new ResponseMessage(sample))));
+        ClientStateResponse decoded = Assert.IsType<ClientStateResponse>(message.Response);
+        Assert.Equal(sample.Objective, decoded.Objective);
+        Assert.Equal(sample.ObjectiveTick, decoded.ObjectiveTick);
+        Assert.Equal(sample.Participation, decoded.Participation);
+        Assert.Equal(sample.Team, decoded.Team);
+    }
 
     private static E2ERequest[] Requests() =>
     [
