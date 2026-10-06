@@ -1,0 +1,42 @@
+name = "Pirates"
+suggested_players = 8
+
+[[spawn_points]]
+x = 480
+y = 1104
+team = "blue"
+
+[[spawn_points]]
+x = 560
+y = 1108
+team = "blue"
+
+[[spawn_points]]
+x = 960
+y = 1148
+team = "blue"
+
+[[spawn_points]]
+x = 1040
+y = 1024
+team = "blue"
+
+[[spawn_points]]
+x = 2640
+y = 1092
+team = "red"
+
+[[spawn_points]]
+x = 3120
+y = 1108
+team = "red"
+
+[[spawn_points]]
+x = 3200
+y = 1104
+team = "red"
+
+[[spawn_points]]
+x = 3360
+y = 1036
+team = "red"
