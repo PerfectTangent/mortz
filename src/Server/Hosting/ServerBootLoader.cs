@@ -39,9 +39,9 @@ public static class ServerBootLoader
         if (rules == null || serverConfig == null)
             return null;
 
-        if (ModeComposition.MapError(rules.Rules.Objective.ToSnapshot(), map.Zones) is { } mapError)
+        if (rules.Errors(map.Zones) is [_, ..] errors)
         {
-            _log.Error("cannot start on map '{MapId}': {Error}", mapId, mapError);
+            _log.Error("cannot start on map '{MapId}': {Errors}", mapId, string.Join(" ", errors));
             return null;
         }
 

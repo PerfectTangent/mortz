@@ -13,7 +13,6 @@ public sealed class ConfigGenerator : IIncrementalGenerator
 {
     private const string PLAYER_STAT_ATTRIBUTE = "Mortz.Core.Match.Configuration.PlayerStatAttribute";
     private const string MATCH_RULE_ATTRIBUTE = "Mortz.Core.Match.Configuration.MatchRuleAttribute";
-    private const string CONFIG_VALUE_ATTRIBUTE = "Mortz.Core.Match.Configuration.ConfigValueAttribute";
     private const string CONFIG_SECTION_ATTRIBUTE = "Mortz.Core.Match.Configuration.ConfigSectionAttribute";
     private const string ZONE_STAT_ATTRIBUTE = "Mortz.Core.Match.Configuration.ZoneStatAttribute";
     private const string CONFIG_VARIANT_ATTRIBUTE =
@@ -57,11 +56,6 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         "Property '{0}.{1}' must declare a configuration field attribute",
         "Mortz.Config", DiagnosticSeverity.Error, isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor _unsupportedProjection = new(
-        "MZ3008", "Unsupported nested configuration projection",
-        "Property '{0}': {1}",
-        "Mortz.Config", DiagnosticSeverity.Error, isEnabledByDefault: true);
-
     private static readonly DiagnosticDescriptor _invalidVariant = new(
         "MZ3010", "Invalid configuration variant",
         "Configuration family '{0}': {1}",
@@ -102,8 +96,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         string FilePath,
         int SpanStart,
         string? SnapshotBase,
-        string? SnapshotType,
-        string? ProjectionType,
+        string? VariantType,
         ImmutableArray<string> UntrackedProperties,
         ImmutableArray<Diagnostic> Diagnostics);
 
@@ -141,11 +134,13 @@ public sealed class ConfigGenerator : IIncrementalGenerator
                 static (node, _) => node is PropertyDeclarationSyntax,
                 static (ctx, _) => Extract(ctx, FieldKind.ZONE_STAT))
             .Collect();
+        // A property whose type declares [ConfigVariant] holds one selectable variant.
         IncrementalValueProvider<ImmutableArray<FieldModel>> values = context.SyntaxProvider
-            .ForAttributeWithMetadataName(
-                CONFIG_VALUE_ATTRIBUTE,
+            .CreateSyntaxProvider(
                 static (node, _) => node is PropertyDeclarationSyntax,
-                static (ctx, _) => Extract(ctx, FieldKind.VALUE))
+                static (ctx, _) => ExtractVariantValue(ctx))
+            .Where(static field => field != null)
+            .Select(static (field, _) => field!)
             .Collect();
         IncrementalValueProvider<ImmutableArray<SectionModel>> sections = context.SyntaxProvider
             .ForAttributeWithMetadataName(
@@ -221,8 +216,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
                 }
                 foreach (IPropertySymbol property in item.Type.GetMembers().OfType<IPropertySymbol>().Where(property =>
                              !property.IsStatic && property.DeclaredAccessibility == Accessibility.Public &&
-                             property.SetMethod != null && !property.GetAttributes().Any(attribute =>
-                                 attribute.AttributeClass?.ToDisplayString() is PLAYER_STAT_ATTRIBUTE or MATCH_RULE_ATTRIBUTE or CONFIG_VALUE_ATTRIBUTE)))
+                             property.SetMethod != null && !IsTracked(property)))
                 {
                     spc.ReportDiagnostic(Diagnostic.Create(_untrackedValue, property.Locations.FirstOrDefault(), item.Type.Name, property.Name));
                     valid = false;
@@ -234,9 +228,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
             }
             foreach (VariantCase item in union.Cases)
             {
-                if (!item.Type.GetMembers().OfType<IPropertySymbol>().Any(property =>
-                        property.GetAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() is
-                            PLAYER_STAT_ATTRIBUTE or MATCH_RULE_ATTRIBUTE or CONFIG_VALUE_ATTRIBUTE)))
+                if (!item.Type.GetMembers().OfType<IPropertySymbol>().Any(IsTracked))
                 {
                     spc.AddSource($"{HintName(item.Type.ToDisplayString())}.g.cs",
                         SourceText.From(EmitConfig([], item.Type.Name,
@@ -301,56 +293,13 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         string type = symbol.Type.ToDisplayString();
         Location location = node.GetLocation();
         ImmutableArray<Diagnostic>.Builder diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
-        ImmutableArray<string> untracked = symbol.ContainingType.GetMembers()
-            .OfType<IPropertySymbol>()
-            .Where(property => property is
-            {
-                IsStatic: false,
-                DeclaredAccessibility: Accessibility.Public,
-                GetMethod.DeclaredAccessibility: Accessibility.Public,
-            } && property.SetMethod != null &&
-                !property.GetAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() is
-                    PLAYER_STAT_ATTRIBUTE or MATCH_RULE_ATTRIBUTE or CONFIG_VALUE_ATTRIBUTE))
-            .Select(property => property.Name)
-            .ToImmutableArray();
-
-        bool publicGetSet = symbol is
-        {
-            IsStatic: false,
-            DeclaredAccessibility: Accessibility.Public,
-            GetMethod.DeclaredAccessibility: Accessibility.Public,
-            SetMethod.DeclaredAccessibility: Accessibility.Public,
-        };
-        if (!publicGetSet)
-            diagnostics.Add(Diagnostic.Create(_misuse, location, name,
-                "the property must be public, non-static, with public get and set"));
+        CheckAccess(symbol, location, diagnostics);
 
         AttributeData attr = ctx.Attributes[0];
-        INamedTypeSymbol? snapshotType = null;
-        INamedTypeSymbol? projectionType = null;
-        if (kind == FieldKind.VALUE)
-        {
-            if (attr.ConstructorArguments.Length != 2 ||
-                attr.ConstructorArguments[0].Value is not INamedTypeSymbol snapshot ||
-                attr.ConstructorArguments[1].Value is not INamedTypeSymbol projection)
-            {
-                diagnostics.Add(Diagnostic.Create(_unsupportedProjection, location, name,
-                    "[ConfigValue] must name snapshot and projection types"));
-            }
-            else
-            {
-                snapshotType = snapshot;
-                projectionType = projection;
-                ValidateProjection(ctx, symbol, snapshot, projection, location, diagnostics);
-            }
-        }
-        AttributeData? rangeContract = kind switch
-        {
-            FieldKind.ZONE_STAT => symbol.GetAttributes().FirstOrDefault(candidate =>
-                candidate.AttributeClass?.ToDisplayString() == MATCH_RULE_ATTRIBUTE),
-            FieldKind.VALUE => null,
-            _ => attr,
-        };
+        AttributeData? rangeContract = kind == FieldKind.ZONE_STAT
+            ? symbol.GetAttributes().FirstOrDefault(candidate =>
+                candidate.AttributeClass?.ToDisplayString() == MATCH_RULE_ATTRIBUTE)
+            : attr;
         if (kind == FieldKind.ZONE_STAT && rangeContract == null)
             diagnostics.Add(Diagnostic.Create(_misuse, location, name,
                 "[ZoneStat] requires [MatchRule] on the same property"));
@@ -399,49 +348,64 @@ public sealed class ConfigGenerator : IIncrementalGenerator
             symbol.ContainingType.ContainingNamespace.ToDisplayString(),
             name, type, isEnum, enumMembers, statsName ?? name, min, max,
             conv, defaultValue, node.SyntaxTree.FilePath, node.SpanStart,
-            symbol.ContainingType.BaseType?.GetAttributes().Any(attribute =>
-                attribute.AttributeClass?.ToDisplayString() == CONFIG_VARIANT_ATTRIBUTE) == true
-                ? symbol.ContainingType.BaseType.ToDisplayString()
-                : null,
-            snapshotType?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-            projectionType?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-            untracked,
+            SnapshotBase(symbol.ContainingType), null, Untracked(symbol.ContainingType),
             diagnostics.ToImmutable());
     }
 
-    private static void ValidateProjection(
-        GeneratorAttributeSyntaxContext ctx,
-        IPropertySymbol property,
-        INamedTypeSymbol snapshot,
-        INamedTypeSymbol projection,
-        Location location,
+    /// <summary>The snapshot is {Type}Snapshot and clamping goes through {Type}Metadata.</summary>
+    private static FieldModel? ExtractVariantValue(GeneratorSyntaxContext ctx)
+    {
+        var node = (PropertyDeclarationSyntax)ctx.Node;
+        if (ctx.SemanticModel.GetDeclaredSymbol(node) is not IPropertySymbol symbol || !IsVariant(symbol.Type))
+            return null;
+        ImmutableArray<Diagnostic>.Builder diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
+        CheckAccess(symbol, node.GetLocation(), diagnostics);
+        return new FieldModel(FieldKind.VALUE,
+            symbol.ContainingType.ToDisplayString(),
+            symbol.ContainingType.Name,
+            symbol.ContainingType.ContainingNamespace.ToDisplayString(),
+            symbol.Name, symbol.Type.ToDisplayString(), false, ImmutableArray<string>.Empty, symbol.Name,
+            float.NaN, float.NaN, Convert.RAW, null, node.SyntaxTree.FilePath, node.SpanStart,
+            SnapshotBase(symbol.ContainingType),
+            symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            Untracked(symbol.ContainingType),
+            diagnostics.ToImmutable());
+    }
+
+    private static bool IsVariant(ITypeSymbol type) => type.GetAttributes().Any(attribute =>
+        attribute.AttributeClass?.ToDisplayString() == CONFIG_VARIANT_ATTRIBUTE);
+
+    private static bool IsTracked(IPropertySymbol property) => IsVariant(property.Type) ||
+        property.GetAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() is
+            PLAYER_STAT_ATTRIBUTE or MATCH_RULE_ATTRIBUTE);
+
+    private static ImmutableArray<string> Untracked(INamedTypeSymbol owner) => owner.GetMembers()
+        .OfType<IPropertySymbol>()
+        .Where(property => property is
+        {
+            IsStatic: false,
+            DeclaredAccessibility: Accessibility.Public,
+            GetMethod.DeclaredAccessibility: Accessibility.Public,
+        } && property.SetMethod != null && !IsTracked(property))
+        .Select(property => property.Name)
+        .ToImmutableArray();
+
+    private static string? SnapshotBase(INamedTypeSymbol owner) =>
+        owner.BaseType != null && IsVariant(owner.BaseType) ? owner.BaseType.ToDisplayString() : null;
+
+    private static void CheckAccess(IPropertySymbol symbol, Location location,
         ImmutableArray<Diagnostic>.Builder diagnostics)
     {
-        ITypeSymbol mutable = property.Type;
-        IArrayTypeSymbol bytes = ctx.SemanticModel.Compilation.CreateArrayTypeSymbol(
-            ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Byte));
-        ITypeSymbol voidType = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Void);
-        (string Name, ITypeSymbol Parameter, ITypeSymbol Return)[] required =
-        [
-            ("ToSnapshot", mutable, snapshot),
-            ("ToMutable", snapshot, mutable),
-            ("Clamp", mutable, voidType),
-        ];
-        foreach ((string methodName, ITypeSymbol parameter, ITypeSymbol returnType) in required)
+        bool publicGetSet = symbol is
         {
-            bool found = projection.GetMembers(methodName).OfType<IMethodSymbol>().Any(method =>
-                method.IsStatic &&
-                method.DeclaredAccessibility != Accessibility.Private &&
-                method.Parameters.Length == 1 &&
-                SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, parameter) &&
-                SymbolEqualityComparer.Default.Equals(method.ReturnType, returnType));
-            if (!found)
-            {
-                diagnostics.Add(Diagnostic.Create(_unsupportedProjection, location, property.Name,
-                    $"projection '{projection.Name}' needs static {returnType.ToDisplayString()} " +
-                    $"{methodName}({parameter.ToDisplayString()})"));
-            }
-        }
+            IsStatic: false,
+            DeclaredAccessibility: Accessibility.Public,
+            GetMethod.DeclaredAccessibility: Accessibility.Public,
+            SetMethod.DeclaredAccessibility: Accessibility.Public,
+        };
+        if (!publicGetSet)
+            diagnostics.Add(Diagnostic.Create(_misuse, location, symbol.Name,
+                "the property must be public, non-static, with public get and set"));
     }
 
     private static SectionModel ExtractSection(GeneratorAttributeSyntaxContext ctx)
@@ -822,7 +786,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine($"namespace {ownerNamespace};");
         sb.AppendLine();
-        sb.AppendLine($"public sealed record {name}Snapshot(");
+        sb.AppendLine($"public sealed partial record {name}Snapshot(");
         if (fields.Length == 0)
         {
             sb.AppendLine(")" + snapshotBase);
@@ -831,7 +795,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         {
             FieldModel field = fields[i];
             string type = field.Kind == FieldKind.VALUE
-                ? field.SnapshotType!
+                ? field.VariantType + "Snapshot"
                 : TypeName(field.Type);
             string suffix = i == fields.Length - 1 ? $")" + snapshotBase : ",";
             sb.AppendLine($"    {type} {field.Name}{suffix}");
@@ -843,7 +807,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         foreach (FieldModel field in fields)
         {
             string value = field.Kind == FieldKind.VALUE
-                ? $"{field.ProjectionType}.ToMutable({field.Name})"
+                ? $"{field.Name}.ToMutable()"
                 : field.Name;
             sb.AppendLine($"        {field.Name} = {value},");
         }
@@ -862,7 +826,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         {
             FieldModel field = fields[i];
             string value = field.Kind == FieldKind.VALUE
-                ? $"{field.ProjectionType}.ToSnapshot({field.Name})"
+                ? $"{field.Name}.ToSnapshot()"
                 : field.Name;
             string suffix = i == fields.Length - 1 ? ");" : ",";
             sb.AppendLine($"        {value}{suffix}");
@@ -890,7 +854,7 @@ public sealed class ConfigGenerator : IIncrementalGenerator
         }
         foreach (FieldModel field in fields.Where(field => field.Kind == FieldKind.VALUE))
         {
-            sb.AppendLine($"        {field.ProjectionType}.Clamp({field.Name});");
+            sb.AppendLine($"        {field.VariantType}Metadata.Clamp({field.Name});");
         }
         sb.AppendLine("    }");
         sb.AppendLine();

@@ -23,7 +23,7 @@ public class NetRouterTests
         router.MatchGeneration = active;
         ClientProbe<MatchEndMsg> probe = new();
         router.Add(probe);
-        MatchEndMsg message = new(false, 1, incoming);
+        MatchEndMsg message = new(false, 1, 0, [], incoming);
 
         Assert.Equal(accepted, router.Dispatch(MatchEndMsg.MsgId, MatchEndMsg.Serialize(message)));
         Assert.Equal(accepted ? 1 : 0, probe.Messages.Count);

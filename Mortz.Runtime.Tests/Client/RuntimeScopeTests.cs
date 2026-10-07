@@ -54,7 +54,7 @@ public class RuntimeScopeTests
         Assert.Null(player.Match);
         Assert.Equal(3, session.Wins.Of(player));
         Assert.False(router.Dispatch(MatchEndMsg.MsgId,
-            MatchEndMsg.Serialize(new MatchEndMsg(false, 1, MatchGeneration: 7))));
+            MatchEndMsg.Serialize(new MatchEndMsg(false, 1, 0, [], MatchGeneration: 7))));
         Assert.Null(match.State.Winner);
     }
 
@@ -73,7 +73,7 @@ public class RuntimeScopeTests
         Assert.True(match.AcceptSnapshot(current.SerializeFor(1), -1));
         Assert.False(match.AcceptSnapshot((current with { Tick = 900, Generation = 6 }).SerializeFor(1), 800));
         Assert.False(match.AcceptSnapshot((current with { Tick = 901, RosterRevision = 1 }).SerializeFor(1), 800));
-        MatchEndMsg stale = new(false, 1, MatchGeneration: 6);
+        MatchEndMsg stale = new(false, 1, 0, [], MatchGeneration: 6);
         Assert.False(router.Dispatch(MatchEndMsg.MsgId, MatchEndMsg.Serialize(stale)));
         Assert.Null(match.State.Winner);
         Assert.Equal(1, match.Interpolator.NewestTick);

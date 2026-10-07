@@ -36,7 +36,6 @@ public class SimWorld
 
     private static MatchConfig Freeze(MatchConfig source)
     {
-        ModeComposition.Validate(source.Rules);
         MatchConfig copy = source.ToSnapshot().ToMutable();
         copy.Rules.Clamp();
         copy.Physics.Clamp();
@@ -57,7 +56,7 @@ public class SimWorld
         Terrain = terrain;
         _config = Freeze(config);
         Config = _config.ToSnapshot();
-        _respawns = respawns ?? RespawnStrategy.Create(_config.Rules.Respawn);
+        _respawns = respawns ?? Config.Rules.Respawn.Create();
         Zones = zones ?? MapZones.None;
         _spawnPoints = spawnPoints?.ToArray() ?? [];
         _players = new DictionaryProjection<int, SimulatedPlayer, PlayerState>(_entries, entry => entry.State);
@@ -200,8 +199,8 @@ public class SimWorld
             JumpsLeft = stats.TotalJumps,
             Ammo = stats.MaxAmmo,
             Health = stats.MaxHealth,
-            SpawnImmunityTicks = (byte)_config.Rules.SpawnImmunityTicks,
-            SpawnImmunityFireThroughSeq = lastInputSeq + _config.Rules.SpawnImmunityTicks,
+            SpawnImmunityTicks = (byte)Config.Rules.SpawnImmunityTicks,
+            SpawnImmunityFireThroughSeq = lastInputSeq + Config.Rules.SpawnImmunityTicks,
             LastInputSeq = lastInputSeq,
         };
     }

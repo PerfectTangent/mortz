@@ -10,6 +10,7 @@ using Mortz.Client.Spectating;
 using Mortz.Client.Ui;
 using Mortz.Client.Views;
 using Mortz.Core.Match.Configuration;
+using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Replication;
 using Mortz.Core.Sim;
@@ -35,7 +36,7 @@ public partial class GameView : Node2D,
     [Export] private PlayerViewManager _players = null!;
     [Export] private MortarClient _mortarClient = null!;
     [Export] private PlayerStatusHud _hud = null!;
-    [Export] private DeadlockHud _objectiveHud = null!;
+    [Export] private ObjectiveHud[] _objectiveHuds = [];
     [Export] private FinalKillReplay _finalKillReplay = null!;
     [Export] private SpectatorController _spectator = null!;
 
@@ -89,7 +90,7 @@ public partial class GameView : Node2D,
         _finalKillReplay.Initialize(_renderer);
         _hud.Configure(PlayerStats.Resolve(runtime.Config.ToMutable()));
         _hud.Visible = matchState.Participation.Activity == MatchActivity.ACTIVE;
-        _objectiveHud.Present(matchState.Objective);
+        PresentObjective(matchState.Objective);
     }
 
     public void OnResolved()
@@ -137,6 +138,14 @@ public partial class GameView : Node2D,
 
     private void OnSnapshotApplied(Snapshot snapshot) => SnapshotApplied?.Invoke(snapshot);
 
+    private void PresentObjective(ObjectiveState objective)
+    {
+        foreach (ObjectiveHud hud in _objectiveHuds)
+        {
+            hud.Present(objective);
+        }
+    }
+
     private void OnMatchStatsChanged(ClientPlayer player)
     {
         if (player.PeerId != Network.LocalPeerId || player.Match == null)
@@ -167,7 +176,7 @@ public partial class GameView : Node2D,
             _localPlayer.CompletedShells) with
         { Objective = _matchState.Objective };
         _renderer.Apply(frame, MatchRenderMode.LIVE);
-        _objectiveHud.Present(frame.Objective);
+        PresentObjective(frame.Objective);
         _finalKillReplay.Record(frame);
 
         Vector2? localCameraPosition = null;

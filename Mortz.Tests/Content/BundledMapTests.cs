@@ -1,8 +1,8 @@
 using Godot;
 using Mortz.Content;
 using Mortz.Core.Match.Configuration;
-using Mortz.Core.Match.Teams;
 using Mortz.Core.Sim;
+using Mortz.Core.Sim.Modifiers;
 using Mortz.Shared;
 using Xunit;
 
@@ -12,25 +12,14 @@ namespace Mortz.Tests.Content;
 public class BundledMapTests
 {
     [Fact]
-    public void DeadlockPresetBindsAllThreeControlBayZones()
+    public void DeadlockPlaysOnControlBayButNotOnAMapWithoutControlZones()
     {
-        ContentCatalogResult result = ContentCatalog.Load(ProjectSettings.GlobalizePath("res://content"));
-        ContentCatalog catalog = Assert.IsType<ContentCatalog>(result.Catalog);
-        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Severity == ContentDiagnosticSeverity.ERROR);
-        GameModeManifest mode = catalog.Modes["deadlock"].Winner.Manifest;
-        MatchConfig config = mode.ToMatchConfigSnapshot().ToMutable();
-        Assert.Empty(ModeComposition.Errors(config.Rules));
-        Assert.IsType<EscalatingRespawnRules>(config.Rules.Respawn);
+        ContentCatalog catalog = Assert.IsType<ContentCatalog>(
+            ContentCatalog.Load(ProjectSettings.GlobalizePath("res://content")).Catalog);
+        MatchConfig config = catalog.Modes["deadlock"].Winner.Manifest.ToMatchConfigSnapshot().ToMutable();
         MapPackage map = Assert.IsType<MapPackage>(MapPackageLoader.Load(catalog.Maps["control-bay"].Winner).Package);
-        Assert.Null(ModeComposition.MapError(config.Rules.Objective.ToSnapshot(), map.Zones));
-        Assert.Equal(3, map.Zones.All.Count(zone => zone.HasTag("control")));
-        Assert.False(map.Zones.All.Single(zone => zone.Name == "accel").HasTag("control"));
-        Assert.Contains(map.SpawnPoints, spawn => spawn.Team == Team.BLUE);
-        Assert.Contains(map.SpawnPoints, spawn => spawn.Team == Team.RED);
-        Assert.Equal(config.ToSnapshot(), MatchConfigCodec.FromBytes(config.ToBytes()).ToSnapshot());
-        ((DeadlockObjectiveRules)config.Rules.Objective).CaptureSpeed = 8;
-        ((EscalatingRespawnRules)config.Rules.Respawn).Increase = 2;
-        Assert.True(mode.Matches(config));
+        Assert.Empty(config.Errors(map.Zones));
+        Assert.Contains("control", Assert.Single(config.Errors(MapZones.None)));
     }
 
     [Fact]

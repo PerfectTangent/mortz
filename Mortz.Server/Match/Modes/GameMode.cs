@@ -1,90 +1,68 @@
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Scoring;
+using Mortz.Core.Match.Teams;
 using Mortz.Core.Sim;
-using Mortz.Core.Sim.Modifiers;
 using Mortz.Server.Match.Scoring;
 
 namespace Mortz.Server.Match.Modes;
 
-/// <summary>Composes objectives, scoring, end conditions, winner selection, and replay into a match outcome.</summary>
-public class GameMode(
-    IScoreSource scores,
-    EndCondition endCondition,
-    IWinnerSelection winner,
-    EvaluationTiming timing,
-    IReplayPolicy replay,
-    IMatchObjective? objective = null)
+/// <summary>Turns one playing tick into scored deaths and, once decided, the match outcome.</summary>
+public class GameMode(ModeRulesSnapshot rules, MatchObjective objective)
 {
-    private readonly IMatchObjective _objective = objective ?? new NoObjective();
+    private readonly bool _teams = rules.Teams;
+    private readonly ScoreMetric _metric = rules.Score;
+    private readonly EndConditionRulesSnapshot _end = rules.EndCondition;
+    private readonly bool _finalReplay = rules.FinalReplay;
 
-    public ObjectiveState Objective => _objective.State;
+    public ObjectiveState Objective => objective.State;
 
-    public static GameMode Create(ModeRulesSnapshot rules, IMatchObjective? objective = null,
-        MapZones? zones = null) => new(
-        ScoreSources.Create(rules.Score), EndCondition.Create(rules.EndCondition.ToMutable()),
-        WinnerSelections.Create(rules.Winner), rules.Evaluation, ReplayPolicies.Create(rules.Replay),
-        objective ?? MatchObjectives.Create(rules.Objective, zones ?? MapZones.None));
-
+    /// <summary>A completed objective wins outright. Otherwise the end condition
+    /// is checked against the scores from before this tick's deaths (timer and
+    /// roster changes), then after each death. Every death is scored either way.</summary>
     public GameModeUpdate Advance(MatchContext match, ScoringStep scoring, IReadOnlyList<Death> deaths)
     {
-        _objective.Advance(match.World);
+        SimWorld world = match.World;
+        objective.Advance(world);
+        MatchOutcome? outcome = null;
+        if (objective.Winner is { } captured)
+            outcome = new MatchOutcome(captured);
+        else if (_end.Winner(world.Tick, Scores(scoring)) is { } early)
+            outcome = new MatchOutcome(early);
+
         List<ScoredKill> eliminations = [];
-        GameModeContext Context() => new(match.World, scoring.Rows(), scoring.TeamKills, scoring.TeamDeaths, Objective);
-        GameModeUpdate Complete(MatchOutcome? outcome) => new(eliminations, Standing(Context()), outcome);
-
-        if (timing == EvaluationTiming.TICK)
-        {
-            eliminations.AddRange(scoring.Apply(match, deaths));
-            return Complete(Evaluate(Context()));
-        }
-
-        // A timer or roster change can finish the match before any death is scored.
-        if (Evaluate(Context()) is MatchOutcome existing)
-            return Complete(existing);
-
         foreach (Death death in deaths)
         {
-            if (scoring.ScoreDeath(match, death) is not ScoredKill elimination)
+            if (scoring.ScoreDeath(match, death) is not ScoredKill kill)
                 continue;
-            eliminations.Add(elimination);
-            GameModeContext context = Context();
-            if (Resolve(context) is not ModeResolution resolution)
+            eliminations.Add(kill);
+            if (outcome != null || _end.Winner(world.Tick, Scores(scoring)) is not { } winner)
                 continue;
-            FinalKillEvent? finalKill = replay.Select(context, resolution,
-                new ScoredElimination(elimination, death));
-            return Complete(new MatchOutcome(resolution.Winner, finalKill));
+            FinalKillEvent? replay = _finalReplay
+                ? FinalKillEvent.Capture(world.Tick, kill, death, world.Explosions)
+                : null;
+            outcome = new MatchOutcome(winner, replay);
         }
 
-        return Complete(null);
+        MatchPoint? matchPoint = outcome == null ? _end.MatchPoint(Scores(scoring)) : null;
+        return new GameModeUpdate(eliminations, matchPoint, outcome);
     }
 
-    /// <summary>Null keeps the match running, including when winner selection cannot break a tie.</summary>
-    public MatchOutcome? Evaluate(GameModeContext context) =>
-        Resolve(context) is ModeResolution resolution ? new MatchOutcome(resolution.Winner) : null;
-
-    public MatchStanding Standing(GameModeContext context)
+    private Scores Scores(ScoringStep scoring)
     {
-        IReadOnlyList<ContenderScore> contenders = scores.Read(context);
-        MatchStanding standing = endCondition.Standing(context, contenders);
-        if (endCondition is ObjectiveCompletionCondition || winner is QualifyingWinner)
-        {
-            return standing with { Remaining = -1 };
-        }
-        // Match-point announcements currently describe a winning kill.
-        return standing.Remaining >= 0 && context.Rules.Score == ScoreMetric.KILLS &&
-               context.Rules.Winner == WinnerRule.HIGHEST_SCORE
-            ? standing
-            : new MatchStanding(winner.Select(contenders, default), -1);
-    }
-
-    private ModeResolution? Resolve(GameModeContext context)
-    {
-        IReadOnlyList<ContenderScore> contenders = scores.Read(context);
-        if (endCondition.Evaluate(context, contenders) is not EndDecision decision ||
-            winner.Select(contenders, decision) is not Victor victor)
-            return null;
-        return new ModeResolution(victor, decision.Reason);
+        IReadOnlyList<SeatedScore> rows = scoring.Rows();
+        bool kills = _metric == ScoreMetric.KILLS;
+        ContenderScore[] values = _teams
+            ? Teams.All
+                .Where(team => rows.Any(row => row.Score.Team == team))
+                .Select(team => new ContenderScore(new Victor.Team(team),
+                    kills ? scoring.TeamKills[team] : scoring.TeamDeaths[team]))
+                .ToArray()
+            : rows
+                .Select(row => new ContenderScore(new Victor.Player(row.Player.PeerId),
+                    kills ? row.Score.Kills : row.Score.Deaths))
+                .ToArray();
+        return new Scores(values, _metric.HigherIsBetter());
     }
 }
 
@@ -92,8 +70,4 @@ public class GameMode(
 public record MatchOutcome(Victor Winner, FinalKillEvent? FinalKill = null);
 
 public readonly record struct GameModeUpdate(
-    IReadOnlyList<ScoredKill> Eliminations, MatchStanding Standing, MatchOutcome? Outcome);
-
-public readonly record struct ModeResolution(Victor Winner, EndReason Reason);
-
-public readonly record struct ScoredElimination(ScoredKill Kill, Death Death);
+    IReadOnlyList<ScoredKill> Eliminations, MatchPoint? MatchPoint, MatchOutcome? Outcome);

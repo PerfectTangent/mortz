@@ -15,7 +15,6 @@ public enum SettingsRejectReason
     UNKNOWN_MODE,
     UNKNOWN_MAP,
     MAP_LOAD_FAILED,
-    INCOMPATIBLE_MAP,
 }
 
 public abstract record SettingsMutationResult

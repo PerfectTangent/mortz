@@ -8,11 +8,12 @@ namespace Mortz.Content;
 [TomlModel]
 public sealed record GameModeManifest : ITomlValidatedModel
 {
+    private static readonly string[] _identity =
+        ["rules.teams", "rules.end_condition.type", "rules.objective.type", "rules.respawn.type"];
+
     public required int FormatVersion { get; init; }
     public required string Name { get; init; }
     public string Description { get; init; } = "";
-    public string[] Identity { get; init; } =
-        ["rules.teams", "rules.score", "rules.winner", "rules.evaluation", "rules.replay", "rules.end_condition.type", "rules.objective.type", "rules.respawn.type"];
     public ModeRules Rules { get; init; } = new();
     public Physics Physics { get; init; } = new();
     public Combat Combat { get; init; } = new();
@@ -35,7 +36,7 @@ public sealed record GameModeManifest : ITomlValidatedModel
             Physics = current.Physics.ToMutable(),
             Combat = current.Combat.ToMutable(),
         },
-        Identity);
+        _identity);
 }
 
 [TomlModel]

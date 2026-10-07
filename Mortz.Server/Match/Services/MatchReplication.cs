@@ -1,5 +1,4 @@
 using Mortz.Core.Match.Configuration;
-using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
@@ -47,7 +46,7 @@ public class MatchReplication(
     private int _nextTerrainTransferId;
     private int _rosterRevision;
     private readonly Dictionary<int, byte> _slots = [];
-    private readonly ObjectiveSnapshotCodec _objectiveCodec = ObjectiveSnapshotCodec.Create(runtime.Config.Rules.Objective);
+    private readonly ObjectiveWire _objectiveWire = ObjectiveWire.Create(runtime.Config.Rules.Objective);
 
     public void Sync(Player jipPlayer)
     {
@@ -56,7 +55,7 @@ public class MatchReplication(
             participation.Activity, participation.Reason, participation.ReturnTick));
         SendCurrentState(jipPlayer);
         // Admission creates the player after bootstrap; send its authoritative spawn now.
-        link.SendSnapshot(jipPlayer.PeerId, CaptureSnapshot().SerializeFor(jipPlayer.PeerId, _objectiveCodec), -1);
+        link.SendSnapshot(jipPlayer.PeerId, CaptureSnapshot().SerializeFor(jipPlayer.PeerId, _objectiveWire), -1);
     }
 
     public void Enter(Player player, int generation, bool initialPhase)
@@ -164,8 +163,7 @@ public class MatchReplication(
                 judgment.Magnitude, judgment.Detail));
         }
 
-        if (update.Tick % NetConfig.TICKS_PER_SNAPSHOT == 0 &&
-            (runtime.World.Players.Count > 0 || runtime.Objective is not NoObjectiveState))
+        if (update.Tick % NetConfig.TICKS_PER_SNAPSHOT == 0)
             BroadcastSnapshot();
         if (update.Tick % NetConfig.TICKS_PER_MORTAR_CORRECTION == 0 && runtime.World.Mortars.Count > 0)
             BroadcastMortarCorrections();
@@ -183,17 +181,10 @@ public class MatchReplication(
 
     private void SendResult(Victor winner, int? peerId = null)
     {
-        MatchEndMsg result = MatchProtocol.Encode(winner);
-        if (runtime.Objective is NoObjectiveState)
-        {
-            if (peerId is int peer) link.Send(peer, result);
-            else link.Broadcast(result);
-            return;
-        }
-        ObjectiveMatchEndMsg objectiveResult = new(result.ByTeam, result.WinnerId, runtime.World.Tick,
-            _objectiveCodec.Serialize(runtime.Objective));
-        if (peerId is int target) link.Send(target, objectiveResult);
-        else link.Broadcast(objectiveResult);
+        MatchEndMsg result = MatchProtocol.Encode(winner, runtime.World.Tick,
+            _objectiveWire.Serialize(runtime.Objective));
+        if (peerId is int target) link.Send(target, result);
+        else link.Broadcast(result);
     }
 
     private void BroadcastMortarEvents(int tick, IReadOnlyList<SimWorld.MortarEvent> mortarEvents,
@@ -224,7 +215,7 @@ public class MatchReplication(
     {
         MatchSnapshot snapshot = CaptureSnapshot();
         _snapshotPayloadBytes += link.BroadcastSnapshot(
-            peerId => snapshot.SerializeFor(peerId, _objectiveCodec),
+            peerId => snapshot.SerializeFor(peerId, _objectiveWire),
             peerId => runtime.World.Players.TryGetValue(peerId, out PlayerState player)
                 ? player.LastInputSeq
                 : -1);
@@ -301,7 +292,7 @@ public class MatchReplication(
         link.Send(peerId, new MatchLoadMsg(map.MapId, map.Hash, runtime.Config.ToBytes(),
             (byte)terrain.Encoding, transferId, terrain.Data.Length, checked((short)chunkCount),
             participation.Seat, participation.Activity, participation.Reason,
-            participation.ReturnTick, initialSnapshot.Serialize(_objectiveCodec), ack, generation));
+            participation.ReturnTick, initialSnapshot.Serialize(_objectiveWire), ack, generation));
         for (int i = 0; i < chunkCount; i++)
         {
             int offset = i * NetConfig.TERRAIN_CHUNK_BYTES;

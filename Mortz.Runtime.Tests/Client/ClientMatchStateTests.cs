@@ -1,4 +1,5 @@
 using Mortz.Client.Match;
+using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
@@ -50,7 +51,7 @@ public class ClientMatchStateTests : RuntimeServiceTest
 
         Assert.False(state.TryApplyParticipation(7, MatchParticipation.JipSpectator));
         Assert.False(state.TryApplyMatchPoint(7, new MatchPoint(1, null)));
-        Assert.False(state.TryApplyWinner(7, new Victor.Player(2)));
+        Assert.False(state.TryComplete(7, 0, NoObjectiveState.Instance, new Victor.Player(2)));
         Assert.False(state.TryReplaceScores(7, [new MatchScoreRow(2, 9, 3)], default));
         Assert.False(state.TryPatchScores(7, new MatchScorePatch(
             2, 3, false, 1, 1, 0, 0, default)));
@@ -67,7 +68,7 @@ public class ClientMatchStateTests : RuntimeServiceTest
     {
         ClientMatchState first = new(1, MatchParticipation.Active);
         first.TryApplyMatchPoint(1, new MatchPoint(2, new Victor.Player(7)));
-        first.TryApplyWinner(1, new Victor.Player(7));
+        first.TryComplete(1, 0, NoObjectiveState.Instance, new Victor.Player(7));
         first.TryReplaceScores(1, [new MatchScoreRow(7, 5, 1)], new TeamKills(5, 0));
         first.Close();
 

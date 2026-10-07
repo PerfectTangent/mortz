@@ -7,10 +7,10 @@ namespace Mortz.Protocol.Replication;
 /// <summary>Fixed binary layout for the outer match snapshot.</summary>
 public static class MatchSnapshotWire
 {
-    public static byte[] Serialize(MatchSnapshot snapshot, int? localPeerId, ObjectiveSnapshotCodec? codec = null) =>
-        PacketEncoder.Encode(snapshot, (localPeerId, codec ?? ObjectiveSnapshotCodec.None), Write);
+    public static byte[] Serialize(MatchSnapshot snapshot, int? localPeerId, ObjectiveWire? objectiveWire = null) =>
+        PacketEncoder.Encode(snapshot, (localPeerId, objectiveWire ?? ObjectiveWire.None), Write);
 
-    private static void Write(ref PacketWriter writer, MatchSnapshot snapshot, (int? Peer, ObjectiveSnapshotCodec Codec) options)
+    private static void Write(ref PacketWriter writer, MatchSnapshot snapshot, (int? Peer, ObjectiveWire Objective) options)
     {
         int? localPeerId = options.Peer;
         writer.Write(snapshot.Generation);
@@ -28,10 +28,10 @@ public static class MatchSnapshotWire
             writer.Write(player.Presentation.IsBleeding);
             writer.Write(player.Skin);
         }
-        options.Codec.Write(ref writer, snapshot.Objective);
+        options.Objective.Write(ref writer, snapshot.Objective);
     }
 
-    public static MatchSnapshot Deserialize(byte[] data, IPeerSlots? slots, ObjectiveSnapshotCodec? codec = null)
+    public static MatchSnapshot Deserialize(byte[] data, IPeerSlots? slots, ObjectiveWire? objectiveWire = null)
     {
         using MemoryStream stream = new(data, writable: false);
         using BinaryReader reader = new(stream);
@@ -45,7 +45,7 @@ public static class MatchSnapshotWire
                 simulationPlayers[i],
                 ReadPresentation(reader), Skin: reader.ReadByte());
         }
-        ObjectiveState objective = (codec ?? ObjectiveSnapshotCodec.None).Read(reader);
+        ObjectiveState objective = (objectiveWire ?? ObjectiveWire.None).Read(reader);
         if (stream.Position != stream.Length)
             throw new InvalidDataException("Trailing bytes in match snapshot.");
         return new MatchSnapshot(tick, players, generation, revision) { Objective = objective };

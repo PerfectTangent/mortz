@@ -1,15 +1,15 @@
+using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
 using Mortz.Server.Match.Scoring.SuicidePenalties;
 using Mortz.Server.Players;
-using ModeRules = Mortz.Core.Match.Configuration.ModeRules;
 
 namespace Mortz.Server.Match.Scoring;
 
 /// <summary>Rows live in each seated player's score cell; team kill totals
 /// accumulate here at kill time, so a leaver's kills stay counted.</summary>
 public sealed class MatchScores(
-    ModeRules config,
+    ModeRulesSnapshot config,
     MatchStateKeys keys,
     IReadOnlyDictionary<int, Player> seated)
 {

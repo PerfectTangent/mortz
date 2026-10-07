@@ -30,7 +30,7 @@ Label/constants/outline_size = 4
 RichTextLabel/colors/font_outline_color = Color(0, 0, 0, 0.9)
 RichTextLabel/constants/outline_size = 4
 
-[node name="GameView" type="Node2D" unique_id=1808596722 node_paths=PackedStringArray("_ropes", "_localPlayer", "_players", "_mortarClient", "_hud", "_objectiveHud", "_finalKillReplay", "_spectator")]
+[node name="GameView" type="Node2D" unique_id=1808596722 node_paths=PackedStringArray("_ropes", "_localPlayer", "_players", "_mortarClient", "_hud", "_objectiveHuds", "_finalKillReplay", "_spectator")]
 script = ExtResource("1_gview")
 _gameMapScene = ExtResource("2_gmap")
 _ropes = NodePath("RopeOverlay")
@@ -38,7 +38,7 @@ _localPlayer = NodePath("LocalPlayer")
 _players = NodePath("Players")
 _mortarClient = NodePath("MortarClient")
 _hud = NodePath("Hud/PlayerStatus")
-_objectiveHud = NodePath("Hud/DeadlockHud")
+_objectiveHuds = [NodePath("Hud/DeadlockHud")]
 _finalKillReplay = NodePath("FinalKillReplay")
 _spectator = NodePath("SpectatorController")
 

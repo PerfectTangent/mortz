@@ -30,9 +30,7 @@ public sealed class SettingsService : IObservePlayers, IObservePhase
         _link = link;
         _log = log;
         Map = boot.Map;
-        ModeComposition.Validate(boot.Rules.Rules);
         Config = boot.Rules.ToSnapshot().ToMutable();
-        ModeComposition.ValidateMap(Config.Rules.Objective.ToSnapshot(), Map.Zones);
         LoadCatalog(boot.Catalog);
     }
 
@@ -69,10 +67,8 @@ public sealed class SettingsService : IObservePlayers, IObservePhase
             return new SettingsMutationResult.Rejected(SettingsRejectReason.INVALID_RULES);
         }
 
-        if (ModeComposition.MapError(next.Rules.Objective.ToSnapshot(), Map.Zones) is { } error)
-        {
-            return new SettingsMutationResult.Rejected(SettingsRejectReason.INCOMPATIBLE_MAP, error);
-        }
+        if (Reject(next, Map) is { } rejected)
+            return rejected;
 
         LobbySettings before = CreateState();
         MatchConfigSnapshot nextSnapshot = next.ToSnapshot();
@@ -87,15 +83,13 @@ public sealed class SettingsService : IObservePlayers, IObservePhase
         if (mode == null)
             return new SettingsMutationResult.Rejected(SettingsRejectReason.UNKNOWN_MODE);
 
+        MatchConfig next = mode.Manifest.ToMatchConfigSnapshot().ToMutable();
+        next.Clamp();
+        if (Reject(next, Map) is { } rejected)
+            return rejected;
+
         LobbySettings before = CreateState();
         string previousMode = ModeName;
-        MatchConfig next = mode.Manifest.ToMatchConfigSnapshot().ToMutable();
-        ModeComposition.Validate(next.Rules);
-        next.Clamp();
-        if (ModeComposition.MapError(next.Rules.Objective.ToSnapshot(), Map.Zones) is { } error)
-        {
-            return new SettingsMutationResult.Rejected(SettingsRejectReason.INCOMPATIBLE_MAP, error);
-        }
         Config = next.ToSnapshot().ToMutable();
         string nextMode = ModeName;
         LobbySettingDelta[] deltas = previousMode == nextMode
@@ -116,10 +110,8 @@ public sealed class SettingsService : IObservePlayers, IObservePhase
             return new SettingsMutationResult.Rejected(SettingsRejectReason.MAP_LOAD_FAILED);
         }
 
-        if (ModeComposition.MapError(Config.Rules.Objective.ToSnapshot(), selected.Zones) is { } error)
-        {
-            return new SettingsMutationResult.Rejected(SettingsRejectReason.INCOMPATIBLE_MAP, error);
-        }
+        if (Reject(Config, selected) is { } rejected)
+            return rejected;
 
         LobbySettings before = CreateState();
         LobbySettingDelta[] deltas =
@@ -127,6 +119,11 @@ public sealed class SettingsService : IObservePlayers, IObservePhase
         Map = selected;
         return Applied(before, deltas);
     }
+
+    private static SettingsMutationResult.Rejected? Reject(MatchConfig next, MapSnapshot map) =>
+        next.Errors(map.Zones) is [_, ..] errors
+            ? new SettingsMutationResult.Rejected(SettingsRejectReason.INVALID_RULES, string.Join(" ", errors))
+            : null;
 
     private SettingsMutationResult Applied(
         LobbySettings before,

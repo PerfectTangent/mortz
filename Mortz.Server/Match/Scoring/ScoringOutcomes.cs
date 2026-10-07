@@ -18,6 +18,3 @@ public readonly record struct DeathScore(
 
 /// <summary>A suicide's kill handed to an enemy; Kills is their tally after.</summary>
 public readonly record struct KillReward(int PeerId, int Kills);
-
-/// <summary>Who is closest to winning and how much they still need.</summary>
-public readonly record struct MatchStanding(Victor? Leader, int Remaining);

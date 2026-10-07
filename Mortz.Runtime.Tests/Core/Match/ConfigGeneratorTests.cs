@@ -61,71 +61,6 @@ public sealed class ConfigGeneratorTests
     }
 
     [Fact]
-    public void NestedValueWithoutACompleteProjectionFailsGeneration()
-    {
-        const string SOURCE = """
-            namespace Mortz.Core.Match.Configuration;
-
-            [System.AttributeUsage(System.AttributeTargets.Property)]
-            public sealed class ConfigValueAttribute(
-                System.Type snapshotType,
-                System.Type projectionType) : System.Attribute;
-
-            public sealed class Nested;
-            public sealed record NestedSnapshot;
-            public static class BrokenProjection;
-
-            public sealed partial class Rules
-            {
-                [ConfigValue(typeof(NestedSnapshot), typeof(BrokenProjection))]
-                public Nested Nested { get; set; } = new();
-            }
-            """;
-
-        GeneratorDriverRunResult result = Run(SOURCE);
-
-        Assert.Contains(result.Diagnostics, item => item.Id == "MZ3008");
-    }
-
-    [Fact]
-    public void ConstructedGenericNestedValueUsesItsExplicitProjection()
-    {
-        const string SOURCE = """
-            namespace Mortz.Core.Match.Configuration;
-
-            [System.AttributeUsage(System.AttributeTargets.Property)]
-            public sealed class ConfigValueAttribute(
-                System.Type snapshotType,
-                System.Type projectionType) : System.Attribute;
-
-            public sealed class Box<T>;
-            public sealed record BoxSnapshot<T>(T Value);
-            public static class BoxIntProjection
-            {
-                public static BoxSnapshot<int> ToSnapshot(Box<int> value) => new(0);
-                public static Box<int> ToMutable(BoxSnapshot<int> snapshot) => new();
-                public static void Clamp(Box<int> value) { }
-                public static byte[] ToBytes(Box<int> value) => [];
-                public static Box<int> FromBytes(byte[] data) => new();
-            }
-
-            public sealed partial class Rules
-            {
-                [ConfigValue(typeof(BoxSnapshot<int>), typeof(BoxIntProjection))]
-                public Box<int> Box { get; set; } = new();
-            }
-            """;
-
-        GeneratorDriverRunResult result = Run(SOURCE);
-        string generated = string.Join("\n", result.GeneratedTrees.Select(tree => tree.ToString()));
-
-        Assert.DoesNotContain(result.Diagnostics, item => item.Id == "MZ3008");
-        Assert.Contains("global::Mortz.Core.Match.Configuration.BoxSnapshot<int> Box",
-            generated, StringComparison.Ordinal);
-        Assert.Contains("BoxIntProjection.ToSnapshot(Box)", generated, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void SectionDeclarationDrivesClampAndImmutableProjection()
     {
         const string SOURCE = """
@@ -202,35 +137,29 @@ public sealed class ConfigGeneratorTests
     }
 
     [Fact]
-    public void SeveralVariantValuesShareOneConfigurationSection()
+    public void VariantTypedPropertiesAreValuesByConvention()
     {
         GeneratorDriverRunResult result = Run("""
             namespace Mortz.Core.Match.Configuration;
-            [System.AttributeUsage(System.AttributeTargets.Property)]
-            public class ConfigValueAttribute(System.Type snapshot, System.Type projection) : System.Attribute;
-            public class Value;
-            public record ValueSnapshot;
-            public static class Projection
-            {
-                public static ValueSnapshot ToSnapshot(Value value) => new();
-                public static Value ToMutable(ValueSnapshot value) => new();
-                public static void Clamp(Value value) { }
-            }
+            [System.AttributeUsage(System.AttributeTargets.Class, AllowMultiple = true)]
+            public class ConfigVariantAttribute(string id, string name, System.Type type) : System.Attribute;
+            [ConfigVariant("plain", "Plain", typeof(PlainValue))]
+            public abstract class Value;
+            public partial class PlainValue : Value;
             public partial class Rules
             {
-                [ConfigValue(typeof(ValueSnapshot), typeof(Projection))]
-                public Value Objective { get; set; } = new();
-                [ConfigValue(typeof(ValueSnapshot), typeof(Projection))]
-                public Value Respawn { get; set; } = new();
+                public Value Objective { get; set; } = new PlainValue();
+                public Value Respawn { get; set; } = new PlainValue();
             }
             """);
         string generated = string.Join("\n", result.GeneratedTrees.Select(tree => tree.ToString()));
 
         Assert.DoesNotContain(result.Diagnostics, item => item.Severity == DiagnosticSeverity.Error);
-        Assert.Contains("Projection.ToSnapshot(Objective)", generated);
-        Assert.Contains("Projection.ToSnapshot(Respawn)", generated);
-        Assert.Contains("Projection.Clamp(Objective)", generated);
-        Assert.Contains("Projection.Clamp(Respawn)", generated);
+        Assert.Contains("global::Mortz.Core.Match.Configuration.ValueSnapshot Objective,", generated);
+        Assert.Contains("Objective.ToSnapshot()", generated);
+        Assert.Contains("Respawn.ToMutable()", generated);
+        Assert.Contains("global::Mortz.Core.Match.Configuration.ValueMetadata.Clamp(Objective);", generated);
+        Assert.Contains("global::Mortz.Core.Match.Configuration.ValueMetadata.Clamp(Respawn);", generated);
     }
 
     private static GeneratorDriverRunResult Run(string source)

@@ -25,7 +25,7 @@ public class DeadlockReplicationTests
     {
         MatchConfig config = DeadlockMatchTests.Config();
         ((DeadlockObjectiveRules)config.Rules.Objective).CaptureSpeed = 99;
-        ObjectiveSnapshotCodec codec = ObjectiveSnapshotCodec.Create(config.Rules.Objective.ToSnapshot());
+        ObjectiveWire objectiveWire = ObjectiveWire.Create(config.Rules.Objective.ToSnapshot());
         MapSnapshot map = TestServer.Map("control", "Control") with
         {
             InitialTerrain = TestWorlds.Flat(),
@@ -55,7 +55,7 @@ public class DeadlockReplicationTests
         replication.RosterChanged();
         replication.Enter(roster.Find(3)!, 3, true);
         MatchLoadMsg bootstrap = wire.Last<MatchLoadMsg>();
-        Assert.IsType<DeadlockObjectiveState>(MatchSnapshot.Deserialize(bootstrap.InitialSnapshot, codec).Objective);
+        Assert.IsType<DeadlockObjectiveState>(MatchSnapshot.Deserialize(bootstrap.InitialSnapshot, objectiveWire).Objective);
         wire.Messages.Clear();
         for (int tick = 0; tick < 61; tick++)
         {
@@ -64,26 +64,25 @@ public class DeadlockReplicationTests
         Assert.NotEqual(0, runtime.World.Tick % NetConfig.TICKS_PER_SNAPSHOT);
         if (spectatorLoading)
         {
-            Assert.DoesNotContain(wire.Messages, sent => sent.Target == 3 && sent.Message is ObjectiveMatchEndMsg);
+            Assert.DoesNotContain(wire.Messages, sent => sent.Target == 3 && sent.Message is MatchEndMsg);
             Assert.True(link.Ready(3, 3));
         }
-        Sent[] results = wire.Messages.Where(sent => sent.Message is ObjectiveMatchEndMsg).ToArray();
+        Sent[] results = wire.Messages.Where(sent => sent.Message is MatchEndMsg).ToArray();
         Assert.Equal(spectatorLoading ? [1, 2, 3] : new[] { 0 }, results.Select(sent => sent.Target));
         foreach (Sent sent in results)
         {
-            ObjectiveMatchEndMsg result = (ObjectiveMatchEndMsg)sent.Message;
+            MatchEndMsg result = (MatchEndMsg)sent.Message;
             Assert.Equal(61, result.Tick);
             Assert.Equal(3, result.MatchGeneration);
-            Assert.Equal(runtime.Objective, codec.Deserialize(result.Objective));
+            Assert.Equal(runtime.Objective, objectiveWire.Deserialize(result.Objective));
         }
-        Assert.DoesNotContain(wire.Messages, sent => sent.Message is MatchEndMsg);
     }
 
     [Fact]
     public void SpectatorsKeepReceivingObjectiveDecayAfterTheLastPlayerLeaves()
     {
         MatchConfig config = DeadlockMatchTests.Config();
-        ObjectiveSnapshotCodec codec = ObjectiveSnapshotCodec.Create(config.Rules.Objective.ToSnapshot());
+        ObjectiveWire objectiveWire = ObjectiveWire.Create(config.Rules.Objective.ToSnapshot());
         MapSnapshot map = TestServer.Map("control", "Control") with
         {
             InitialTerrain = TestWorlds.Flat(),
@@ -126,7 +125,7 @@ public class DeadlockReplicationTests
 
         SentSnapshot sent = Assert.Single(wire.Snapshots);
         Assert.Equal(spectator.PeerId, sent.Target);
-        MatchSnapshot snapshot = MatchSnapshot.Deserialize(sent.Data, codec);
+        MatchSnapshot snapshot = MatchSnapshot.Deserialize(sent.Data, objectiveWire);
         Assert.Empty(snapshot.Players);
         Assert.Equal(runtime.World.Tick, snapshot.Tick);
         DeadlockObjectiveState objective = Assert.IsType<DeadlockObjectiveState>(snapshot.Objective);

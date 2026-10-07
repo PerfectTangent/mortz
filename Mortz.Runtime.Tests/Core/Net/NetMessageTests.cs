@@ -270,9 +270,11 @@ public class NetMessageTests
         ClientProbe<MatchEndMsg> probe = new();
         router.Add(probe);
 
-        new MatchEndMsg(true, 2).Broadcast(router);
+        new MatchEndMsg(true, 2, 61, [1, 2, 3]).Broadcast(router);
 
-        Assert.Equal(new MatchEndMsg(true, 2), Assert.Single(probe.Messages));
+        MatchEndMsg received = Assert.Single(probe.Messages);
+        Assert.Equal((true, 2, 61), (received.ByTeam, received.WinnerId, received.Tick));
+        Assert.Equal([1, 2, 3], received.Objective);
     }
 
     [Fact]

@@ -1,13 +1,10 @@
 [rules]
 teams = true
 score = "kills"
-winner = "qualifying"
-evaluation = "tick"
-replay = "none"
 spawn_immunity = 0.0
 
 [rules.end_condition]
-type = "objective_completion"
+type = "none"
 
 [rules.objective]
 type = "deadlock"

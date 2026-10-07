@@ -41,7 +41,8 @@ public partial class ScoreHudHost : ViewVariantHost<ScoreHudKind>
 
     private void RefreshScores()
     {
-        Visible = Setup.Config.Rules.Objective is not DeadlockObjectiveRules;
+        // Without an end condition only the objective decides, so kills don't matter.
+        Visible = Setup.Config.Rules.EndCondition is not NoEndConditionRules;
         if (Visible)
         {
             Refresh();

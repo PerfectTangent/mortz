@@ -54,7 +54,7 @@ public class MatchEndPresentationTests : NodeServiceTest
         Assert.True(spectatorHud.Visible);
 
         Victor expected = new Victor.Player(7);
-        MatchEndMsg message = MatchProtocol.Encode(expected);
+        MatchEndMsg message = MatchProtocol.Encode(expected, 0, []);
         Assert.True(MatchProtocol.TryDecode(message, out Victor? decoded));
         int changes = 0;
         matchState.WinnerChanged += _ => changes++;

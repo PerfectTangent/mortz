@@ -2,69 +2,38 @@ using System.Collections.Immutable;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Sim;
 using Mortz.Server.Match.Events;
-using Mortz.Server.Match.Scoring;
 
 namespace Mortz.Server.Match;
 
 /// <summary>Frozen outputs from one completed match tick.</summary>
-public class MatchUpdate
+public sealed record MatchUpdate
 {
-    public MatchUpdate(
-        int tick,
-        ServerTime time,
-        ImmutableArray<SimWorld.MortarEvent> mortarEvents,
-        ImmutableArray<Explosion> explosions,
-        ImmutableArray<ShellRetirement> shellRetirements,
-        ImmutableArray<Death> deaths,
-        ImmutableArray<ScoredKill> eliminations,
-        MatchStanding standing,
-        ImmutableArray<Judgment> gameEvents,
-        ImmutableArray<MatchParticipationChange> participationChanges,
-        Victor? matchEnded,
-        FinalKillEvent? finalKill,
-        bool returnToLobby,
-        ImmutableArray<ModifierChange> modifierChanges = default)
-    {
-        Tick = tick;
-        Time = time;
-        MortarEvents = mortarEvents;
-        Explosions = explosions;
-        ShellRetirements = shellRetirements;
-        Deaths = deaths;
-        Eliminations = eliminations;
-        Standing = standing;
-        GameEvents = gameEvents;
-        ParticipationChanges = participationChanges;
-        MatchEnded = matchEnded;
-        FinalKill = finalKill;
-        ReturnToLobby = returnToLobby;
-        ModifierChanges = modifierChanges.IsDefault ? [] : modifierChanges;
-    }
+    public int Tick { get; init; }
 
-    public int Tick { get; }
+    public ServerTime Time { get; init; }
 
-    public ServerTime Time { get; }
+    public ImmutableArray<SimWorld.MortarEvent> MortarEvents { get; init; } = [];
 
-    public ImmutableArray<SimWorld.MortarEvent> MortarEvents { get; }
+    public ImmutableArray<Explosion> Explosions { get; init; } = [];
 
-    public ImmutableArray<Explosion> Explosions { get; }
+    public ImmutableArray<ShellRetirement> ShellRetirements { get; init; } = [];
 
-    public ImmutableArray<ShellRetirement> ShellRetirements { get; }
+    public ImmutableArray<Death> Deaths { get; init; } = [];
 
-    public ImmutableArray<Death> Deaths { get; }
+    public ImmutableArray<ScoredKill> Eliminations { get; init; } = [];
 
-    public ImmutableArray<ScoredKill> Eliminations { get; }
+    /// <summary>Null when nobody is one kill from winning, and once the match is decided.</summary>
+    public MatchPoint? MatchPoint { get; init; }
 
-    public MatchStanding Standing { get; }
+    public ImmutableArray<Judgment> GameEvents { get; init; } = [];
 
-    public ImmutableArray<Judgment> GameEvents { get; }
+    public ImmutableArray<MatchParticipationChange> ParticipationChanges { get; init; } = [];
 
-    public ImmutableArray<MatchParticipationChange> ParticipationChanges { get; }
+    public Victor? MatchEnded { get; init; }
 
-    public Victor? MatchEnded { get; }
+    public FinalKillEvent? FinalKill { get; init; }
 
-    public FinalKillEvent? FinalKill { get; }
+    public bool ReturnToLobby { get; init; }
 
-    public bool ReturnToLobby { get; }
-    public ImmutableArray<ModifierChange> ModifierChanges { get; }
+    public ImmutableArray<ModifierChange> ModifierChanges { get; init; } = [];
 }

@@ -11,30 +11,19 @@ public sealed partial class ModeRules
     [MatchRule]
     public bool Teams { get; set; }
 
-    [ConfigValue(typeof(EndConditionRulesSnapshot), typeof(EndConditionRulesProjection))]
     public EndConditionRules EndCondition { get; set; } = new ScoreTargetRules();
 
-    [ConfigValue(typeof(ObjectiveRulesSnapshot), typeof(ObjectiveRulesProjection))]
     public ObjectiveRules Objective { get; set; } = new NoObjectiveRules();
 
-    [ConfigValue(typeof(RespawnRulesSnapshot), typeof(RespawnRulesProjection))]
     public RespawnRules Respawn { get; set; } = new FixedRespawnRules();
 
     [UiProperty("Score")]
     [MatchRule]
     public ScoreMetric Score { get; set; } = ScoreMetric.KILLS;
 
-    [UiProperty("Winner")]
-    [MatchRule]
-    public WinnerRule Winner { get; set; } = WinnerRule.HIGHEST_SCORE;
-
-    [UiProperty("Evaluate Result")]
-    [MatchRule]
-    public EvaluationTiming Evaluation { get; set; } = EvaluationTiming.ELIMINATION;
-
     [UiProperty("Final Replay")]
     [MatchRule]
-    public ReplayRule Replay { get; set; } = ReplayRule.DECISIVE_ELIMINATION;
+    public bool FinalReplay { get; set; } = true;
 
     // Self-damage always applies.
     [UiProperty("Friendly Fire")]
@@ -55,8 +44,20 @@ public sealed partial class ModeRules
     [MatchRule(min: 0, max: 4)]
     public float SpawnImmunity { get; set; } = SimConfig.SPAWN_IMMUNITY;
 
-    public int SpawnImmunityTicks => (int)(SpawnImmunity * SimConfig.TICK_RATE);
-
     public bool FriendlyFireIsRelevant => Teams;
 
+    public IReadOnlyList<string> Errors()
+    {
+        List<string> errors = [.. EndCondition.Errors(this), .. Objective.Errors(this), .. Respawn.Errors(this)];
+        if (EndCondition is NoEndConditionRules && Objective is NoObjectiveRules)
+        {
+            errors.Add("rules.end_condition 'none' requires an objective, or the match can never end.");
+        }
+        return errors;
+    }
+}
+
+public sealed partial record ModeRulesSnapshot
+{
+    public int SpawnImmunityTicks => (int)(SpawnImmunity * SimConfig.TICK_RATE);
 }

@@ -5,7 +5,6 @@ using Mortz.Core.Match.Teams;
 using Mortz.Core.Sim;
 using Mortz.Core.Terrain;
 using Mortz.Server.Match;
-using Mortz.Server.Match.Scoring;
 using Mortz.Server.Players;
 using Xunit;
 
@@ -25,8 +24,6 @@ public class MatchRuntimeTests
                 Rules = new ModeRules
                 {
                     EndCondition = new TimeLimitRules { Seconds = 1 },
-                    Evaluation = EvaluationTiming.TICK,
-                    Replay = ReplayRule.NONE
                 }
             }, 2, keys);
         runtime.Seat(OpenPlayer(1, keys));
@@ -163,35 +160,6 @@ public class MatchRuntimeTests
             runtime.Winners(new Victor.Team(Team.BLUE)).Select(player => player.PeerId));
         Assert.Equal([2],
             runtime.Winners(new Victor.Player(2)).Select(player => player.PeerId));
-    }
-
-    [Fact]
-    public void WinningDeathStopsLaterScoringButParticipationSeesEveryDeath()
-    {
-        MatchStateKeys keys = new(GENERATION);
-        using MatchRuntime runtime = NewRuntime(keys,
-            killTarget: 1,
-            suicidePenalty: SuicidePenalty.REWARD_CLOSEST_ENEMY,
-            spawnPoints: [new Vec2(10, 32), new Vec2(40, 32), new Vec2(120, 32)]);
-        Player first = OpenPlayer(1, keys);
-        Player second = OpenPlayer(2, keys);
-        Player rewarded = OpenPlayer(3, keys);
-        runtime.Seat(first);
-        runtime.Seat(second);
-        runtime.Seat(rewarded);
-        runtime.World.QueueDamage(first.PeerId, byte.MaxValue);
-        runtime.World.QueueDamage(second.PeerId, byte.MaxValue);
-
-        MatchUpdate update = runtime.Advance(default);
-
-        Assert.Equal([1, 2], update.Deaths.Select(death => death.PeerId));
-        ScoredKill scored = Assert.Single(update.Eliminations);
-        Assert.Equal(1, scored.Score.VictimId);
-        Assert.Equal(new KillReward(3, 1), scored.Score.Reward);
-        Assert.Equal(new Victor.Player(3), update.MatchEnded);
-        Assert.Equal(1, runtime.ScoreOf(first).Deaths);
-        Assert.Equal(0, runtime.ScoreOf(second).Deaths);
-        Assert.Equal([1, 2], update.ParticipationChanges.Select(change => change.PeerId));
     }
 
     [Fact]

@@ -3,24 +3,14 @@ using Mortz.Core.Sim;
 
 namespace Mortz.Core.Match.Respawning;
 
-public class EscalatingRespawnStrategy : RespawnStrategy
+public class EscalatingRespawnStrategy(EscalatingRespawnRulesSnapshot rules) : RespawnStrategy
 {
-    private readonly EscalatingRespawnRulesSnapshot _rules;
     private readonly Dictionary<int, (ulong Deaths, int? ReturnTick)> _players = [];
-
-    public EscalatingRespawnStrategy(EscalatingRespawnRules rules)
-    {
-        if (rules.ValidationError is { } error)
-        {
-            throw new ArgumentException(error, nameof(rules));
-        }
-        _rules = rules.ToSnapshot();
-    }
 
     public int DelayTicks(ulong previousDeaths)
     {
-        double seconds = Math.Min(_rules.MaximumDelay,
-            _rules.BaseDelay + (double)_rules.Increase * previousDeaths);
+        double seconds = Math.Min(rules.MaximumDelay,
+            rules.BaseDelay + (double)rules.Increase * previousDeaths);
         // Match fixed respawns' seconds-to-ticks rounding after the wide, capped calculation.
         return Math.Max(1, (int)((float)seconds * SimConfig.TICK_RATE));
     }

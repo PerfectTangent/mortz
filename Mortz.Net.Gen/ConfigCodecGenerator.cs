@@ -26,6 +26,9 @@ public class ConfigCodecGenerator : IIncrementalGenerator
     private static bool Has(IPropertySymbol property, string name) => property.GetAttributes()
         .Any(attribute => attribute.AttributeClass?.ToDisplayString() == PREFIX + name + "Attribute");
 
+    private static bool IsVariant(IPropertySymbol property) => property.Type.GetAttributes()
+        .Any(attribute => attribute.AttributeClass?.ToDisplayString() == PREFIX + "ConfigVariantAttribute");
+
     private static string TypeName(ITypeSymbol type) => type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
     private static string Codec(ITypeSymbol type) => TypeName(type) + "Codec";
 
@@ -34,11 +37,11 @@ public class ConfigCodecGenerator : IIncrementalGenerator
         if (!emitted.Add(TypeName(type)))
             return;
         IPropertySymbol[] fields = type.GetMembers().OfType<IPropertySymbol>()
-            .Where(property => Has(property, "ConfigSection") || Has(property, "ConfigValue") ||
+            .Where(property => Has(property, "ConfigSection") || IsVariant(property) ||
                 Has(property, "PlayerStat") || Has(property, "MatchRule")).ToArray();
         AttributeData[] cases = type.GetAttributes().Where(attribute =>
             attribute.AttributeClass?.ToDisplayString() == PREFIX + "ConfigVariantAttribute").ToArray();
-        foreach (IPropertySymbol field in fields.Where(field => Has(field, "ConfigSection") || Has(field, "ConfigValue")))
+        foreach (IPropertySymbol field in fields.Where(field => Has(field, "ConfigSection") || IsVariant(field)))
         {
             Emit(output, (INamedTypeSymbol)field.Type, emitted);
         }
@@ -71,10 +74,10 @@ public class ConfigCodecGenerator : IIncrementalGenerator
         }
         else
         {
-            IPropertySymbol[] nested = fields.Where(field => Has(field, "ConfigValue")).ToArray();
+            IPropertySymbol[] nested = fields.Where(field => IsVariant(field)).ToArray();
             if (nested.Length > 0)
                 source.AppendLine("        writer.Write(0); // Shared section length is filled after its fields.");
-            foreach (IPropertySymbol field in fields.Where(field => !Has(field, "ConfigValue")))
+            foreach (IPropertySymbol field in fields.Where(field => !IsVariant(field)))
             {
                 source.AppendLine($"        writer.Write({(field.Type.TypeKind == TypeKind.Enum ? "(byte)" : "")}value.{field.Name});");
             }
@@ -101,11 +104,11 @@ public class ConfigCodecGenerator : IIncrementalGenerator
         }
         else
         {
-            IPropertySymbol[] nested = fields.Where(field => Has(field, "ConfigValue")).ToArray();
+            IPropertySymbol[] nested = fields.Where(field => IsVariant(field)).ToArray();
             if (nested.Length > 0)
                 source.AppendLine("        int sharedLength = reader.ReadInt32();\n        if (sharedLength < 0 || sharedLength > stream.Length - stream.Position)\n            throw new global::System.IO.InvalidDataException(\"Invalid shared configuration length.\");");
             source.AppendLine($"        {name} value = new()\n        {{");
-            foreach (IPropertySymbol field in fields.Where(field => !Has(field, "ConfigValue")))
+            foreach (IPropertySymbol field in fields.Where(field => !IsVariant(field)))
             {
                 string expression = Has(field, "ConfigSection") ? $"{Codec(field.Type)}.FromBytes(ReadSegment(reader))" : Read(field.Type);
                 source.AppendLine($"            {field.Name} = {expression},");
@@ -120,10 +123,6 @@ public class ConfigCodecGenerator : IIncrementalGenerator
                 }
             }
             source.AppendLine("        if (stream.Position != stream.Length)\n            throw new global::System.IO.InvalidDataException(\"Trailing configuration bytes.\");");
-            if (type.ToDisplayString() == PREFIX + "MatchConfig")
-            {
-                source.AppendLine("        var errors = global::Mortz.Core.Match.Configuration.ModeComposition.Errors(value.Rules);\n        if (errors.Count > 0)\n            throw new global::System.IO.InvalidDataException(global::System.String.Join(\" \", errors));");
-            }
             source.AppendLine("        value.Clamp();\n        return value;");
         }
         source.AppendLine("    }");

@@ -9,7 +9,7 @@ namespace Mortz.Server.Match;
 
 /// <summary>Owns match scoring and turns ordered deaths into scored eliminations.</summary>
 public class ScoringStep(
-    ModeRules rules,
+    ModeRulesSnapshot rules,
     MatchStateKeys keys,
     IReadOnlyDictionary<int, Player> seated)
 {

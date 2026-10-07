@@ -8,10 +8,10 @@ namespace Mortz.Protocol.Net.Match;
 /// <summary>Turns match outcomes into the flat wire fields and back.</summary>
 public static class MatchProtocol
 {
-    public static MatchEndMsg Encode(Victor victor) => victor switch
+    public static MatchEndMsg Encode(Victor victor, int tick, byte[] objective) => victor switch
     {
-        Victor.Player player => new MatchEndMsg(false, player.PeerId),
-        Victor.Team team => new MatchEndMsg(true, TeamWire.ToByte(team.Value)),
+        Victor.Player player => new MatchEndMsg(false, player.PeerId, tick, objective),
+        Victor.Team team => new MatchEndMsg(true, TeamWire.ToByte(team.Value), tick, objective),
         _ => throw new ArgumentOutOfRangeException(nameof(victor)),
     };
 

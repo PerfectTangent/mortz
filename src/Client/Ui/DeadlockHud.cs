@@ -7,7 +7,7 @@ using Mortz.Core.Sim;
 namespace Mortz.Client.Ui;
 
 [Tool, GlobalClass]
-public partial class DeadlockHud : Control
+public partial class DeadlockHud : ObjectiveHud
 {
     public enum PreviewState { CAPTURING, DEADLOCKED, GRACE, DECAYING, CAPTURED }
 
@@ -42,7 +42,7 @@ public partial class DeadlockHud : Control
         }
     }
 
-    public void Present(ObjectiveState objective)
+    public override void Present(ObjectiveState objective)
     {
         Visible = objective is DeadlockObjectiveState;
         if (objective is not DeadlockObjectiveState state)
@@ -55,7 +55,7 @@ public partial class DeadlockHud : Control
         _red.AnchorLeft = 1 - red;
         _blueProgress.Text = $"BLUE  {(int)(100 * state.BlueProgress / state.Capacity)}%";
         _redProgress.Text = $"{(int)(100 * state.RedProgress / state.Capacity)}%  RED";
-        _status.Text = state.CapturedBy is Team winner ? $"{winner} CAPTURED" :
+        _status.Text = state.Capture is Team winner ? $"{winner} CAPTURED" :
             state.IsDeadlocked ? "DEADLOCK" : "CONTROL";
         _blueStatus.Text = TeamStatus(state, true);
         _redStatus.Text = TeamStatus(state, false);
@@ -63,9 +63,9 @@ public partial class DeadlockHud : Control
 
     private static string TeamStatus(DeadlockObjectiveState state, bool blue)
     {
-        if (state.CapturedBy != null)
+        if (state.Capture != null)
         {
-            return state.CapturedBy == (blue ? Team.BLUE : Team.RED) ? "Captured" : "Lost";
+            return state.Capture == (blue ? Team.BLUE : Team.RED) ? "Captured" : "Lost";
         }
         bool occupied = blue ? state.BlueOccupied : state.RedOccupied;
         decimal progress = blue ? state.BlueProgress : state.RedProgress;
@@ -81,10 +81,10 @@ public partial class DeadlockHud : Control
 
     private void ShowPreview() => Present(_preview switch
     {
-        PreviewState.DEADLOCKED => new DeadlockObjectiveState(6000, 3900, 2100, true, true, 0, 0, false, false, null),
-        PreviewState.GRACE => new DeadlockObjectiveState(6000, 3900, 2100, true, false, 0, 90, false, false, null),
-        PreviewState.DECAYING => new DeadlockObjectiveState(6000, 4200, 1800, true, false, 0, 0, false, true, null),
-        PreviewState.CAPTURED => new DeadlockObjectiveState(6000, 6000, 0, true, false, 0, 0, false, true, Team.BLUE),
-        _ => new DeadlockObjectiveState(6000, 1800, 1200, true, true, 0, 0, false, false, null),
+        PreviewState.DEADLOCKED => new DeadlockObjectiveState(DeadlockObjective.CAPACITY, 3900, 2100, true, true, 0, 0, false, false, null),
+        PreviewState.GRACE => new DeadlockObjectiveState(DeadlockObjective.CAPACITY, 3900, 2100, true, false, 0, 90, false, false, null),
+        PreviewState.DECAYING => new DeadlockObjectiveState(DeadlockObjective.CAPACITY, 4200, 1800, true, false, 0, 0, false, true, null),
+        PreviewState.CAPTURED => new DeadlockObjectiveState(DeadlockObjective.CAPACITY, DeadlockObjective.CAPACITY, 0, true, false, 0, 0, false, true, Team.BLUE),
+        _ => new DeadlockObjectiveState(DeadlockObjective.CAPACITY, 1800, 1200, true, true, 0, 0, false, false, null),
     });
 }

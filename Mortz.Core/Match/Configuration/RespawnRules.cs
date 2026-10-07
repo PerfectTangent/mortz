@@ -1,3 +1,4 @@
+using Mortz.Core.Match.Respawning;
 using Mortz.Core.Sim;
 using Mortz.Core.Ui;
 
@@ -9,6 +10,8 @@ namespace Mortz.Core.Match.Configuration;
 public abstract class RespawnRules
 {
     public abstract RespawnRulesSnapshot ToSnapshot();
+
+    public virtual IEnumerable<string> Errors(ModeRules rules) => [];
 }
 
 public partial class FixedRespawnRules : RespawnRules
@@ -17,11 +20,21 @@ public partial class FixedRespawnRules : RespawnRules
     [UiProperty("Respawn Delay", min: 0, max: 60, step: 0.05f)]
     [MatchRule(min: 0, max: 60)]
     public float Delay { get; set; } = SimConfig.RESPAWN_DELAY;
+}
 
+public sealed partial record FixedRespawnRulesSnapshot
+{
     public int DelayTicks => (int)(Delay * SimConfig.TICK_RATE);
+
+    public override RespawnStrategy Create() => new FixedRespawnStrategy(DelayTicks);
 }
 
 public partial class NoRespawnRules : RespawnRules;
+
+public sealed partial record NoRespawnRulesSnapshot
+{
+    public override RespawnStrategy Create() => new NoRespawnStrategy();
+}
 
 public partial class EscalatingRespawnRules : RespawnRules
 {
@@ -40,23 +53,23 @@ public partial class EscalatingRespawnRules : RespawnRules
     [MatchRule(min: 0, max: MAXIMUM_DELAY_SECONDS)]
     public float MaximumDelay { get; set; } = 10;
 
-    public string? ValidationError =>
+    public override IEnumerable<string> Errors(ModeRules rules) =>
         !float.IsFinite(BaseDelay) || BaseDelay < 0 ||
         !float.IsFinite(Increase) || Increase < 0 ||
         !float.IsFinite(MaximumDelay) || MaximumDelay * (double)SimConfig.TICK_RATE < 1 ||
         MaximumDelay * (double)SimConfig.TICK_RATE > ushort.MaxValue || BaseDelay > MaximumDelay
-            ? "rules.respawn 'escalating' requires finite nonnegative base delay/increase, base delay <= maximum delay, and a maximum delay of 1..65535 ticks."
-            : null;
+            ? ["rules.respawn 'escalating' requires finite nonnegative base delay/increase, base delay <= maximum delay, and a maximum delay of 1..65535 ticks."]
+            : [];
+}
+
+public sealed partial record EscalatingRespawnRulesSnapshot
+{
+    public override RespawnStrategy Create() => new EscalatingRespawnStrategy(this);
 }
 
 public abstract record RespawnRulesSnapshot
 {
     public abstract RespawnRules ToMutable();
-}
 
-public static class RespawnRulesProjection
-{
-    public static RespawnRulesSnapshot ToSnapshot(RespawnRules rules) => rules.ToSnapshot();
-    public static RespawnRules ToMutable(RespawnRulesSnapshot snapshot) => snapshot.ToMutable();
-    public static void Clamp(RespawnRules rules) => RespawnRulesMetadata.Clamp(rules);
+    public abstract RespawnStrategy Create();
 }

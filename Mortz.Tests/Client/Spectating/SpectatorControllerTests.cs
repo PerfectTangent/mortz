@@ -89,7 +89,7 @@ public class SpectatorControllerTests : NodeServiceTest
         _controller.Present([], null, newestTick: 0);
         Assert.True(_hud.Visible);
 
-        MatchProtocol.Encode(new Victor.Player(2)).Broadcast(Router);
+        MatchProtocol.Encode(new Victor.Player(2), 0, []).Broadcast(Router);
         Assert.False(_hud.Visible);
 
         _controller.Present([], null, newestTick: 0);

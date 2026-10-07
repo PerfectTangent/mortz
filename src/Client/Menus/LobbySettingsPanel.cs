@@ -172,12 +172,7 @@ public partial class LobbySettingsPanel : PanelContainer
     {
         if (!Admin.IsAdmin)
             return;
-        IReadOnlyList<string> errors = ModeComposition.Errors(_config.Rules);
-        if (errors.Count > 0)
-        {
-            _mapStatus.Text = string.Join(" ", errors);
-            return;
-        }
+        // The server validates and answers a rejection in chat, like map and mode changes.
         byte[] payload = _config.ToBytes();
         if (Admin.TrySignAdminAction(ReplaceLobbyRulesAction.ACTION,
                 ReplaceLobbyRulesAction.SignablePayload(payload),

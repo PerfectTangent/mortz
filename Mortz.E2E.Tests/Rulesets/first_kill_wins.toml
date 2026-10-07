@@ -1,9 +1,6 @@
 # Deathmatch with target=1, so the match ends after one shot, not five.
 [rules]
 score = "kills"
-winner = "highest_score"
-evaluation = "elimination"
-replay = "decisive_elimination"
 teams = false
 suicide_penalty = "kill_no_negative"
 

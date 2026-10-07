@@ -25,7 +25,7 @@ public class ClientMatchRuntime : IDisposable, IHandle<MatchStartMsg>, IHandle<C
     private readonly int _localPeerId;
     private readonly Action<byte[]> _sendInputs;
     private bool _closed;
-    private readonly ObjectiveSnapshotCodec _objectiveCodec;
+    private readonly ObjectiveWire _objectiveWire;
 
     public Func<PlayerInput>? SampleInput { get; set; }
     public AnnouncementDirector Announcements { get; }
@@ -57,13 +57,13 @@ public class ClientMatchRuntime : IDisposable, IHandle<MatchStartMsg>, IHandle<C
         config = config.ToSnapshot().ToMutable();
         config.Clamp();
         Config = config.ToSnapshot();
-        _objectiveCodec = ObjectiveSnapshotCodec.Create(Config.Rules.Objective);
+        _objectiveWire = ObjectiveWire.Create(Config.Rules.Objective);
         players.OpenMatch(config);
         Predictor = new Predictor(terrain, config, zones);
         Terrain = new ClientTerrain(terrain, config.Combat.MortarCarveRadius, localPeerId, clock);
         Mortars = new MortarReplicaSet(terrain, config.Combat.ToSnapshot().ToMutable(), zones);
         _scope = new FeatureScope(router.Add, router.Remove);
-        _scope.Register(new ClientMatchStateAdapter(state, _objectiveCodec));
+        _scope.Register(new ClientMatchStateAdapter(state, _objectiveWire));
         Announcements = _scope.Register(new AnnouncementDirector(players, state));
         _scope.Register(this);
         _scope.Own(state.Close);
@@ -81,7 +81,7 @@ public class ClientMatchRuntime : IDisposable, IHandle<MatchStartMsg>, IHandle<C
         MatchSnapshot snapshot;
         try
         {
-            snapshot = MatchSnapshot.Deserialize(data, _objectiveCodec);
+            snapshot = MatchSnapshot.Deserialize(data, _objectiveWire);
         }
         catch (Exception exception) when (exception is IOException or InvalidDataException)
         {
@@ -100,7 +100,7 @@ public class ClientMatchRuntime : IDisposable, IHandle<MatchStartMsg>, IHandle<C
         MatchSnapshot snapshot;
         try
         {
-            snapshot = MatchSnapshot.Deserialize(data, _players.Table, _objectiveCodec);
+            snapshot = MatchSnapshot.Deserialize(data, _players.Table, _objectiveWire);
         }
         catch (Exception exception) when (exception is IOException or InvalidDataException)
         {

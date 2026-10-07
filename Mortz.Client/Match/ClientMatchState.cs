@@ -73,19 +73,9 @@ public sealed class ClientMatchState
         return true;
     }
 
-    public bool TryApplyWinner(int generation, Victor winner)
-    {
-        ArgumentNullException.ThrowIfNull(winner);
-        if (!Accepts(generation) || Winner != null)
-            return false;
-        Winner = winner;
-        WinnerChanged?.Invoke(winner);
-        return true;
-    }
-
     public bool TryApplyObjective(int generation, int tick, ObjectiveState objective)
     {
-        if (!Accepts(generation) || Winner != null || tick <= ObjectiveTick || Objective.CapturedBy != null)
+        if (!Accepts(generation) || Winner != null || tick <= ObjectiveTick)
         {
             return false;
         }
@@ -94,10 +84,11 @@ public sealed class ClientMatchState
         return true;
     }
 
-    public bool TryCompleteObjective(int generation, int tick, ObjectiveState objective, Victor winner)
+    /// <summary>The winner, with the objective frozen on the ending tick.</summary>
+    public bool TryComplete(int generation, int tick, ObjectiveState objective, Victor winner)
     {
-        if (!Accepts(generation) || Winner != null || tick < 0 || tick < ObjectiveTick ||
-            objective.CapturedBy is not { } team || winner != new Victor.Team(team))
+        ArgumentNullException.ThrowIfNull(winner);
+        if (!Accepts(generation) || Winner != null || tick < ObjectiveTick)
         {
             return false;
         }

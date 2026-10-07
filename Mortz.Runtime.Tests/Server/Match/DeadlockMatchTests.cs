@@ -20,10 +20,7 @@ public class DeadlockMatchTests
         {
             Teams = true,
             Objective = new DeadlockObjectiveRules { CaptureSpeed = 100, DecaySpeed = 100, AbsenceDelay = 0 },
-            EndCondition = new ObjectiveCompletionRules(),
-            Winner = WinnerRule.QUALIFYING,
-            Evaluation = EvaluationTiming.TICK,
-            Replay = ReplayRule.NONE,
+            EndCondition = new NoEndConditionRules(),
             Respawn = new FixedRespawnRules { Delay = 0 },
             SpawnImmunity = 0,
             SuicidePenalty = SuicidePenalty.REWARD_CLOSEST_ENEMY,
@@ -131,42 +128,51 @@ public class DeadlockMatchTests
         f.Runtime.World.QueueDamage(2, byte.MaxValue);
         MatchUpdate ended = f.Runtime.Advance(default);
         Assert.False(f.State.RedOccupied);
-        Assert.Equal(Team.BLUE, f.State.CapturedBy);
+        Assert.Equal(Team.BLUE, f.State.Capture);
         Assert.Equal(new Victor.Team(Team.BLUE), ended.MatchEnded);
         Assert.True(f.Runtime.TeamKills.Blue < f.Runtime.TeamKills.Red);
         Assert.Null(ended.FinalKill);
-        Assert.Equal(-1, ended.Standing.Remaining);
+        Assert.Null(ended.MatchPoint);
         DeadlockObjectiveState final = f.State;
         f.Step(2);
         Assert.Same(final, f.State);
     }
 
-    [Theory]
-    [InlineData("teams")]
-    [InlineData("end_condition")]
-    [InlineData("winner")]
-    [InlineData("evaluation")]
-    [InlineData("replay")]
-    public void InvalidCompositionFailsAtEveryEntryPoint(string field)
+    [Fact]
+    public void WithATimeLimitTheBestKillsWinWhenNobodyCaptures()
     {
         MatchConfig config = Config();
-        switch (field)
+        config.Rules.EndCondition = new TimeLimitRules { Seconds = 1 };
+        using Fixture f = new(config);
+        f.Runtime.World.QueueDamage(1, byte.MaxValue);
+        f.Step();
+        Assert.Equal(1, f.Runtime.TeamKills.Red);
+        while (f.Runtime.World.Tick < SimConfig.TICK_RATE - 1)
         {
-            case "teams": config.Rules.Teams = false; break;
-            case "end_condition": config.Rules.EndCondition = new ScoreTargetRules(); break;
-            case "winner": config.Rules.Winner = WinnerRule.HIGHEST_SCORE; break;
-            case "evaluation": config.Rules.Evaluation = EvaluationTiming.ELIMINATION; break;
-            case "replay": config.Rules.Replay = ReplayRule.DECISIVE_ELIMINATION; break;
+            f.Step();
+            Assert.Null(f.Runtime.Winner);
         }
-        Assert.Contains(ModeComposition.Errors(config.Rules), error => error.Contains(field));
-        Assert.Throws<InvalidDataException>(() => MatchConfigCodec.FromBytes(config.ToBytes()));
+
+        MatchUpdate ended = f.Runtime.Advance(default);
+
+        Assert.Equal(new Victor.Team(Team.RED), ended.MatchEnded);
+        Assert.Null(ended.FinalKill);
+        Assert.Null(f.State.Capture);
+    }
+
+    [Fact]
+    public void DeadlockWithoutTeamsIsRejected()
+    {
+        MatchConfig config = Config();
+        config.Rules.Teams = false;
+        Assert.Contains(config.Errors(Zones()), error => error.Contains("teams"));
         Assert.Null(TomlModel.Read<RulesetManifest>(TomlModel.Write(new RulesetManifest { Rules = config.Rules })).Value);
-        Assert.Throws<ArgumentException>(() => new MatchRuntime(TestWorlds.Flat(), config, 0, new MatchStateKeys(1), zones: Zones()));
     }
 
     [Fact]
     public void MissingControlZonesFailAtConstructionWithoutInvalidatingOtherModes()
     {
+        Assert.Contains("control", Assert.Single(Config().Errors(MapZones.None)));
         Assert.Contains("control", Assert.Throws<ArgumentException>(() =>
             new MatchRuntime(TestWorlds.Flat(), Config(), 0, new MatchStateKeys(1))).Message);
         MapZones untagged = new([new MapZone("control", ["deadlock"], ZoneShape.Rect(0, 0, 400, 300), null)]);

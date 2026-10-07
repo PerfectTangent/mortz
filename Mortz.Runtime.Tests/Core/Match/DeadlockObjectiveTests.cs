@@ -38,11 +38,11 @@ public class DeadlockObjectiveTests
         Advance(objective, 3, true, false);
         Assert.Equal(95.5m, objective.State.BlueProgress);
         Assert.Equal(5.5m, objective.State.RedProgress);
-        Assert.Null(objective.State.CapturedBy);
+        Assert.Null(objective.State.Capture);
         objective.Advance(true, false);
         Assert.Equal(101, objective.State.BlueProgress);
         Assert.Equal(0, objective.State.RedProgress);
-        Assert.Equal(Team.BLUE, objective.State.CapturedBy);
+        Assert.Equal(Team.BLUE, objective.State.Capture);
     }
 
     [Theory]
@@ -70,10 +70,10 @@ public class DeadlockObjectiveTests
         Advance(objective, 10, false, false);
         Assert.Equal(100, objective.State.NeutralProgress);
         Advance(objective, 3, true, false);
-        Assert.Null(objective.State.CapturedBy);
+        Assert.Null(objective.State.Capture);
         Assert.Equal(90, objective.State.BlueProgress);
         objective.Advance(true, false);
-        Assert.Equal(Team.BLUE, objective.State.CapturedBy);
+        Assert.Equal(Team.BLUE, objective.State.Capture);
         Assert.Equal(100, objective.State.BlueProgress);
         DeadlockObjectiveState completed = objective.State;
         Advance(objective, 100, false, true);
@@ -93,7 +93,7 @@ public class DeadlockObjectiveTests
         Assert.Equal(decimal.Parse(blue, CultureInfo.InvariantCulture), objective.State.BlueProgress);
         Assert.Equal(decimal.Parse(red, CultureInfo.InvariantCulture), objective.State.RedProgress);
         Assert.True(objective.State.IsDeadlocked);
-        Assert.Null(objective.State.CapturedBy);
+        Assert.Null(objective.State.Capture);
     }
 
     [Theory]
@@ -152,10 +152,10 @@ public class DeadlockObjectiveTests
                 Assert.InRange(original.State.BlueProgress, 0, 101);
                 Assert.InRange(original.State.RedProgress, 0, 101);
                 Assert.InRange(original.State.NeutralProgress, 0, 101);
-                Assert.Equal(original.State.CapturedBy.HasValue, mirrored.State.CapturedBy.HasValue);
-                if (original.State.CapturedBy.HasValue)
+                Assert.Equal(original.State.Capture.HasValue, mirrored.State.Capture.HasValue);
+                if (original.State.Capture.HasValue)
                 {
-                    Assert.NotEqual(original.State.CapturedBy, mirrored.State.CapturedBy);
+                    Assert.NotEqual(original.State.Capture, mirrored.State.Capture);
                 }
             }
         }

@@ -1,7 +1,4 @@
-using Mortz.Core.Match.Scoring;
-using Mortz.Server.Match.Scoring;
-
-namespace Mortz.Server.Match.Modes;
+namespace Mortz.Core.Match.Scoring;
 
 /// <summary>Tracks the best and second-best score offered, so the standing is
 /// the lead the front-runner holds over whoever chases them.</summary>
@@ -34,11 +31,10 @@ public sealed class LeadRace(int target)
         }
     }
 
-    public MatchStanding Standing()
-    {
-        if (_count < 2 || _tied)
-            return new MatchStanding(null, target);
-        long lead = (long)_best - _second;
-        return new MatchStanding(_leader, (int)Math.Max(0, target - lead));
-    }
+    private bool Open => _count < 2 || _tied;
+
+    /// <summary>Null while nobody leads alone.</summary>
+    public Victor? Leader => Open ? null : _leader;
+
+    public int Remaining => Open ? target : (int)Math.Max(0, target - ((long)_best - _second));
 }

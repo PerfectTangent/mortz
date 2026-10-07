@@ -20,7 +20,7 @@ public class ParticipationStepTests
             BaseDelay = 0,
             Increase = 20,
             MaximumDelay = 6,
-        });
+        }.ToSnapshot());
         Fixture fixture = new(0, respawns);
         fixture.Kill();
         fixture.World.Step();

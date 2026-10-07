@@ -1,4 +1,3 @@
-using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Teams;
 using Mortz.Core.Sim;
 
@@ -6,14 +5,6 @@ namespace Mortz.Core.Match.Respawning;
 
 public abstract class RespawnStrategy
 {
-    public static RespawnStrategy Create(RespawnRules rules) => rules switch
-    {
-        NoRespawnRules => new NoRespawnStrategy(),
-        FixedRespawnRules fixedRules => new FixedRespawnStrategy(fixedRules.DelayTicks),
-        EscalatingRespawnRules escalating => new EscalatingRespawnStrategy(escalating),
-        _ => throw new ArgumentOutOfRangeException(nameof(rules)),
-    };
-
     public virtual void Entered(int peerId, Team? team) { }
     public abstract void Died(Death death, int tick);
 

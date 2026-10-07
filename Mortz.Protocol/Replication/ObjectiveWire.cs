@@ -1,19 +1,18 @@
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Teams;
-using Mortz.Core.Sim;
 using Mortz.Protocol.Net;
 
 namespace Mortz.Protocol.Replication;
 
-public abstract class ObjectiveSnapshotCodec
+public abstract class ObjectiveWire
 {
-    public static ObjectiveSnapshotCodec None { get; } = new NoObjectiveCodec();
+    public static ObjectiveWire None { get; } = new NoObjectiveWire();
 
-    public static ObjectiveSnapshotCodec Create(ObjectiveRulesSnapshot rules) => rules switch
+    public static ObjectiveWire Create(ObjectiveRulesSnapshot rules) => rules switch
     {
         NoObjectiveRulesSnapshot => None,
-        DeadlockObjectiveRulesSnapshot deadlock => new DeadlockCodec(deadlock.ToMutable().AbsenceDelayTicks),
+        DeadlockObjectiveRulesSnapshot => new DeadlockWire(),
         _ => throw new ArgumentOutOfRangeException(nameof(rules)),
     };
 
@@ -21,7 +20,7 @@ public abstract class ObjectiveSnapshotCodec
     public abstract ObjectiveState Read(BinaryReader reader);
 
     public byte[] Serialize(ObjectiveState state) => PacketEncoder.Encode(state, this,
-        static (ref PacketWriter writer, ObjectiveState value, ObjectiveSnapshotCodec codec) => codec.Write(ref writer, value));
+        static (ref PacketWriter writer, ObjectiveState value, ObjectiveWire wire) => wire.Write(ref writer, value));
 
     public ObjectiveState Deserialize(byte[] data)
     {
@@ -35,7 +34,7 @@ public abstract class ObjectiveSnapshotCodec
         return state;
     }
 
-    private class NoObjectiveCodec : ObjectiveSnapshotCodec
+    private class NoObjectiveWire : ObjectiveWire
     {
         public override void Write(ref PacketWriter writer, ObjectiveState state)
         {
@@ -46,19 +45,9 @@ public abstract class ObjectiveSnapshotCodec
         }
 
         public override ObjectiveState Read(BinaryReader reader) => NoObjectiveState.Instance;
-
-        public override void Write(ref PacketWriter writer, ObjectiveState state)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override ObjectiveState Read(BinaryReader reader)
-        {
-            throw new NotImplementedException();
-        }
     }
 
-    private class DeadlockCodec(int graceTicks) : ObjectiveSnapshotCodec
+    private class DeadlockWire : ObjectiveWire
     {
         public override void Write(ref PacketWriter writer, ObjectiveState state)
         {
@@ -66,14 +55,13 @@ public abstract class ObjectiveSnapshotCodec
             {
                 throw new InvalidDataException("Expected Deadlock objective state.");
             }
-            Validate(deadlock);
             WriteDecimal(ref writer, deadlock.BlueProgress);
             WriteDecimal(ref writer, deadlock.RedProgress);
             writer.Write((byte)((deadlock.BlueOccupied ? 1 : 0) | (deadlock.RedOccupied ? 2 : 0) |
                 (deadlock.BlueDecaying ? 4 : 0) | (deadlock.RedDecaying ? 8 : 0)));
             writer.Write((ushort)deadlock.BlueGraceTicks);
             writer.Write((ushort)deadlock.RedGraceTicks);
-            writer.Write((byte)(deadlock.CapturedBy ?? 0));
+            writer.Write((byte)(deadlock.Capture ?? 0));
         }
 
         public override ObjectiveState Read(BinaryReader reader)
@@ -84,35 +72,10 @@ public abstract class ObjectiveSnapshotCodec
             int blueGrace = reader.ReadUInt16();
             int redGrace = reader.ReadUInt16();
             byte capture = reader.ReadByte();
-            if (flags > 15 || capture > 2)
-            {
-                throw new InvalidDataException("Invalid objective flags.");
-            }
-            DeadlockObjectiveState state = new(100 * SimConfig.TICK_RATE, blue, red,
+            return new DeadlockObjectiveState(DeadlockObjective.CAPACITY, blue, red,
                 (flags & 1) != 0, (flags & 2) != 0, blueGrace, redGrace,
                 (flags & 4) != 0, (flags & 8) != 0, capture == 0 ? null : (Team)capture);
-            Validate(state);
-            return state;
         }
-
-        private void Validate(DeadlockObjectiveState state)
-        {
-            const int capacity = 100 * SimConfig.TICK_RATE;
-            if (state.Capacity != capacity || state.BlueProgress < 0 || state.BlueProgress > capacity ||
-                state.RedProgress < 0 || state.RedProgress > capacity || state.NeutralProgress < 0 ||
-                !ValidTeam(state.BlueOccupied, state.BlueDecaying, state.BlueGraceTicks) ||
-                !ValidTeam(state.RedOccupied, state.RedDecaying, state.RedGraceTicks) ||
-                (state.CapturedBy == Team.BLUE) != (state.BlueProgress == capacity) ||
-                (state.CapturedBy == Team.RED) != (state.RedProgress == capacity) ||
-                (state.CapturedBy != null && state.CapturedBy is not Team.BLUE and not Team.RED))
-            {
-                throw new InvalidDataException("Invalid Deadlock objective state.");
-            }
-        }
-
-        private bool ValidTeam(bool occupied, bool decaying, int grace) =>
-            grace >= 0 && grace <= graceTicks && !(occupied && decaying) &&
-            (!(occupied || decaying) || grace == 0);
 
         private static void WriteDecimal(ref PacketWriter writer, decimal value)
         {
@@ -122,16 +85,6 @@ public abstract class ObjectiveSnapshotCodec
             {
                 writer.Write(part);
             }
-        }
-
-        public override void Write(ref PacketWriter writer, ObjectiveState state)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override ObjectiveState Read(BinaryReader reader)
-        {
-            throw new NotImplementedException();
         }
     }
 }

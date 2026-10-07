@@ -82,13 +82,10 @@ public readonly partial record struct GameEventMsg(
     byte Detail = 0,
     int MatchGeneration = 0);
 
-/// <summary>WinnerId is a team ID when ByTeam.</summary>
+/// <summary>The result and frozen objective state from the same ending tick.
+/// WinnerId is a team ID when ByTeam.</summary>
 [NetMessage(NetChannel.RELIABLE, NetDirection.SERVER_TO_CLIENT)]
-public readonly partial record struct MatchEndMsg(bool ByTeam, int WinnerId, int MatchGeneration = 0);
-
-/// <summary>The result and frozen objective state from the same ending tick.</summary>
-[NetMessage(NetChannel.RELIABLE, NetDirection.SERVER_TO_CLIENT)]
-public readonly partial record struct ObjectiveMatchEndMsg(
+public readonly partial record struct MatchEndMsg(
     bool ByTeam, int WinnerId, int Tick, byte[] Objective, int MatchGeneration = 0);
 
 [NetMessage(NetChannel.RELIABLE, NetDirection.SERVER_TO_CLIENT)]

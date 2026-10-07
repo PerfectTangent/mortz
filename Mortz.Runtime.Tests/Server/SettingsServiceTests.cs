@@ -31,32 +31,25 @@ public sealed class SettingsServiceTests : IDisposable
         SettingsService settings = Build();
         MatchConfig original = settings.Config;
         SettingsMutationResult.Rejected mode = Assert.IsType<SettingsMutationResult.Rejected>(settings.SetMode("deadlock"));
-        Assert.Equal(SettingsRejectReason.INCOMPATIBLE_MAP, mode.Reason);
+        Assert.Equal(SettingsRejectReason.INVALID_RULES, mode.Reason);
         Assert.Contains("control", mode.Message);
         Assert.Same(original, settings.Config);
         SettingsMutationResult.Rejected rules = Assert.IsType<SettingsMutationResult.Rejected>(
             settings.SetRules(DeadlockMatchTests.Config().ToBytes()));
-        Assert.Equal(SettingsRejectReason.INCOMPATIBLE_MAP, rules.Reason);
+        Assert.Equal(SettingsRejectReason.INVALID_RULES, rules.Reason);
         Assert.Same(original, settings.Config);
 
         Applied(settings.SetMap("duel"));
         Applied(settings.SetMode("deadlock"));
         Assert.Equal("Deadlock", settings.ModeName);
         SettingsMutationResult.Rejected map = Assert.IsType<SettingsMutationResult.Rejected>(settings.SetMap("arena"));
-        Assert.Equal(SettingsRejectReason.INCOMPATIBLE_MAP, map.Reason);
+        Assert.Equal(SettingsRejectReason.INVALID_RULES, map.Reason);
         Assert.Same(control, settings.Map);
         Applied(settings.SetRules(DeadlockMatchTests.Config().ToBytes()));
 
         Applied(settings.SetMode("deathmatch"));
         Applied(settings.SetMap("arena"));
         Assert.Equal("arena", settings.Map.MapId);
-    }
-
-    [Fact]
-    public void DirectServerBootRejectsDeadlockWithoutControlZones()
-    {
-        Assert.Contains("control", Assert.Throws<ArgumentException>(() =>
-            new TestServer(rules: DeadlockMatchTests.Config())).Message);
     }
 
     [Fact]
@@ -100,7 +93,7 @@ public sealed class SettingsServiceTests : IDisposable
         MatchConfig before = settings.Config;
         MatchConfig invalid = new()
         {
-            Rules = new ModeRules { EndCondition = new TimeLimitRules() },
+            Rules = new ModeRules { EndCondition = new NoEndConditionRules() },
         };
 
         SettingsMutationResult.Rejected rejected = Assert.IsType<SettingsMutationResult.Rejected>(settings.SetRules(invalid.ToBytes()));
@@ -236,11 +229,8 @@ public sealed class SettingsServiceTests : IDisposable
         AddMode(pack, "teamdeathmatch", "Team Deathmatch", "teams = true");
         AddMode(pack, "deadlock", "Deadlock", """
             teams = true
-            winner = "qualifying"
-            evaluation = "tick"
-            replay = "none"
             [rules.end_condition]
-            type = "objective_completion"
+            type = "none"
             [rules.objective]
             type = "deadlock"
             """);

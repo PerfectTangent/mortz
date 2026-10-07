@@ -1,24 +1,30 @@
 using Mortz.Core.Match.Configuration;
+using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
 using Mortz.Core.Sim;
+using Mortz.Core.Sim.Modifiers;
 
 namespace Mortz.Core.Match.Objectives;
 
-public class DeadlockObjective
+public class DeadlockObjective : MatchObjective
 {
+    public const int CAPACITY = 100 * SimConfig.TICK_RATE;
+
     private readonly int _capture;
     private readonly int _decay;
     private readonly int _grace;
+    private readonly MapZone[] _zones = [];
     private int _blueAbsence;
     private int _redAbsence;
+    private DeadlockObjectiveState _state;
 
-    public DeadlockObjective(DeadlockObjectiveRules rules)
-        : this(100 * SimConfig.TICK_RATE, rules.CaptureSpeed, rules.DecaySpeed,
-            rules.AbsenceDelayTicks)
+    public DeadlockObjective(DeadlockObjectiveRulesSnapshot rules, MapZones zones)
+        : this(CAPACITY, rules.CaptureSpeed, rules.DecaySpeed, rules.AbsenceDelayTicks)
     {
-        if (!float.IsFinite(rules.AbsenceDelay) || rules.AbsenceDelay < 0)
+        _zones = zones.All.Where(zone => zone.HasTag(DeadlockObjectiveRules.CONTROL_TAG)).ToArray();
+        if (_zones.Length == 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(rules));
+            throw new ArgumentException(DeadlockObjectiveRules.MAP_ERROR, nameof(zones));
         }
     }
 
@@ -31,14 +37,43 @@ public class DeadlockObjective
         _capture = capturePerTick;
         _decay = decayPerTick;
         _grace = absenceDelayTicks;
-        State = new DeadlockObjectiveState(capacity, 0, 0, false, false, 0, 0, false, false, null);
+        _state = new DeadlockObjectiveState(capacity, 0, 0, false, false, 0, 0, false, false, null);
     }
 
-    public DeadlockObjectiveState State { get; private set; }
+    public override DeadlockObjectiveState State => _state;
+
+    public override Victor? Winner => State.Capture is { } team ? new Victor.Team(team) : null;
+
+    public override void Advance(SimWorld world)
+    {
+        bool blue = false;
+        bool red = false;
+        foreach (PlayerState player in world.Players.Values)
+        {
+            if (!player.IsAlive || player.Team == null)
+            {
+                continue;
+            }
+            foreach (MapZone zone in _zones)
+            {
+                if (zone.ContainsPlayer(player))
+                {
+                    blue |= player.Team == Team.BLUE;
+                    red |= player.Team == Team.RED;
+                    break;
+                }
+            }
+            if (blue && red)
+            {
+                break;
+            }
+        }
+        Advance(blue, red);
+    }
 
     public void Advance(bool blueOccupied, bool redOccupied)
     {
-        if (State.CapturedBy.HasValue)
+        if (State.Capture.HasValue)
         {
             return;
         }
@@ -73,7 +108,7 @@ public class DeadlockObjective
         }
 
         Team? captured = blue == State.Capacity ? Team.BLUE : red == State.Capacity ? Team.RED : null;
-        State = new DeadlockObjectiveState(State.Capacity, blue, red, blueOccupied, redOccupied,
+        _state = new DeadlockObjectiveState(State.Capacity, blue, red, blueOccupied, redOccupied,
             blueOccupied || blueDecays ? 0 : _grace - _blueAbsence + 1,
             redOccupied || redDecays ? 0 : _grace - _redAbsence + 1, blueDecays, redDecays, captured);
     }
@@ -99,7 +134,6 @@ public record DeadlockObjectiveState(int Capacity, decimal BlueProgress, decimal
     bool BlueOccupied, bool RedOccupied, int BlueGraceTicks, int RedGraceTicks,
     bool BlueDecaying, bool RedDecaying, Team? Capture) : ObjectiveState
 {
-    public override Team? CapturedBy => Capture;
     public decimal NeutralProgress => Capacity - BlueProgress - RedProgress;
     public bool IsDeadlocked => BlueOccupied && RedOccupied && NeutralProgress == 0 && Capture == null;
 }

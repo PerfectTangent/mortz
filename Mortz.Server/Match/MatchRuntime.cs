@@ -29,16 +29,15 @@ public sealed class MatchRuntime : IDisposable
 
     public MatchRuntime(TerrainMask terrain, MatchConfig config, int victoryLapTicks,
         MatchStateKeys keys, IReadOnlyList<SpawnPoint>? spawnPoints = null,
-        MapZones? zones = null, GameMode? mode = null)
+        MapZones? zones = null)
     {
         Generation = keys.Generation;
         World = new SimWorld(terrain, config, spawnPoints, zones);
-        ModeComposition.ValidateMap(World.Config.Rules.Objective, World.Zones);
         Context = new MatchContext(World, _seated);
 
         _participation = new ParticipationStep(keys);
-        _scoring = new ScoringStep(World.Config.Rules.ToMutable(), keys, _seated);
-        _mode = mode ?? GameMode.Create(World.Config.Rules, zones: World.Zones);
+        _scoring = new ScoringStep(World.Config.Rules, keys, _seated);
+        _mode = new GameMode(World.Config.Rules, World.Config.Rules.Objective.Create(World.Zones));
         _gameEvents = new GameEventsStep(
             new GameEventJudge(keys, _seated, _scoring.TeamOf));
         _ending = new EndingStep(victoryLapTicks);
@@ -130,9 +129,12 @@ public sealed class MatchRuntime : IDisposable
         EnsureOpen();
         if (Stage == MatchStage.VICTORY_LAP)
         {
-            return new MatchUpdate(World.Tick, time, [], [], [], [], [],
-                _mode.Standing(new GameModeContext(World, _scoring.Rows(), _scoring.TeamKills,
-                    _scoring.TeamDeaths, Objective)), [], [], null, null, _ending.AdvanceVictoryLap(Context));
+            return new MatchUpdate
+            {
+                Tick = World.Tick,
+                Time = time,
+                ReturnToLobby = _ending.AdvanceVictoryLap(Context),
+            };
         }
 
         World.Step();
@@ -141,10 +143,23 @@ public sealed class MatchRuntime : IDisposable
             _participation.Apply(Context, World.Deaths);
         IReadOnlyList<Judgment> judgments = _gameEvents.Judge(mode.Eliminations, World.Tick);
         EndingOutput ending = _ending.Apply(Context, mode.Outcome);
-        return new MatchUpdate(World.Tick, time, [.. World.MortarEvents],
-            [.. World.Explosions], [.. World.ShellRetirements], [.. World.Deaths],
-            [.. mode.Eliminations], mode.Standing, [.. judgments], [.. participation],
-            ending.Winner, ending.FinalKill, _ending.ReturnToLobby, [.. World.DrainModifierChanges()]);
+        return new MatchUpdate
+        {
+            Tick = World.Tick,
+            Time = time,
+            MortarEvents = [.. World.MortarEvents],
+            Explosions = [.. World.Explosions],
+            ShellRetirements = [.. World.ShellRetirements],
+            Deaths = [.. World.Deaths],
+            Eliminations = [.. mode.Eliminations],
+            MatchPoint = mode.MatchPoint,
+            GameEvents = [.. judgments],
+            ParticipationChanges = [.. participation],
+            MatchEnded = ending.Winner,
+            FinalKill = ending.FinalKill,
+            ReturnToLobby = _ending.ReturnToLobby,
+            ModifierChanges = [.. World.DrainModifierChanges()],
+        };
     }
 
     /// <summary>Players credited with the win: the winner itself, or everyone

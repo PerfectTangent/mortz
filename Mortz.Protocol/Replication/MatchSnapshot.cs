@@ -21,15 +21,15 @@ public record MatchSnapshot(
     public Snapshot SimulationSnapshot =>
         new(Tick, [.. Players.Select(player => player.Simulation)], []);
 
-    public byte[] Serialize(ObjectiveSnapshotCodec? codec = null) => MatchSnapshotWire.Serialize(this, localPeerId: null, codec);
+    public byte[] Serialize(ObjectiveWire? objectiveWire = null) => MatchSnapshotWire.Serialize(this, localPeerId: null, objectiveWire);
 
-    public byte[] SerializeFor(int localPeerId, ObjectiveSnapshotCodec? codec = null) =>
-        MatchSnapshotWire.Serialize(this, localPeerId, codec);
+    public byte[] SerializeFor(int localPeerId, ObjectiveWire? objectiveWire = null) =>
+        MatchSnapshotWire.Serialize(this, localPeerId, objectiveWire);
 
-    public static MatchSnapshot Deserialize(byte[] data, ObjectiveSnapshotCodec? codec = null) =>
-        MatchSnapshotWire.Deserialize(data, slots: null, codec);
+    public static MatchSnapshot Deserialize(byte[] data, ObjectiveWire? objectiveWire = null) =>
+        MatchSnapshotWire.Deserialize(data, slots: null, objectiveWire);
 
     /// <summary>Remote player slots are resolved through the reliable roster.</summary>
-    public static MatchSnapshot Deserialize(byte[] data, IPeerSlots slots, ObjectiveSnapshotCodec? codec = null) =>
-        MatchSnapshotWire.Deserialize(data, slots, codec);
+    public static MatchSnapshot Deserialize(byte[] data, IPeerSlots slots, ObjectiveWire? objectiveWire = null) =>
+        MatchSnapshotWire.Deserialize(data, slots, objectiveWire);
 }

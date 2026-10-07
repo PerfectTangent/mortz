@@ -6,14 +6,14 @@ namespace Mortz.Runtime.Tests.Core.Net;
 public class ProtocolContractTests
 {
     [Fact]
-    public void ObjectiveReplicationProtocolIsVersion52()
+    public void SingleMatchResultProtocolIsVersion53()
     {
-        Assert.Equal(52, NetConfig.PROTOCOL_VERSION);
+        Assert.Equal(53, NetConfig.PROTOCOL_VERSION);
     }
 
     [Fact]
-    public void GeneratedMessageSchemaMatchesVersion52()
+    public void GeneratedMessageSchemaMatchesVersion53()
     {
-        Assert.Equal(0x9012E2A3C930B4EEUL, NetRegistry.SCHEMA_HASH);
+        Assert.Equal(0xC10BF8FC829C2426UL, NetRegistry.SCHEMA_HASH);
     }
 }

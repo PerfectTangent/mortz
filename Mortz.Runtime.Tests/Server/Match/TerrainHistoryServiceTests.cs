@@ -1,6 +1,5 @@
 using Mortz.Core.Sim;
 using Mortz.Server.Match;
-using Mortz.Server.Match.Scoring;
 using Mortz.Server.Match.Services;
 using Xunit;
 
@@ -13,9 +12,11 @@ public class TerrainHistoryServiceTests
     {
         TerrainHistory history = new();
         TerrainHistoryService service = new(history);
-        MatchUpdate update = new(1, default, [],
-            [new Explosion(10, 20, 4, 1, 2), new Explosion(30, 40, 8, 3, 4)],
-            [], [], [], new MatchStanding(null, 1), [], [], null, null, false);
+        MatchUpdate update = new()
+        {
+            Tick = 1,
+            Explosions = [new Explosion(10, 20, 4, 1, 2), new Explosion(30, 40, 8, 3, 4)],
+        };
         service.MatchUpdated(update, default);
 
         Assert.Equal(2, history.CarveCount);

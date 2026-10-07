@@ -8,9 +8,7 @@ public class ModeDefinitionTests
 {
     [Theory]
     [InlineData("score")]
-    [InlineData("winner")]
-    [InlineData("evaluation")]
-    [InlineData("replay")]
+    [InlineData("suicide_penalty")]
     public void UnknownComponentsRejectTheDefinition(string component)
     {
         ContentReadResult<RulesetManifest> read = TomlModel.Read<RulesetManifest>(
@@ -22,16 +20,13 @@ public class ModeDefinitionTests
     }
 
     [Fact]
-    public void DefaultIdentityDistinguishesModeComponentsButAllowsTargetCustomization()
+    public void IdentityDistinguishesModeComponentsButAllowsTargetCustomization()
     {
         GameModeManifest mode = new() { Name = "Kills", FormatVersion = 1 };
         MatchConfig draft = mode.ToMatchConfigSnapshot().ToMutable();
         ((ScoreTargetRules)draft.Rules.EndCondition).Target = 80;
         Assert.True(mode.Matches(draft));
-        draft.Rules.Score = ScoreMetric.DEATHS;
-        Assert.False(mode.Matches(draft));
-        draft.Rules.Score = ScoreMetric.KILLS;
-        draft.Rules.Replay = ReplayRule.NONE;
+        draft.Rules.Respawn = new NoRespawnRules();
         Assert.False(mode.Matches(draft));
     }
 }

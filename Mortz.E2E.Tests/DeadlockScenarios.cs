@@ -96,7 +96,7 @@ public class DeadlockScenarios
         foreach (ClientDriver client in scenario.Clients)
         {
             ClientStateResponse observed = await WaitClient(scenario, client,
-                state => state.Objective is { CapturedBy: Team.BLUE });
+                state => state.Objective is { Capture: Team.BLUE });
             Assert.Equal(final.Objective, observed.Objective);
             Assert.Equal(winner.Tick, observed.ObjectiveTick);
             Assert.False(client.Process.LogContains("no handler for message id"));

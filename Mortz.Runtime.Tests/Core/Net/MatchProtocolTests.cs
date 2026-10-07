@@ -11,7 +11,7 @@ namespace Mortz.Runtime.Tests.Core.Net;
 public class MatchProtocolTests
 {
     private static Victor? BroadcastEnd(Victor winner) =>
-        SendRawEnd(MatchProtocol.Encode(winner));
+        SendRawEnd(MatchProtocol.Encode(winner, 0, []));
 
     private static MatchPoint? BroadcastMatchPoint(MatchPoint? state) =>
         SendRawMatchPoint(MatchProtocol.Encode(state));
@@ -52,8 +52,8 @@ public class MatchProtocolTests
     [Fact]
     public void AWinnerNobodyCanNameIsDropped()
     {
-        Assert.Null(SendRawEnd(new MatchEndMsg(ByTeam: false, WinnerId: 0)));
-        Assert.Null(SendRawEnd(new MatchEndMsg(ByTeam: true, WinnerId: 9)));
+        Assert.Null(SendRawEnd(new MatchEndMsg(ByTeam: false, WinnerId: 0, 0, [])));
+        Assert.Null(SendRawEnd(new MatchEndMsg(ByTeam: true, WinnerId: 9, 0, [])));
     }
 
     [Fact]

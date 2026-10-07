@@ -22,8 +22,7 @@ namespace Mortz.Client.E2E;
 public partial class ClientE2EHandler : Node, IE2EHandler, IE2EClientBridge,
     IHandle<LobbyStateMsg>,
     IHandle<EliminationMsg>,
-    IHandle<MatchEndMsg>,
-    IHandle<ObjectiveMatchEndMsg>
+    IHandle<MatchEndMsg>
 {
     /// <summary>Emits the first snapshot, then every 15th. Enough to anchor a
     /// convergence assertion without a line per tick.</summary>
@@ -201,9 +200,6 @@ public partial class ClientE2EHandler : Node, IE2EHandler, IE2EClientBridge,
             message.KillerId,
             message.VictimId,
             message.Flags.HasFlag(EliminationFlags.SUICIDE)));
-
-    public void Handle(in ObjectiveMatchEndMsg message) =>
-        Handle(new MatchEndMsg(message.ByTeam, message.WinnerId, message.MatchGeneration));
 
     public void Handle(in MatchEndMsg message)
     {

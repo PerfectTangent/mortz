@@ -1,17 +1,13 @@
 format_version = 1
 name = "Deadlock"
 description = "Hold the control zones to capture the shared bar. Full capture wins."
-identity = ["rules.teams", "rules.score", "rules.winner", "rules.evaluation", "rules.replay", "rules.end_condition.type", "rules.objective.type", "rules.respawn.type"]
 
 [rules]
 teams = true
 score = "kills"
-winner = "qualifying"
-evaluation = "tick"
-replay = "none"
 
 [rules.end_condition]
-type = "objective_completion"
+type = "none"
 
 [rules.objective]
 type = "deadlock"

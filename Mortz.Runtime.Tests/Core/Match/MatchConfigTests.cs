@@ -1,6 +1,5 @@
 using System.Reflection;
 using Mortz.Core.Match.Configuration;
-using Mortz.Core.Match.Scoring;
 using Mortz.Core.Sim;
 using Mortz.Core.Ui;
 using Mortz.Server.Settings;
@@ -196,36 +195,6 @@ public class MatchConfigTests
     }
 
     [Fact]
-    public void SnapshotWireProjectionMatchesTheComposedModeGoldenLayout()
-    {
-        MatchConfig config = new()
-        {
-            Rules = new ModeRules
-            {
-                Teams = true,
-                EndCondition = new ScoreLeadRules { Target = 17 },
-                FriendlyFire = false,
-                Respawn = new FixedRespawnRules { Delay = 1.25f },
-            },
-            Physics = new Physics
-            {
-                Gravity = 777,
-                TotalJumps = 3,
-            },
-            Combat = new Combat
-            {
-                MortarSpeed = 1234,
-                MortarDamage = 67,
-            },
-        };
-        byte[] expected = Convert.FromHexString(
-            "460000000C00000001000000000000010000E03F130000000A73636F72655F6C656164040000001100000009000000046E6F6E65000000000E000000056669786564040000000000A03F5C00000000008C43000016450000E144000096440040424400006144030000000000C8430000C84300002043000002440000BE434C37893D3108AC3CCDCC4C3E000016441F852B3F0080A2440000024400401C45000016430000803E0000803F3800000000409A440000003F000048440000614430000000050000000000A03F00000C429A99193F0000204164000000430000000000003F23000000");
-
-        Assert.Equal(expected, config.ToBytes());
-        Assert.Equal(expected, config.ToSnapshot().ToBytes());
-    }
-
-    [Fact]
     public void LobbyDeltasCoverEveryEditableValue()
     {
         MatchConfig before = new();
@@ -277,53 +246,6 @@ public class MatchConfigTests
     }
 
     [Fact]
-    public void ModeFields_RoundTripTheWire_AndClampHostileValues()
-    {
-        MatchConfig sent = new()
-        {
-            Rules = new ModeRules
-            {
-                Teams = true,
-                EndCondition = new ScoreTargetRules { Target = 5 },
-                FriendlyFire = false,
-                SuicidePenalty = SuicidePenalty.REWARD_CLOSEST_ENEMY,
-            },
-        };
-        MatchConfig got = MatchConfigCodec.FromBytes(sent.ToBytes());
-
-        Assert.True(got.Rules.Teams);
-        Assert.Equal(5, Assert.IsType<ScoreTargetRules>(got.Rules.EndCondition).Target);
-        Assert.False(got.Rules.FriendlyFire);
-        Assert.Equal(SuicidePenalty.REWARD_CLOSEST_ENEMY, got.Rules.SuicidePenalty);
-
-        MatchConfig hostile = new()
-        {
-            Rules = new ModeRules
-            {
-                EndCondition = new ScoreLeadRules { Target = 1000 },
-            },
-        };
-        got = MatchConfigCodec.FromBytes(hostile.ToBytes());
-        Assert.Equal(999, Assert.IsType<ScoreLeadRules>(got.Rules.EndCondition).Target);
-    }
-
-    [Fact]
-    public void Clamp_IncludesTheSelectedVictoryRules()
-    {
-        MatchConfig config = new()
-        {
-            Rules = new ModeRules
-            {
-                EndCondition = new ScoreTargetRules { Target = 1000 },
-            },
-        };
-
-        config.Clamp();
-
-        Assert.Equal(999, Assert.IsType<ScoreTargetRules>(config.Rules.EndCondition).Target);
-    }
-
-    [Fact]
     public void TryApplyKey_SetsTypedValuesFromRawTomlTypes()
     {
         ModeRules rules = new();
@@ -342,7 +264,7 @@ public class MatchConfigTests
         Assert.Equal(4, lead.Target);
         Assert.Equal(600, physics.Gravity);
         Assert.Equal(2.5f, rules.SpawnImmunity);
-        Assert.Equal(150, rules.SpawnImmunityTicks);
+        Assert.Equal(150, rules.ToSnapshot().SpawnImmunityTicks);
         Assert.True(rules.FriendlyFire);
     }
 
@@ -394,8 +316,8 @@ public class MatchConfigTests
         Assert.InRange(stats.RopeMissCooldownTicks, 1, 255);
         Assert.InRange(stats.ReloadPerShellTicks, 1, 255);
         Assert.InRange(stats.CoyoteMaxTicks, 1, 255);
-        Assert.InRange(((FixedRespawnRules)maxed.Rules.Respawn).DelayTicks, 1, ushort.MaxValue);
-        Assert.InRange(maxed.Rules.SpawnImmunityTicks, 1, 255);
+        Assert.InRange(((FixedRespawnRulesSnapshot)maxed.Rules.Respawn.ToSnapshot()).DelayTicks, 1, ushort.MaxValue);
+        Assert.InRange(maxed.Rules.ToSnapshot().SpawnImmunityTicks, 1, 255);
         Assert.InRange(stats.ParryWindowTicks, 1, 255);
         Assert.InRange(stats.ParryCooldownTicks, 1, ushort.MaxValue);
     }

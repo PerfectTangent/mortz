@@ -147,8 +147,6 @@ public class CompletedMatchAdmissionTests
                 {
                     EndCondition = new TimeLimitRules { Seconds = 1 },
                     Score = ScoreMetric.DEATHS,
-                    Evaluation = EvaluationTiming.TICK,
-                    Replay = ReplayRule.NONE,
                     SpawnImmunity = 0,
                     Respawn = new FixedRespawnRules { Delay = 0 },
                 },

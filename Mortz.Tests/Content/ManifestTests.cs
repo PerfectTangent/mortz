@@ -14,7 +14,6 @@ public class ManifestTests
             format_version = 1
             name = "Team Deathmatch"
             description = "Two teams."
-            identity = ["rules.teams", "rules.end_condition.target"]
 
             [rules]
             teams = true
@@ -28,7 +27,6 @@ public class ManifestTests
         Assert.Empty(result.Diagnostics);
         Assert.Equal("Team Deathmatch", manifest.Name);
         Assert.Equal("Two teams.", manifest.Description);
-        Assert.Equal(["rules.teams", "rules.end_condition.target"], manifest.Identity);
         Assert.True(manifest.Rules.Teams);
         Assert.Equal(15,
             Assert.IsType<ScoreTargetRules>(manifest.Rules.EndCondition).Target);
@@ -36,13 +34,12 @@ public class ManifestTests
     }
 
     [Fact]
-    public void ModeIdentityUsesItsAuthoredConfigPaths()
+    public void ModeIdentityIgnoresTunableValues()
     {
         GameModeManifest manifest = new()
         {
             FormatVersion = 1,
             Name = "Five Kill Teams",
-            Identity = ["rules.teams", "rules.end_condition.type", "rules.end_condition.target"],
             Rules = new ModeRules
             {
                 Teams = true,
@@ -58,12 +55,27 @@ public class ManifestTests
                 EndCondition = new ScoreTargetRules { Target = 5 },
             },
         }));
-        Assert.False(manifest.Matches(new MatchConfig
+        Assert.True(manifest.Matches(new MatchConfig
         {
             Rules = new ModeRules
             {
                 Teams = true,
                 EndCondition = new ScoreTargetRules { Target = 6 },
+            },
+        }));
+        Assert.False(manifest.Matches(new MatchConfig
+        {
+            Rules = new ModeRules
+            {
+                Teams = true,
+                EndCondition = new ScoreLeadRules { Target = 5 },
+            },
+        }));
+        Assert.False(manifest.Matches(new MatchConfig
+        {
+            Rules = new ModeRules
+            {
+                EndCondition = new ScoreTargetRules { Target = 5 },
             },
         }));
         Assert.True(manifest.Matches(new MatchConfig
