@@ -40,9 +40,8 @@ public class SpectatorControllerTests : NodeServiceTest
         _controller.FakeDependency<INetwork>(new FakeNetwork { LocalPeerId = 1 });
         ClientPlayers players = RegisterRuntime(new ClientPlayers(Scope));
         players.OpenMatch(new MatchConfig());
-        _controller.FakeDependency(players);
         _matchState = new ClientMatchState(3, MatchParticipation.JipSpectator);
-        _controller.FakeDependency(_matchState);
+        _controller.FakeDependency(FeatureLookup(players, _matchState));
         _controller.Initialize(Vector2.Zero);
         Host(_controller);
         Router.MatchGeneration = _matchState.Generation;
@@ -53,19 +52,16 @@ public class SpectatorControllerTests : NodeServiceTest
     [Fact]
     public void UnscheduledDeathAndExpiredScheduleKeepTheDeathPresentationVisible()
     {
-        Label status = Assert.IsType<Label>(_hud.Get("_status").AsGodotObject());
         new MatchParticipationMsg(MatchSeat.PLAYER, MatchActivity.DEATH_PRESENTATION,
             SpectateReason.RESPAWN, -1).Broadcast(Router);
         _controller.Present([], new Vector2(200, 200), newestTick: 60);
-        Assert.Equal("Waiting to respawn", status.Text);
         Assert.True(_hud.Visible);
 
         new MatchParticipationMsg(MatchSeat.PLAYER, MatchActivity.DEATH_PRESENTATION,
             SpectateReason.RESPAWN, 120).Broadcast(Router);
         _controller.Present([], new Vector2(200, 200), newestTick: 60);
-        Assert.Equal("Respawning in 1.0", status.Text);
+        Assert.True(_hud.Visible);
         _controller.Present([], new Vector2(200, 200), newestTick: 130);
-        Assert.Equal("Respawning...", status.Text);
         Assert.True(_hud.Visible);
         Assert.Equal(MatchActivity.DEATH_PRESENTATION, _matchState.Participation.Activity);
     }

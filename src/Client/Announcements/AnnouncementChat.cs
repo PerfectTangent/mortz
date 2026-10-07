@@ -3,6 +3,7 @@ using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Chat;
 using Mortz.Client.Ui;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Events;
 using Mortz.Core.Match.Teams;
 using Mortz.Core.Text;
@@ -13,11 +14,10 @@ namespace Mortz.Client.Announcements;
 [Meta(typeof(IAutoNode))]
 public partial class AnnouncementChat : Node
 {
-    [Dependency]
-    private IAnnouncementDirector Director => this.DependOn<IAnnouncementDirector>();
+    [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
 
-    [Dependency]
-    private ClientChat Chat => this.DependOn<ClientChat>();
+    private IAnnouncementDirector Director => Scope.Feature<IAnnouncementDirector>();
+    private ClientChat Chat => Scope.Feature<ClientChat>();
 
     private readonly VariantPicker _picker = new();
 

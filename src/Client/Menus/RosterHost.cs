@@ -3,6 +3,7 @@ using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Setup;
 using Mortz.Client.Ui;
+using Mortz.Core.Features;
 
 namespace Mortz.Client.Menus;
 
@@ -15,8 +16,8 @@ public partial class RosterHost : ViewVariantHost<RosterLayout>
 
     private bool _subscribed;
 
-    [Dependency]
-    public MatchSetup Setup => this.DependOn<MatchSetup>();
+    [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private MatchSetup Setup => Scope.Feature<MatchSetup>();
 
     public override void _Notification(int what) => this.Notify(what);
 

@@ -27,7 +27,7 @@ public class PlayerViewTypingTests : NodeServiceTest
         _manager.FakeDependency<ISfx>(new NullSfx());
         ClientPlayers players = RegisterRuntime(new ClientPlayers(Scope));
         players.OpenMatch(new MatchConfig());
-        _manager.FakeDependency(players);
+        _manager.FakeDependency(FeatureLookup(players));
         HostRouted(_manager);
         new RosterMsg([
             new RosterEntry(1, "Alice", 0, null, 1),

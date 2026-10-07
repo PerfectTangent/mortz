@@ -3,6 +3,7 @@ using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Setup;
 using Mortz.Client.Ui;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 
 namespace Mortz.Client.Match;
@@ -16,8 +17,8 @@ public partial class ScoreHudHost : ViewVariantHost<ScoreHudKind>
 
     private bool _subscribed;
 
-    [Dependency]
-    public MatchSetup Setup => this.DependOn<MatchSetup>();
+    [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private MatchSetup Setup => Scope.Feature<MatchSetup>();
 
     public override void _Notification(int what) => this.Notify(what);
 

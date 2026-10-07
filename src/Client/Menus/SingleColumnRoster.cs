@@ -3,6 +3,7 @@ using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Players;
 using Mortz.Client.Stats;
+using Mortz.Core.Features;
 using Mortz.Net;
 
 namespace Mortz.Client.Menus;
@@ -16,13 +17,10 @@ public partial class SingleColumnRoster : ScrollContainer
     private bool _subscribed;
 
     [Dependency]
-    public ClientPlayers Players => this.DependOn<ClientPlayers>();
-
-    [Dependency]
-    public Pings Pings => this.DependOn<Pings>();
-
-    [Dependency]
-    public SessionWins Wins => this.DependOn<SessionWins>();
+    private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientPlayers Players => Scope.Feature<ClientPlayers>();
+    private Pings Pings => Scope.Feature<Pings>();
+    private SessionWins Wins => Scope.Feature<SessionWins>();
 
     [Dependency]
     private INetwork Network => this.DependOn<INetwork>();

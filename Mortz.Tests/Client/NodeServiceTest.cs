@@ -27,6 +27,17 @@ public abstract class NodeServiceTest : IDisposable
 
     protected FeatureScope Scope { get; } = new("connection");
 
+    /// <summary>Lookup-only scope for faking a node's FeatureScope; never started or disposed.</summary>
+    protected static FeatureScope FeatureLookup(params object[] features)
+    {
+        FeatureScope scope = new("test");
+        foreach (object feature in features)
+        {
+            scope.Register(feature);
+        }
+        return scope;
+    }
+
     /// <summary>The client-side router every hosted handler registers with,
     /// the same instance the loopback dispatches into.</summary>
     protected NetRouter Router { get; } = new() { MatchGeneration = 0 };

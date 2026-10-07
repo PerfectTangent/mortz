@@ -1,6 +1,7 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
+using Mortz.Core.Features;
 using Mortz.Net;
 
 namespace Mortz.Client.Match;
@@ -14,7 +15,8 @@ public partial class PlayerKillsHud : Control
     private bool _subscribed;
 
     [Dependency]
-    public ClientMatchState MatchState => this.DependOn<ClientMatchState>();
+    private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientMatchState MatchState => Scope.Feature<ClientMatchState>();
 
     [Dependency]
     private INetwork Network => this.DependOn<INetwork>();

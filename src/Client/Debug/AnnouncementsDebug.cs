@@ -2,7 +2,6 @@ using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Admin;
-using Mortz.Client.Announcements;
 using Mortz.Client.Audio;
 using Mortz.Client.Chat;
 using Mortz.Client.Players;
@@ -19,10 +18,7 @@ namespace Mortz.Client.Debug;
 /// <summary>Run isolated (F6) to fire announcements without a live match.</summary>
 [Meta(typeof(IAutoNode))]
 public partial class AnnouncementsDebug : Control,
-    IProvide<IAnnouncementDirector>,
-    IProvide<ClientPlayers>,
-    IProvide<ClientAdmin>,
-    IProvide<ClientChat>,
+    IProvide<FeatureScope>,
     IProvide<INetwork>,
     IProvide<IClientSender>,
     IProvide<NetRouter>,
@@ -37,15 +33,10 @@ public partial class AnnouncementsDebug : Control,
     private readonly NetRouter _router = new();
     private readonly FakeSessionExit _sessionExit = new();
 
-    private readonly ClientPlayers _players = new(new FeatureScope("debug"));
-    private ClientAdmin _admin = null!;
-    private ClientChat _chat = null!;
+    private readonly FeatureScope _features = new("debug");
     [Export] private Sfx _sfx = null!;
 
-    IAnnouncementDirector IProvide<IAnnouncementDirector>.Value() => _director;
-    ClientPlayers IProvide<ClientPlayers>.Value() => _players;
-    ClientAdmin IProvide<ClientAdmin>.Value() => _admin;
-    ClientChat IProvide<ClientChat>.Value() => _chat;
+    FeatureScope IProvide<FeatureScope>.Value() => _features;
     INetwork IProvide<INetwork>.Value() => _network;
     IClientSender IProvide<IClientSender>.Value() => _network;
     NetRouter IProvide<NetRouter>.Value() => _router;
@@ -56,17 +47,14 @@ public partial class AnnouncementsDebug : Control,
 
     public void OnReady()
     {
-        _admin = new ClientAdmin(_network, () => _network.LocalPeerId);
-        _chat = new ClientChat(_admin, _sessionExit, _network);
+        _features.Register(_director);
+        _features.Register(new ClientPlayers(_features));
+        ClientAdmin admin = _features.Register(new ClientAdmin(_network, () => _network.LocalPeerId));
+        _features.Register(new ClientChat(admin, _sessionExit, _network));
         this.Provide();
     }
 
-    public void OnExitTree()
-    {
-        _chat?.Dispose();
-        _admin?.Dispose();
-        _players.Dispose();
-    }
+    public void OnExitTree() => _features.Dispose();
 
     private void OnFirstBlood() => Fire(Event(GameEventKind.FIRST_BLOOD));
 

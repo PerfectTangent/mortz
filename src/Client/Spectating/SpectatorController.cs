@@ -5,6 +5,7 @@ using Mortz.Client.Chat;
 using Mortz.Client.Match;
 using Mortz.Client.Players;
 using Mortz.Client.Replication;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Sim;
@@ -22,10 +23,9 @@ public partial class SpectatorController : Node
     private INetwork Network => this.DependOn<INetwork>();
 
     [Dependency]
-    private ClientPlayers Players => this.DependOn<ClientPlayers>();
-
-    [Dependency]
-    private ClientMatchState MatchState => this.DependOn<ClientMatchState>();
+    private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientPlayers Players => Scope.Feature<ClientPlayers>();
+    private ClientMatchState MatchState => Scope.Feature<ClientMatchState>();
 
     private readonly List<int> _targets = [];
     private MatchParticipation _participation = MatchParticipation.Active;

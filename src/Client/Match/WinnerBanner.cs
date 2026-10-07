@@ -2,6 +2,7 @@ using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Players;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
 
@@ -13,11 +14,9 @@ public partial class WinnerBanner : Control
 {
     [Export] private Label _winnerLabel = null!;
 
-    [Dependency]
-    private ClientPlayers Players => this.DependOn<ClientPlayers>();
-
-    [Dependency]
-    private ClientMatchState MatchState => this.DependOn<ClientMatchState>();
+    [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientPlayers Players => Scope.Feature<ClientPlayers>();
+    private ClientMatchState MatchState => Scope.Feature<ClientMatchState>();
 
     public override void _Notification(int what) => this.Notify(what);
 

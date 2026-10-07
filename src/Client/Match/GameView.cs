@@ -1,7 +1,6 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
-using Mortz.Client.Announcements;
 using Mortz.Client.Match.PlayerHud;
 using Mortz.Client.Players;
 using Mortz.Client.Replay;
@@ -9,6 +8,7 @@ using Mortz.Client.Replication;
 using Mortz.Client.Spectating;
 using Mortz.Client.Ui;
 using Mortz.Client.Views;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Participation;
@@ -24,11 +24,7 @@ namespace Mortz.Client.Match;
 
 /// <summary>Composition root of the in-game screen, wired in GameView.tscn.</summary>
 [Meta(typeof(IAutoNode))]
-public partial class GameView : Node2D,
-    IProvide<ClientMatchRuntime>,
-    IProvide<ClientMatchState>,
-    IProvide<IAnnouncementDirector>,
-    IProvide<GameMap>
+public partial class GameView : Node2D, IProvide<FeatureScope>, IProvide<GameMap>
 {
     [Export] private PackedScene _gameMapScene = null!;
     [Export] private RopeOverlay _ropes = null!;
@@ -42,10 +38,9 @@ public partial class GameView : Node2D,
 
     [Dependency] private INetwork Network => this.DependOn<INetwork>();
 
-    [Dependency] private ClientPlayers Players => this.DependOn<ClientPlayers>();
+    private ClientPlayers Players => _match.Feature<ClientPlayers>();
 
-    IAnnouncementDirector IProvide<IAnnouncementDirector>.Value() => _runtime.Announcements;
-    ClientMatchState IProvide<ClientMatchState>.Value() => _matchState;
+    FeatureScope IProvide<FeatureScope>.Value() => _match;
     GameMap IProvide<GameMap>.Value() => _gameMap;
 
     public override void _Notification(int what) => this.Notify(what);
@@ -53,9 +48,9 @@ public partial class GameView : Node2D,
     /// <summary>Diagnostics tap: a snapshot was buffered and reconciled.</summary>
     public event Action<Snapshot>? SnapshotApplied;
 
+    private FeatureScope _match = null!;
     private ClientMatchRuntime _runtime = null!;
-    private SnapshotInterpolator _interpolator => _runtime.Interpolator;
-    ClientMatchRuntime IProvide<ClientMatchRuntime>.Value() => _runtime;
+    private SnapshotInterpolator Interpolator => _runtime.Interpolator;
     private GameMap _gameMap = null!;
     private ClientMatchState _matchState = null!;
     private LiveMatchFrameBuilder _frameBuilder = null!;
@@ -64,15 +59,17 @@ public partial class GameView : Node2D,
     /// <summary>The map this match is played on; set by Initialize.</summary>
     public string MapId { get; private set; } = "";
 
-    public int NewestSnapshotTick => _interpolator.NewestTick;
-    public float RenderTick => _interpolator.RenderTick;
+    public int NewestSnapshotTick => Interpolator.NewestTick;
+    public float RenderTick => Interpolator.RenderTick;
 
     /// <summary>Must be called right after instantiating, before entering the tree:
     /// it mounts the map the other nodes depend on.</summary>
-    public void Initialize(ClientMatchRuntime runtime, MapPackage map)
+    public void Initialize(FeatureScope match, MapPackage map)
     {
+        _match = match;
+        ClientMatchRuntime runtime = match.Feature<ClientMatchRuntime>();
         _runtime = runtime;
-        ClientMatchState matchState = runtime.State;
+        ClientMatchState matchState = match.Feature<ClientMatchState>();
         _matchState = matchState;
         MapId = map.MapId;
         _gameMap = _gameMapScene.Instantiate<GameMap>();
@@ -124,8 +121,6 @@ public partial class GameView : Node2D,
     public void OnExitTree()
     {
         Input.MouseMode = Input.MouseModeEnum.Visible;
-        if (_runtime == null)
-            return;
         _runtime.SnapshotApplied -= OnSnapshotApplied;
         Players.MatchStatsChanged -= OnMatchStatsChanged;
         _matchState.ParticipationChanged -= OnParticipationChanged;
@@ -158,7 +153,7 @@ public partial class GameView : Node2D,
         if (_finalKillReplay.ConsumeFrame((float)delta))
             return;
 
-        InterpolatedState? state = _interpolator.Advance((float)delta);
+        InterpolatedState? state = Interpolator.Advance((float)delta);
         if (state == null)
             return;
 

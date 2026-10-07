@@ -28,7 +28,6 @@ public class ClientMatchRuntime : IDisposable, IClientTick, IClientFrame, IHandl
     private readonly ObjectiveWire _objectiveWire;
 
     public Func<PlayerInput>? SampleInput { get; set; }
-    public AnnouncementDirector Announcements { get; }
     public ClientMatchState State { get; }
     public MatchConfigSnapshot Config { get; }
     public Predictor Predictor { get; }
@@ -63,7 +62,7 @@ public class ClientMatchRuntime : IDisposable, IClientTick, IClientFrame, IHandl
         Terrain = new ClientTerrain(terrain, config.Combat.MortarCarveRadius, localPeerId, clock);
         Mortars = new MortarReplicaSet(terrain, config.Combat.ToSnapshot().ToMutable(), zones);
         scope.Register(new ClientMatchStateAdapter(state, _objectiveWire));
-        Announcements = scope.Register(new AnnouncementDirector(players, state));
+        scope.Register(new AnnouncementDirector(players, state));
         scope.Register(this);
         scope.Own(state.Close);
         scope.Own(players.CloseMatch);

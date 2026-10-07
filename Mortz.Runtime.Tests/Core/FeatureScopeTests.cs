@@ -233,4 +233,98 @@ public class FeatureScopeTests
         Assert.Contains("  match", description);
         Assert.Contains("String", description);
     }
+
+    [Fact]
+    public void FeatureFindsByExactTypeAndByInterface()
+    {
+        List<string> events = [];
+        FeatureScope scope = new("root");
+        Feature feature = scope.Register(new Feature("a", events));
+
+        Assert.Same(feature, scope.Feature<Feature>());
+        Assert.Same(feature, scope.Feature<IPing>());
+    }
+
+    [Fact]
+    public void FeatureWalksUpFromTheChildButNeverDown()
+    {
+        List<string> events = [];
+        FeatureScope root = new("root");
+        Feature rootFeature = root.Register(new Feature("a", events));
+        root.Start();
+        FeatureScope child = root.OpenChild("child");
+        State childFeature = child.Register(new State());
+
+        Assert.Same(rootFeature, child.Feature<Feature>());
+        Assert.Same(childFeature, child.Feature<State>());
+        InvalidOperationException missing = Assert.Throws<InvalidOperationException>(root.Feature<State>);
+        Assert.Contains("'root'", missing.Message);
+    }
+
+    [Fact]
+    public void FeaturePrefersTheNearestScope()
+    {
+        List<string> events = [];
+        FeatureScope root = new("root");
+        root.Register(new Feature("a", events));
+        root.Start();
+        FeatureScope child = root.OpenChild("child");
+        Feature near = child.Register(new Feature("b", events));
+
+        Assert.Same(near, child.Feature<IPing>());
+    }
+
+    [Fact]
+    public void MissingFeatureNamesTheWholeChain()
+    {
+        FeatureScope root = new("connection");
+        root.Start();
+        FeatureScope child = root.OpenChild("match");
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(child.Feature<Peer>);
+
+        Assert.Contains("Peer", error.Message);
+        Assert.Contains("'match' -> 'connection'", error.Message);
+    }
+
+    [Fact]
+    public void TwoMatchesInOneScopeThrow()
+    {
+        List<string> events = [];
+        FeatureScope scope = new("root");
+        scope.Register(new Feature("a", events));
+        scope.Register(new Feature("b", events));
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(scope.Feature<IPing>);
+
+        Assert.Contains("root", error.Message);
+        Assert.Contains("Feature, Feature", error.Message);
+    }
+
+    [Fact]
+    public void FeatureWorksBeforeStartAndAfterDispose()
+    {
+        FeatureScope root = new("root");
+        State state = root.Register(new State());
+        Assert.Same(state, root.Feature<State>());
+        root.Start();
+        FeatureScope child = root.OpenChild("child");
+        OtherState other = child.Register(new OtherState());
+        child.Start();
+
+        root.Dispose();
+
+        Assert.Same(state, child.Feature<State>());
+        Assert.Same(other, child.Feature<OtherState>());
+    }
+
+    [Fact]
+    public void FeatureSeesALaterRegistration()
+    {
+        FeatureScope scope = new("root");
+        Assert.Throws<InvalidOperationException>(scope.Feature<State>);
+        State state = scope.Register(new State());
+
+        Assert.Same(state, scope.Feature<State>());
+    }
 }

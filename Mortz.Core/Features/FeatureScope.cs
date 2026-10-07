@@ -124,6 +124,26 @@ public sealed class FeatureScope : IDisposable
         }
     }
 
+    /// <summary>The one feature of type T in this scope or the nearest ancestor that has one.</summary>
+    public T Feature<T>() where T : class
+    {
+        for (FeatureScope? scope = this; scope != null; scope = scope._parent)
+        {
+            IReadOnlyList<T> matches = scope.Implementing<T>();
+            if (matches.Count == 1)
+                return matches[0];
+            if (matches.Count > 1)
+            {
+                throw new InvalidOperationException(
+                    $"{matches.Count} features match {typeof(T).Name} in scope '{scope.Name}': " +
+                    string.Join(", ", matches.Select(feature => feature.GetType().Name)));
+            }
+        }
+        throw new InvalidOperationException($"No {typeof(T).Name} in scope {Chain()}.");
+    }
+
+    private string Chain() => _parent == null ? $"'{Name}'" : $"'{Name}' -> {_parent.Chain()}";
+
     private bool Live => _started && !_closed;
 
     private IReadOnlyList<T> Implementing<T>()

@@ -1,6 +1,7 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
+using Mortz.Core.Features;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Chat;
 
@@ -30,7 +31,8 @@ public partial class GameChat : Control
     private bool _open;
 
     [Dependency]
-    private ClientChat Chat => this.DependOn<ClientChat>();
+    private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientChat Chat => Scope.Feature<ClientChat>();
 
     [Dependency]
     private IClientSender Sender => this.DependOn<IClientSender>();

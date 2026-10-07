@@ -2,6 +2,7 @@ using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Replication;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Sim;
 
@@ -24,20 +25,20 @@ public partial class LocalPlayerController : Node2D
     public Func<byte>? AimProvider { get; set; }
 
     private ClientMatchRuntime _runtime = null!;
-    private Predictor _predictor => _runtime.Predictor;
+    private Predictor Predictor => _runtime.Predictor;
     private byte _aim;
     private MatchParticipation _participation = MatchParticipation.Active;
 
-    [Dependency]
-    private ClientMatchState MatchState => this.DependOn<ClientMatchState>();
+    [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientMatchState MatchState => Scope.Feature<ClientMatchState>();
 
     /// <summary>False until the first snapshot containing the local player arrives.</summary>
-    public bool Initialized => _predictor.Initialized;
-    public PlayerState State => _predictor.State;
-    public int NextSeq => _predictor.NextSeq;
+    public bool Initialized => Predictor.Initialized;
+    public PlayerState State => Predictor.State;
+    public int NextSeq => Predictor.NextSeq;
     public byte Aim => _aim;
     public Vector2 CorrectionOffset => new(_runtime.CorrectionOffset.X, _runtime.CorrectionOffset.Y);
-    public IReadOnlyList<(int SpawnSeq, MortarState Shell)> Shells => _predictor.Shells;
+    public IReadOnlyList<(int SpawnSeq, MortarState Shell)> Shells => Predictor.Shells;
     public bool Frozen => !_runtime.CanAdvance;
 
     /// <summary>Must be called right after instantiating, before entering the tree.</summary>
@@ -63,8 +64,6 @@ public partial class LocalPlayerController : Node2D
     public void OnExitTree()
     {
         MatchState.ParticipationChanged -= OnParticipationChanged;
-        if (_runtime == null)
-            return;
         _runtime.SampleInput = null;
         _runtime.PacketSent -= OnPacketSent;
         _runtime.Reconciled -= OnReconciled;
@@ -79,7 +78,7 @@ public partial class LocalPlayerController : Node2D
             ? InputSampler.Sample()
             : InputButtons.NONE;
 
-        if (_predictor.Initialized && _participation.Activity == MatchActivity.ACTIVE)
+        if (Predictor.Initialized && _participation.Activity == MatchActivity.ACTIVE)
         {
             Vector2 toMouse = GetGlobalMousePosition() - BodyCenter();
             if (toMouse.LengthSquared() > 1)
@@ -87,7 +86,7 @@ public partial class LocalPlayerController : Node2D
         }
 
         if (ButtonFilter != null)
-            buttons = ButtonFilter(_predictor.NextSeq, buttons);
+            buttons = ButtonFilter(Predictor.NextSeq, buttons);
         if (AimOverride is byte aim)
             _aim = aim;
         if (AimProvider != null)
@@ -96,7 +95,7 @@ public partial class LocalPlayerController : Node2D
         return new PlayerInput(buttons, _aim);
     }
 
-    public IReadOnlySet<int> CompletedShells => _predictor.CompletedShells;
+    public IReadOnlySet<int> CompletedShells => Predictor.CompletedShells;
 
     private void OnParticipationChanged(MatchParticipation participation) =>
         _participation = participation;

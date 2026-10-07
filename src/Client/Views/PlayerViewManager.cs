@@ -4,6 +4,7 @@ using Godot;
 using Mortz.Client.Audio;
 using Mortz.Client.Chat;
 using Mortz.Client.Players;
+using Mortz.Core.Features;
 using Mortz.Net;
 
 namespace Mortz.Client.Views;
@@ -19,7 +20,8 @@ public partial class PlayerViewManager : Node2D
 
     [Dependency] private ISfx Sfx => this.DependOn<ISfx>();
 
-    [Dependency] private ClientPlayers Players => this.DependOn<ClientPlayers>();
+    [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientPlayers Players => Scope.Feature<ClientPlayers>();
 
     /// <summary>A remote player's rendered feet position this frame (lag probe tap).</summary>
     public event Action<Vector2>? RemotePlaced;

@@ -1,6 +1,7 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
+using Mortz.Core.Features;
 
 namespace Mortz.Client.Chat;
 
@@ -15,8 +16,8 @@ public partial class LobbyChat : PanelContainer
 
     private ScrollBottomPin _scrollPin = null!;
 
-    [Dependency]
-    private ClientChat Chat => this.DependOn<ClientChat>();
+    [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientChat Chat => Scope.Feature<ClientChat>();
 
     public override void _Notification(int what) => this.Notify(what);
 

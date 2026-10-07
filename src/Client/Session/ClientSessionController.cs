@@ -1,6 +1,7 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
+using Mortz.Client.Admin;
 using Mortz.Client.Hooks;
 using Mortz.Client.Hosting;
 using Mortz.Client.MapEditor;
@@ -57,9 +58,6 @@ public partial class ClientSessionController : Node, ISessionExit,
     private ServerBrowserController? _browser;
     private PendingMatchEntry? _pendingMatch;
     private ConnectedSession? _connectedSession;
-    private ClientMatchState? _matchState;
-    private ClientMatchRuntime? _matchRuntime;
-    private GameView? _gameView;
     private Lobby? _lobby;
     private MainMenu? _menu;
     private MapEditorScreen? _mapEditor;
@@ -357,7 +355,7 @@ public partial class ClientSessionController : Node, ISessionExit,
             return;
         }
         _pendingMatch = null;
-        DisposeGameView();
+        _connectedSession?.Connection.CloseMatch();
         Network.Router.MatchGeneration = message.Generation;
         DisposeLobby();
         CreateMenu(autoStartIntro: false);
@@ -375,7 +373,7 @@ public partial class ClientSessionController : Node, ISessionExit,
             return;
         if (returningFromMatch)
         {
-            DisposeGameView();
+            _connectedSession?.Connection.CloseMatch();
             _pendingMatch = null;
         }
         Network.Router.MatchGeneration = message.Generation;
@@ -446,7 +444,6 @@ public partial class ClientSessionController : Node, ISessionExit,
     {
         if (_connectedSession is not ConnectedSession connectedSession)
             return;
-        ClientMatchState matchState = new(entry.Generation, entry.Participation);
         TerrainMask mask = entry.Map.BuildMask();
         try
         {
@@ -457,9 +454,9 @@ public partial class ClientSessionController : Node, ISessionExit,
             RejectMatchLoad($"Invalid terrain sync: {exception.Message}");
             return;
         }
-        DisposeGameView();
-        ClientMatchRuntime runtime = connectedSession.Connection.OpenMatch(matchState, mask,
-            entry.Terrain.Config, entry.Map.Zones, Network.LocalPeerId,
+        ClientConnectionScope connection = connectedSession.Connection;
+        ClientMatchRuntime runtime = connection.OpenMatch(entry.Generation, entry.Participation,
+            mask, entry.Terrain.Config, entry.Map.Zones, Network.LocalPeerId,
             Network.SendInputs, Time.GetTicksMsec);
         if (!runtime.InitializeSnapshot(entry.InitialSnapshot, entry.InitialSnapshotAck))
         {
@@ -469,11 +466,11 @@ public partial class ClientSessionController : Node, ISessionExit,
         GameView gameView = _gameViewScene.Instantiate<GameView>();
         try
         {
-            gameView.Initialize(runtime, entry.Map);
+            gameView.Initialize(connection.Features.Child!, entry.Map);
         }
         catch (IOException exception)
         {
-            connectedSession.Connection.CloseMatch();
+            connection.CloseMatch();
             gameView.Free();
             RejectMatchLoad($"Invalid terrain sync: {exception.Message}");
             return;
@@ -484,15 +481,20 @@ public partial class ClientSessionController : Node, ISessionExit,
         DisposeMenu();
         DisposeLobby();
 
-        _matchState = matchState;
-        _matchRuntime = runtime;
-        _gameView = gameView;
         connectedSession.AddChild(gameView);
+        // Runs before the match features are disposed.
+        connection.OwnMatch(() =>
+        {
+            if (IsInstanceValid(gameView))
+                Detach(gameView);
+        });
         _pendingMatch = null;
         new PhaseReadyMsg(entry.Generation).SendToServer(Network);
     }
 
-    private void ReceiveSnapshot(byte[] data, int ack) => _matchRuntime?.AcceptSnapshot(data, ack);
+    private void ReceiveSnapshot(byte[] data, int ack) =>
+        _connectedSession?.Connection.Features.Child?.Feature<ClientMatchRuntime>()
+            .AcceptSnapshot(data, ack);
 
     public override void _PhysicsProcess(double delta) =>
         _connectedSession?.Connection?.Features.Raise<IClientTick>(feature => feature.Tick());
@@ -526,7 +528,7 @@ public partial class ClientSessionController : Node, ISessionExit,
     {
         _connection.Cancel();
         Network.ResetPeer();
-        DisposeGameView();
+        _connectedSession?.Connection.CloseMatch();
         DisposeLobby();
         DisposeConnectedSession();
         _pendingMatch = null;
@@ -630,7 +632,7 @@ public partial class ClientSessionController : Node, ISessionExit,
         if (_pendingLocalAdminPassword is string password)
         {
             _pendingLocalAdminPassword = null;
-            connectedSession.Admin.BeginAuthentication(password);
+            connectedSession.Connection.Features.Feature<ClientAdmin>().BeginAuthentication(password);
         }
     }
 
@@ -638,16 +640,6 @@ public partial class ClientSessionController : Node, ISessionExit,
     {
         Detach(_lobby);
         _lobby = null;
-    }
-
-    private void DisposeGameView()
-    {
-        _connectedSession?.Connection.CloseMatch();
-        _matchRuntime = null;
-        _matchState?.Close();
-        _matchState = null;
-        Detach(_gameView);
-        _gameView = null;
     }
 
     // QueueFree alone defers the exit to end of frame, so a dying screen's

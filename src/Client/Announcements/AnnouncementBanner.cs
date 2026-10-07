@@ -3,6 +3,7 @@ using Chickensoft.Introspection;
 using Godot;
 using Godot.Collections;
 using Mortz.Client.Ui;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Events;
 using Mortz.Core.Match.Teams;
 using Mortz.Core.Text;
@@ -28,8 +29,8 @@ public partial class AnnouncementBanner : Control
 
     private float LineWidth => Math.Min(_lineWidth, Math.Max(1f, Size.X - 32f));
 
-    [Dependency]
-    private IAnnouncementDirector Director => this.DependOn<IAnnouncementDirector>();
+    [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private IAnnouncementDirector Director => Scope.Feature<IAnnouncementDirector>();
 
     public override void _Notification(int what) => this.Notify(what);
 

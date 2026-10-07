@@ -31,7 +31,7 @@ public class PlayerViewStatsTests : NodeServiceTest
         manager.FakeDependency<ISfx>(new NullSfx());
         ClientPlayers players = RegisterRuntime(new ClientPlayers(Scope));
         players.OpenMatch(new MatchConfig());
-        manager.FakeDependency(players);
+        manager.FakeDependency(FeatureLookup(players));
         HostRouted(manager);
         SeatPlayers();
         manager.BeginFrame();
@@ -53,7 +53,7 @@ public class PlayerViewStatsTests : NodeServiceTest
         manager.FakeDependency<ISfx>(new NullSfx());
         ClientPlayers players = RegisterRuntime(new ClientPlayers(Scope));
         players.OpenMatch(new MatchConfig());
-        manager.FakeDependency(players);
+        manager.FakeDependency(FeatureLookup(players));
         HostRouted(manager);
         SeatPlayers();
 
@@ -84,7 +84,7 @@ public class PlayerViewStatsTests : NodeServiceTest
         manager.FakeDependency<ISfx>(new NullSfx());
         ClientPlayers players = RegisterRuntime(new ClientPlayers(Scope));
         players.OpenMatch(new MatchConfig());
-        manager.FakeDependency(players);
+        manager.FakeDependency(FeatureLookup(players));
         HostRouted(manager);
         SeatPlayers();
 

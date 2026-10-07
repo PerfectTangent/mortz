@@ -2,7 +2,7 @@ using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Audio;
-using Mortz.Core.Match;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Events;
 using Mortz.Net;
 
@@ -38,7 +38,8 @@ public partial class GameAnnouncer : Node
     public const int SUICIDE_MOCK_COUNT = 3;
 
     [Dependency]
-    private IAnnouncementDirector Director => this.DependOn<IAnnouncementDirector>();
+    private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private IAnnouncementDirector Director => Scope.Feature<IAnnouncementDirector>();
 
     [Dependency]
     private INetwork Network => this.DependOn<INetwork>();

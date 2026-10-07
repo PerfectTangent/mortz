@@ -5,6 +5,7 @@ using Mortz.Client.Audio;
 using Mortz.Client.Replay;
 using Mortz.Client.Replication;
 using Mortz.Client.Views;
+using Mortz.Core.Features;
 using Mortz.Core.Sim;
 using Mortz.Net;
 using Mortz.Shared.Logging;
@@ -27,14 +28,15 @@ public partial class MortarClient : Node
 
     [Dependency] private GameMap Map => this.DependOn<GameMap>();
 
-    [Dependency] private ClientMatchRuntime Runtime => this.DependOn<ClientMatchRuntime>();
+    [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientMatchRuntime Runtime => Scope.Feature<ClientMatchRuntime>();
 
     public override void _Notification(int what) => this.Notify(what);
 
     // Successive parries climb a pentatonic scale, louder each step since
     // pitching up thins the sound.
     private static readonly float[] _parryPitches =
-        Array.ConvertAll(new[] { 0, 2, 4, 7, 9, 12 }, st => Mathf.Pow(2f, st / 12f));
+        Array.ConvertAll([0, 2, 4, 7, 9, 12], st => Mathf.Pow(2f, st / 12f));
 
     private const float PARRY_GAIN_DB_PER_STEP = 1f;
 

@@ -5,6 +5,7 @@ using Mortz.Client.Players;
 using Mortz.Client.Setup;
 using Mortz.Client.Stats;
 using Mortz.Client.Ui;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Teams;
 using Mortz.Net;
 using Mortz.Protocol.Net;
@@ -29,16 +30,11 @@ public partial class TeamColumnsRoster : ScrollContainer
     private bool _subscribed;
 
     [Dependency]
-    public ClientPlayers Players => this.DependOn<ClientPlayers>();
-
-    [Dependency]
-    public MatchSetup Setup => this.DependOn<MatchSetup>();
-
-    [Dependency]
-    public Pings Pings => this.DependOn<Pings>();
-
-    [Dependency]
-    public SessionWins Wins => this.DependOn<SessionWins>();
+    private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientPlayers Players => Scope.Feature<ClientPlayers>();
+    private MatchSetup Setup => Scope.Feature<MatchSetup>();
+    private Pings Pings => Scope.Feature<Pings>();
+    private SessionWins Wins => Scope.Feature<SessionWins>();
 
     [Dependency]
     private INetwork Network => this.DependOn<INetwork>();

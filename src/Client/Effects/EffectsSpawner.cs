@@ -4,6 +4,7 @@ using Godot;
 using Mortz.Client.Audio;
 using Mortz.Client.Match;
 using Mortz.Client.Replay;
+using Mortz.Core.Features;
 using Mortz.Protocol.Net.Match;
 using Mortz.Protocol.Net.Sim;
 
@@ -31,7 +32,8 @@ public partial class EffectsSpawner : Node2D
     private ISfx Sfx => this.DependOn<ISfx>();
 
     [Dependency]
-    private ClientMatchRuntime Runtime => this.DependOn<ClientMatchRuntime>();
+    private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientMatchRuntime Runtime => Scope.Feature<ClientMatchRuntime>();
 
     public override void _Notification(int what) => this.Notify(what);
 

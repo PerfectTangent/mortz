@@ -39,12 +39,10 @@ public class MatchEndPresentationTests : NodeServiceTest
         new LobbyStateMsg([new LobbyMember(7, "alice", false, null)], []).Broadcast(Router);
         ClientMatchState matchState = new(3, MatchParticipation.JipSpectator);
 
-        banner.FakeDependency(players);
-        banner.FakeDependency(matchState);
+        banner.FakeDependency(FeatureLookup(players, matchState));
         Host(banner);
         spectator.FakeDependency<INetwork>(new FakeNetwork { LocalPeerId = 1 });
-        spectator.FakeDependency(players);
-        spectator.FakeDependency(matchState);
+        spectator.FakeDependency(FeatureLookup(players, matchState));
         spectator.Initialize(Vector2.Zero);
         Host(spectator);
         Router.MatchGeneration = matchState.Generation;

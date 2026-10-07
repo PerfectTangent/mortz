@@ -3,6 +3,7 @@ using Chickensoft.AutoInject;
 using Godot;
 using Mortz.Client.Match;
 using Mortz.Client.Players;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Replication;
@@ -144,14 +145,15 @@ public partial class ClientE2EHandler : Node, IE2EHandler, IE2EClientBridge,
                 "The client has no applied snapshot yet."));
             return;
         }
-        ClientMatchState state = ((IProvide<ClientMatchState>)_view!).Value();
+        FeatureScope match = ((IProvide<FeatureScope>)_view!).Value();
+        ClientMatchState state = match.Feature<ClientMatchState>();
         responder.Respond(new ClientStateResponse(
             request.Id, snapshot.Tick, player.State.Position, Observed(snapshot))
         {
             Objective = state.Objective as DeadlockObjectiveState,
             ObjectiveTick = state.ObjectiveTick,
             Participation = state.Participation,
-            Team = _view.DependOn<ClientPlayers>().Find(_network.LocalPeerId)?.Team,
+            Team = match.Feature<ClientPlayers>().Find(_network.LocalPeerId)?.Team,
         });
     }
 

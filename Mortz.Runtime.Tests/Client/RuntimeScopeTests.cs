@@ -1,6 +1,7 @@
 using Mortz.Client.Match;
 using Mortz.Client.Players;
 using Mortz.Client.Session;
+using Mortz.Client.Stats;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Participation;
@@ -32,11 +33,11 @@ public class RuntimeScopeTests
         ClientConnectionScope session = new(router, sender, () => 1, sender);
         PingUpdateMsg update = new([new PeerPing(1, 42)]);
         Assert.True(router.Dispatch(PingUpdateMsg.MsgId, PingUpdateMsg.Serialize(update)));
-        ClientPlayer player = session.Players.Find(1)!;
-        Assert.Equal(42, session.Pings.Of(player));
+        ClientPlayer player = session.Features.Feature<ClientPlayers>().Find(1)!;
+        Assert.Equal(42, session.Features.Feature<Pings>().Of(player));
         session.Dispose();
         Assert.False(router.Dispatch(PingUpdateMsg.MsgId, PingUpdateMsg.Serialize(update)));
-        Assert.Throws<ObjectDisposedException>(() => session.Pings.Of(player));
+        Assert.Throws<ObjectDisposedException>(() => session.Features.Feature<Pings>().Of(player));
     }
 
     [Fact]
@@ -45,17 +46,46 @@ public class RuntimeScopeTests
         NetRouter router = new();
         Sender sender = new();
         using ClientConnectionScope session = new(router, sender, () => 1, sender);
-        session.Wins.Handle(new SessionWinsMsg([new PeerWins(1, 3)]));
-        ClientMatchRuntime match = session.OpenMatch(new ClientMatchState(7, MatchParticipation.Active),
-            EmptyTerrain(), new MatchConfig(), MapZones.None, 1, _ => { }, () => 0);
-        ClientPlayer player = session.Players.Find(1)!;
+        session.Features.Feature<SessionWins>().Handle(new SessionWinsMsg([new PeerWins(1, 3)]));
+        ClientMatchRuntime match = session.OpenMatch(7, MatchParticipation.Active, EmptyTerrain(), new MatchConfig(), MapZones.None, 1, _ => { }, () => 0);
+        ClientPlayer player = session.Features.Feature<ClientPlayers>().Find(1)!;
         Assert.NotNull(player.Match);
         session.CloseMatch();
         Assert.Null(player.Match);
-        Assert.Equal(3, session.Wins.Of(player));
+        Assert.Equal(3, session.Features.Feature<SessionWins>().Of(player));
         Assert.False(router.Dispatch(MatchEndMsg.MsgId,
             MatchEndMsg.Serialize(new MatchEndMsg(false, 1, 0, [], MatchGeneration: 7))));
         Assert.Null(match.State.Winner);
+    }
+
+    [Fact]
+    public void MatchOwnedCleanupRunsBeforeTheMatchCloses()
+    {
+        NetRouter router = new();
+        Sender sender = new();
+        using ClientConnectionScope session = new(router, sender, () => 1, sender);
+        ClientMatchRuntime match = session.OpenMatch(7, MatchParticipation.Active, EmptyTerrain(),
+            new MatchConfig(), MapZones.None, 1, _ => { }, () => 0);
+        bool stateOpenDuringCleanup = false;
+        session.OwnMatch(() => stateOpenDuringCleanup =
+            match.State.TryApplyParticipation(7, MatchParticipation.JipSpectator));
+        session.CloseMatch();
+        Assert.True(stateOpenDuringCleanup);
+        Assert.Null(session.Features.Child);
+        Assert.False(match.State.TryApplyParticipation(7, MatchParticipation.Active));
+    }
+
+    [Fact]
+    public void OwningMatchCleanupWithoutAnOpenMatchThrows()
+    {
+        NetRouter router = new();
+        Sender sender = new();
+        using ClientConnectionScope session = new(router, sender, () => 1, sender);
+        Assert.Throws<InvalidOperationException>(() => session.OwnMatch(() => { }));
+        session.OpenMatch(7, MatchParticipation.Active, EmptyTerrain(), new MatchConfig(),
+            MapZones.None, 1, _ => { }, () => 0);
+        session.CloseMatch();
+        Assert.Throws<InvalidOperationException>(() => session.OwnMatch(() => { }));
     }
 
     [Fact]
@@ -64,9 +94,8 @@ public class RuntimeScopeTests
         NetRouter router = new();
         Sender sender = new();
         using ClientConnectionScope session = new(router, sender, () => 1, sender);
-        ClientMatchRuntime match = session.OpenMatch(new ClientMatchState(7, MatchParticipation.Active),
-            EmptyTerrain(), new MatchConfig(), MapZones.None, 1, _ => { }, () => 0);
-        session.Players.Handle(new RosterMsg([new RosterEntry(1, "player", 0, null, 1)], Revision: 2));
+        ClientMatchRuntime match = session.OpenMatch(7, MatchParticipation.Active, EmptyTerrain(), new MatchConfig(), MapZones.None, 1, _ => { }, () => 0);
+        session.Features.Feature<ClientPlayers>().Handle(new RosterMsg([new RosterEntry(1, "player", 0, null, 1)], Revision: 2));
         MatchSnapshot current = new(1,
             [new ReplicatedPlayer(new PlayerState { PeerId = 1, Health = 100 }, default)],
             Generation: 7, RosterRevision: 2);
@@ -85,14 +114,13 @@ public class RuntimeScopeTests
         NetRouter router = new();
         Sender sender = new();
         using ClientConnectionScope session = new(router, sender, () => 1, sender);
-        ClientMatchRuntime match = session.OpenMatch(new ClientMatchState(7, MatchParticipation.Active),
-            EmptyTerrain(), new MatchConfig(), MapZones.None, 1, _ => { }, () => 0);
+        ClientMatchRuntime match = session.OpenMatch(7, MatchParticipation.Active, EmptyTerrain(), new MatchConfig(), MapZones.None, 1, _ => { }, () => 0);
         Assert.True(match.InitializeSnapshot(new MatchSnapshot(10, [], 7, 1).Serialize(), -1));
         Assert.False(match.Predictor.Initialized);
         match.Handle(new MatchStartMsg(7));
         match.Tick(new PlayerInput(InputButtons.RIGHT));
         Assert.Equal(0, match.Predictor.NextSeq);
-        session.Players.Handle(new RosterMsg([new RosterEntry(1, "player", 0, null, 1)], Revision: 2));
+        session.Features.Feature<ClientPlayers>().Handle(new RosterMsg([new RosterEntry(1, "player", 0, null, 1)], Revision: 2));
         MatchSnapshot admitted = new(10,
             [new ReplicatedPlayer(new PlayerState { PeerId = 1, Health = 100, Position = new Vec2(12, 12) }, default)],
             Generation: 7, RosterRevision: 2);
@@ -117,8 +145,7 @@ public class RuntimeScopeTests
         NetRouter router = new();
         Sender sender = new();
         using ClientConnectionScope session = new(router, sender, () => 1, sender);
-        ClientMatchRuntime match = session.OpenMatch(new ClientMatchState(7, MatchParticipation.Active),
-            EmptyTerrain(), new MatchConfig(), MapZones.None, 1, _ => { }, () => 0);
+        ClientMatchRuntime match = session.OpenMatch(7, MatchParticipation.Active, EmptyTerrain(), new MatchConfig(), MapZones.None, 1, _ => { }, () => 0);
         MatchSnapshot initial = new(0,
             [new ReplicatedPlayer(new PlayerState { PeerId = 1, Health = 100 }, default),
              new ReplicatedPlayer(new PlayerState { PeerId = 2, Health = 100 }, default)],
@@ -128,12 +155,12 @@ public class RuntimeScopeTests
         Assert.False(match.InitializeSnapshot((initial with { Generation = 6 }).Serialize(), -1));
         Assert.True(match.InitializeSnapshot(initial.Serialize(), -1));
         Assert.Equal(0, match.Interpolator.NewestTick);
-        Assert.NotNull(session.Players.Find(2)?.Match);
+        Assert.NotNull(session.Features.Feature<ClientPlayers>().Find(2)?.Match);
         Assert.False(match.InitializeSnapshot((initial with { Tick = 100 }).Serialize(), -1));
 
         MatchSnapshot live = initial with { Tick = 2 };
         Assert.False(match.AcceptSnapshot(live.SerializeFor(1), -1));
-        session.Players.Handle(new RosterMsg(
+        session.Features.Feature<ClientPlayers>().Handle(new RosterMsg(
             [new RosterEntry(1, "local", 0, null, 1), new RosterEntry(2, "remote", 0, null, 2)], Revision: 1));
         Assert.True(match.AcceptSnapshot(live.SerializeFor(1), -1));
         Assert.False(match.AcceptSnapshot([.. live.SerializeFor(1), 0], -1));

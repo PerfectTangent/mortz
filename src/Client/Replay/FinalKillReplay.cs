@@ -6,6 +6,7 @@ using Mortz.Client.Effects;
 using Mortz.Client.Match;
 using Mortz.Client.Spectating;
 using Mortz.Client.Views;
+using Mortz.Core.Features;
 using Mortz.Core.Sim;
 using Mortz.Net;
 using Mortz.Protocol.Net.Match;
@@ -24,7 +25,8 @@ public partial class FinalKillReplay : Node
 
     [Dependency] private GameMap Map => this.DependOn<GameMap>();
 
-    [Dependency] private ClientMatchRuntime Runtime => this.DependOn<ClientMatchRuntime>();
+    [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientMatchRuntime Runtime => Scope.Feature<ClientMatchRuntime>();
 
     [Export] private EffectsSpawner _effects = null!;
     [Export] private RopeOverlay _ropes = null!;

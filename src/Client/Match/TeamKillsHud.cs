@@ -2,6 +2,7 @@ using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Ui;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Teams;
 
 namespace Mortz.Client.Match;
@@ -15,8 +16,8 @@ public partial class TeamKillsHud : Control
 
     private bool _subscribed;
 
-    [Dependency]
-    public ClientMatchState MatchState => this.DependOn<ClientMatchState>();
+    [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientMatchState MatchState => Scope.Feature<ClientMatchState>();
 
     public override void _Notification(int what) => this.Notify(what);
 

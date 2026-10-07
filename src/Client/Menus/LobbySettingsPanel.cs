@@ -4,6 +4,7 @@ using Godot;
 using Mortz.Client.Admin;
 using Mortz.Client.Setup;
 using Mortz.Client.Ui;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Lobby;
@@ -35,9 +36,9 @@ public partial class LobbySettingsPanel : PanelContainer
     private string _previewMapId = "";
     private string _previewMapHash = "";
 
-    [Dependency] private ClientAdmin Admin => this.DependOn<ClientAdmin>();
-
-    [Dependency] private MatchSetup Setup => this.DependOn<MatchSetup>();
+    [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
+    private ClientAdmin Admin => Scope.Feature<ClientAdmin>();
+    private MatchSetup Setup => Scope.Feature<MatchSetup>();
 
     [Dependency] private IClientSender Sender => this.DependOn<IClientSender>();
 
@@ -49,12 +50,12 @@ public partial class LobbySettingsPanel : PanelContainer
         _modePicker.ItemSelected += OnModeSelected;
         _rulesSheet.Build(ModeRulesUiMetadata.Categories, _config.Rules, OnConfigEdited);
         _victoryRulesSheet.Build(_config.Rules.EndCondition, OnVictoryRulesEdited);
-        _objectiveRulesSheet.Build(_config.Rules.Objective, (ObjectiveRules rules) =>
+        _objectiveRulesSheet.Build(_config.Rules.Objective, rules =>
         {
             _config.Rules.Objective = rules;
             OnConfigEdited();
         });
-        _respawnRulesSheet.Build(_config.Rules.Respawn, (RespawnRules rules) =>
+        _respawnRulesSheet.Build(_config.Rules.Respawn, rules =>
         {
             _config.Rules.Respawn = rules;
             OnConfigEdited();

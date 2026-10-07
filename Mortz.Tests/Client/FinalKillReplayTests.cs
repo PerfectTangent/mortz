@@ -49,8 +49,8 @@ public class FinalKillReplayTests : NodeServiceTest
             Camera2D replayCamera = shell.GetNode<Camera2D>("ReplayCamera");
             Sprite2D replayTerrain = map.GetNode<Sprite2D>("ReplayTerrain");
             using ClientMatchRuntime runtime = Runtime(map, new ClientPlayers(Scope));
-            effects.FakeDependency(runtime);
-            replay.FakeDependency(runtime);
+            effects.FakeDependency(FeatureLookup(runtime));
+            replay.FakeDependency(FeatureLookup(runtime));
             effects.OnResolved();
             replay.OnResolved();
             try
@@ -203,14 +203,14 @@ public class FinalKillReplayTests : NodeServiceTest
         effects.FakeDependency(map);
         effects.FakeDependency<ISfx>(sfx);
         ClientMatchRuntime runtime = Runtime(map, clientPlayers);
-        effects.FakeDependency(runtime);
+        effects.FakeDependency(FeatureLookup(runtime));
         players.FakeDependency<INetwork>(network);
         players.FakeDependency<ISfx>(sfx);
-        players.FakeDependency(clientPlayers);
+        players.FakeDependency(FeatureLookup(clientPlayers));
         mortars.FakeDependency<ISfx>(sfx);
         replay.FakeDependency<INetwork>(network);
         replay.FakeDependency(map);
-        replay.FakeDependency(runtime);
+        replay.FakeDependency(FeatureLookup(runtime));
         map.FakeDependency<INetwork>(network);
         map.FakeDependency(Router);
 
