@@ -271,7 +271,8 @@ public partial class NetworkManager : Node, INetwork, IClientSender, IServerAdmi
                 RpcId(peer, endpoint, msgId, payload);
             }
         }
-        else if (!IsServer || _gate.IsValidated(target))
+        // A client only sends once admitted, so teardown after ResetPeer stays quiet.
+        else if (IsServer ? _gate.IsValidated(target) : ClientAdmitted)
         {
             RpcId(target, endpoint, msgId, payload);
         }

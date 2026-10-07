@@ -15,6 +15,7 @@ public partial class RollLine : HBoxContainer
     private int _value;
     private float _elapsed;
     private float _travel;
+    private bool _spinning;
     private Control _column = null!;
 
     public static RollLine Create(string senderName, int value, bool animate)
@@ -25,14 +26,18 @@ public partial class RollLine : HBoxContainer
             _senderName = senderName,
             _value = value,
             MouseFilter = MouseFilterEnum.Ignore,
+            _spinning = animate,
         };
         if (animate)
             line.BuildReel();
         else
             line.AddChild(line.BuildSettledLabel());
-        line.SetProcess(animate);
         return line;
     }
+
+    // Godot re-enables processing on ready for any script overriding
+    // _Process, so the choice only sticks once the line is in the tree.
+    public override void _Ready() => SetProcess(_spinning);
 
     public override void _Process(double delta)
     {
