@@ -5,6 +5,7 @@ using Mortz.Client.Audio;
 using Mortz.Client.Match;
 using Mortz.Client.Replay;
 using Mortz.Core.Features;
+using Mortz.Extensions;
 using Mortz.Protocol.Net.Match;
 using Mortz.Protocol.Net.Sim;
 
@@ -21,7 +22,6 @@ public partial class EffectsSpawner : Node2D
     private Node2D _liveEffects = null!;
     private Node2D _replayEffects = null!;
     private FinalKillMsg? _finalKill;
-    private bool _subscribedToMap;
     private List<(Vector2 Position, Color Color)> _replayDebris = [];
     private (ImpactIdentity Identity, List<(Vector2 Position, Color Color)> Debris)? _recentDebris;
 
@@ -45,20 +45,10 @@ public partial class EffectsSpawner : Node2D
 
     public void OnResolved()
     {
-        Runtime.Died += OnDeath;
-        Map.Exploded += OnExploded;
-        Map.GroundRemoved += OnGroundRemoved;
-        _subscribedToMap = true;
-    }
-
-    public void OnExitTree()
-    {
-        if (!_subscribedToMap)
-            return;
-        Runtime.Died -= OnDeath;
-        Map.Exploded -= OnExploded;
-        Map.GroundRemoved -= OnGroundRemoved;
-        _subscribedToMap = false;
+        this.Subscribe(() => Runtime.Died += OnDeath, () => Runtime.Died -= OnDeath);
+        this.Subscribe(() => Map.Exploded += OnExploded, () => Map.Exploded -= OnExploded);
+        this.Subscribe(() => Map.GroundRemoved += OnGroundRemoved,
+            () => Map.GroundRemoved -= OnGroundRemoved);
     }
 
     private void OnExploded(ImpactIdentity identity, Vector2 center, int radius)

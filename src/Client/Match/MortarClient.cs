@@ -7,6 +7,7 @@ using Mortz.Client.Replication;
 using Mortz.Client.Views;
 using Mortz.Core.Features;
 using Mortz.Core.Sim;
+using Mortz.Extensions;
 using Mortz.Net;
 using Mortz.Shared.Logging;
 using Serilog;
@@ -43,8 +44,8 @@ public partial class MortarClient : Node
     private readonly Dictionary<ushort, int> _parriesByMortar = new();
     public MortarViewManager ViewManager => _views;
 
-    public void OnResolved() => Runtime.MortarChanged += OnMortarChanged;
-    public void OnExitTree() => Runtime.MortarChanged -= OnMortarChanged;
+    public void OnResolved() => this.Subscribe(() => Runtime.MortarChanged += OnMortarChanged,
+        () => Runtime.MortarChanged -= OnMortarChanged);
     public IReadOnlyList<RenderMortar> SampleRemoteMortars() => Runtime.Mortars.Render();
 
     private void OnMortarChanged(SimWorld.MortarEvent change)

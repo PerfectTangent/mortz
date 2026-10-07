@@ -7,6 +7,7 @@ using Mortz.Core.Features;
 using Mortz.Core.Match.Events;
 using Mortz.Core.Match.Teams;
 using Mortz.Core.Text;
+using Mortz.Extensions;
 
 namespace Mortz.Client.Announcements;
 
@@ -38,17 +39,13 @@ public partial class AnnouncementBanner : Control
 
     public void OnResolved()
     {
-        Director.BatchReady += OnBatch;
-        Director.MatchPointChanged += OnMatchPoint;
+        this.Subscribe(() => Director.BatchReady += OnBatch,
+            () => Director.BatchReady -= OnBatch);
+        this.Subscribe(() => Director.MatchPointChanged += OnMatchPoint,
+            () => Director.MatchPointChanged -= OnMatchPoint);
         // A late joiner walks in mid match point.
         if (Director.MatchPoint is MatchPointState active)
             OnMatchPoint(active);
-    }
-
-    public void OnExitTree()
-    {
-        Director.BatchReady -= OnBatch;
-        Director.MatchPointChanged -= OnMatchPoint;
     }
 
     private void OnBatch(IReadOnlyList<Announcement> batch)

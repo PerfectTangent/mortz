@@ -36,10 +36,6 @@ public sealed class ClientPlayer(
     /// broadcast that names this player.</summary>
     public bool Known { get; private set; }
 
-    /// <summary>Identity changed: first confirmation, rename, team move,
-    /// ready toggle, skin change.</summary>
-    public event Action? Changed;
-
     public bool Apply(LobbyMember member) => Confirm(_identity with
     {
         Name = member.Name,
@@ -61,8 +57,6 @@ public sealed class ClientPlayer(
         bool changed = !Known || next != _identity;
         Known = true;
         _identity = next;
-        if (changed)
-            Changed?.Invoke();
         return changed;
     }
 

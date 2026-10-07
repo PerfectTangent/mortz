@@ -9,6 +9,7 @@ using Mortz.Core.Match.Scoring;
 using Mortz.Core.Replication;
 using Mortz.Core.Sim;
 using Mortz.E2E.Protocol;
+using Mortz.Extensions;
 using Mortz.Net;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Lobby;
@@ -80,13 +81,13 @@ public partial class ClientE2EHandler : Node, IE2EHandler, IE2EClientBridge,
         _player = player;
         _lastSnapshot = null;
         _lastEmittedTick = int.MinValue;
-        view.SnapshotApplied += OnSnapshot;
+        // Unsubscribes on the view's tree exit, the same exit that runs DetachMatch.
+        view.Subscribe(() => view.SnapshotApplied += OnSnapshot, () => view.SnapshotApplied -= OnSnapshot);
         _responder?.Emit(new MatchEnteredEvent(view.MapId));
     }
 
     public void DetachMatch()
     {
-        _view!.SnapshotApplied -= OnSnapshot;
         Uninstall();
         _view = null;
         _player = null;

@@ -1,5 +1,6 @@
 using Mortz.Client.Admin;
 using Mortz.Client.Chat.Commands;
+using Mortz.Client.Hooks;
 using Mortz.Client.Session;
 using Mortz.Core.Chat;
 using Mortz.Core.Chat.Commands;
@@ -10,22 +11,21 @@ using Mortz.Protocol.Net.Chat;
 namespace Mortz.Client.Chat;
 
 /// <summary>Chat history and commands for one connection.</summary>
-public class ClientChat : IDisposable, IHandle<ChatMsg>
+public class ClientChat : IDisposable, IHandle<ChatMsg>, IObserveAdminStatus
 {
     private readonly ChatCommandRegistry<ClientCommandContext> _commands = new();
     private readonly List<ChatLine> _lines = [];
-    private readonly ClientAdmin Admin;
-    private readonly ISessionExit SessionExit;
-    private readonly IClientSender Sender;
+    private readonly ClientAdmin _admin;
+    private readonly ISessionExit _sessionExit;
+    private readonly IClientSender _sender;
     private bool _closed;
 
     public ClientChat(ClientAdmin admin, ISessionExit sessionExit, IClientSender sender)
     {
-        Admin = admin;
-        SessionExit = sessionExit;
-        Sender = sender;
+        _admin = admin;
+        _sessionExit = sessionExit;
+        _sender = sender;
         _commands.RegisterAssemblyCommands();
-        Admin.StatusLine += OnAdminStatusLine;
     }
 
     public IReadOnlyList<ChatLine> Lines => _lines;
@@ -33,13 +33,7 @@ public class ClientChat : IDisposable, IHandle<ChatMsg>
     public event Action<ChatLine>? LineAdded;
     public event Action? Cleared;
 
-    public void Dispose()
-    {
-        if (_closed)
-            return;
-        _closed = true;
-        Admin.StatusLine -= OnAdminStatusLine;
-    }
+    public void Dispose() => _closed = true;
 
     public void Handle(in ChatMsg message)
     {
@@ -59,7 +53,7 @@ public class ClientChat : IDisposable, IHandle<ChatMsg>
                 AddPrivate(parseError);
                 return false;
             }
-            command!.Execute(new ClientCommandContext(this, Admin, SessionExit, Sender));
+            command!.Execute(new ClientCommandContext(this, _admin, _sessionExit, _sender));
             return true;
         }
 
@@ -71,7 +65,7 @@ public class ClientChat : IDisposable, IHandle<ChatMsg>
             AddPrivate(error);
             return false;
         }
-        new ChatSendMsg(text).SendToServer(Sender);
+        new ChatSendMsg(text).SendToServer(_sender);
         return true;
     }
 
@@ -98,5 +92,5 @@ public class ClientChat : IDisposable, IHandle<ChatMsg>
         Cleared?.Invoke();
     }
 
-    private void OnAdminStatusLine(string line) => AddPrivate(line);
+    public void AdminStatus(string line) => AddPrivate(line);
 }

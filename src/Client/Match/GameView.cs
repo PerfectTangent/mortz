@@ -14,6 +14,7 @@ using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Replication;
 using Mortz.Core.Sim;
+using Mortz.Extensions;
 using Mortz.Net;
 using Mortz.Shared;
 #if TOOLS
@@ -92,9 +93,12 @@ public partial class GameView : Node2D, IProvide<FeatureScope>, IProvide<GameMap
 
     public void OnResolved()
     {
-        _runtime.SnapshotApplied += OnSnapshotApplied;
-        Players.MatchStatsChanged += OnMatchStatsChanged;
-        _matchState.ParticipationChanged += OnParticipationChanged;
+        this.Subscribe(() => _runtime.SnapshotApplied += OnSnapshotApplied,
+            () => _runtime.SnapshotApplied -= OnSnapshotApplied);
+        this.Subscribe(() => Players.MatchStatsChanged += OnMatchStatsChanged,
+            () => Players.MatchStatsChanged -= OnMatchStatsChanged);
+        this.Subscribe(() => _matchState.ParticipationChanged += OnParticipationChanged,
+            () => _matchState.ParticipationChanged -= OnParticipationChanged);
         this.Provide();
         ClientPlayer? local = Players.Find(Network.LocalPeerId);
         if (local != null)
@@ -118,13 +122,7 @@ public partial class GameView : Node2D, IProvide<FeatureScope>, IProvide<GameMap
         _gameMap.SetZonesVisible(PlayerView.DrawSimBoxes);
     }
 
-    public void OnExitTree()
-    {
-        Input.MouseMode = Input.MouseModeEnum.Visible;
-        _runtime.SnapshotApplied -= OnSnapshotApplied;
-        Players.MatchStatsChanged -= OnMatchStatsChanged;
-        _matchState.ParticipationChanged -= OnParticipationChanged;
-    }
+    public void OnExitTree() => Input.MouseMode = Input.MouseModeEnum.Visible;
 
     private void OnParticipationChanged(MatchParticipation participation)
     {

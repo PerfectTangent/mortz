@@ -2,6 +2,7 @@ using System.Text;
 using Mortz.Client.Admin;
 using Mortz.Client.Chat;
 using Mortz.Core.Chat;
+using Mortz.Core.Features;
 using Mortz.Core.Text;
 using Mortz.Protocol.Admin;
 using Mortz.Protocol.Net;
@@ -23,9 +24,18 @@ public class ClientChatTests : RuntimeServiceTest
 
     public ClientChatTests()
     {
-        ClientAdmin admin = new(Sender, () => SENDER);
-        _admin = RegisterRuntime(admin);
-        _chat = RegisterRuntime(new ClientChat(_admin, _sessionExit, Sender));
+        FeatureScope scope = OpenScope("connection");
+        _admin = scope.Register(new ClientAdmin(scope, Sender, () => SENDER));
+        _chat = scope.Register(new ClientChat(_admin, _sessionExit, Sender));
+        scope.Start();
+    }
+
+    [Fact]
+    public void AdminStatusLinesReachChat()
+    {
+        new AdminStateMsg(false, "Wrong password.").Broadcast(Router);
+
+        Assert.IsType<ChatLine.Private>(Assert.Single(_chat.Lines));
     }
 
     [Fact]

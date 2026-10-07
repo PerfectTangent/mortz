@@ -4,6 +4,7 @@ using Godot;
 using Mortz.Client.Audio;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Events;
+using Mortz.Extensions;
 using Mortz.Net;
 
 namespace Mortz.Client.Announcements;
@@ -53,9 +54,8 @@ public partial class GameAnnouncer : Node
 
     public override void _Notification(int what) => this.Notify(what);
 
-    public void OnResolved() => Director.BatchReady += OnBatch;
-
-    public void OnExitTree() => Director.BatchReady -= OnBatch;
+    public void OnResolved() =>
+        this.Subscribe(() => Director.BatchReady += OnBatch, () => Director.BatchReady -= OnBatch);
 
     public override void _Process(double delta)
     {

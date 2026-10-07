@@ -5,6 +5,7 @@ using Mortz.Client.Audio;
 using Mortz.Client.Chat;
 using Mortz.Client.Players;
 using Mortz.Core.Features;
+using Mortz.Extensions;
 using Mortz.Net;
 
 namespace Mortz.Client.Views;
@@ -28,26 +29,17 @@ public partial class PlayerViewManager : Node2D
 
     private readonly Dictionary<int, PlayerView> _views = [];
     private readonly HashSet<int> _placed = new();
-    private bool _subscribed;
 
     public override void _Notification(int what) => this.Notify(what);
 
     public void OnResolved()
     {
-        Players.Changed += OnPlayersChanged;
-        Players.PlayerLeft += OnPlayerLeft;
-        Players.MatchStatsChanged += OnMatchStatsChanged;
-        _subscribed = true;
-    }
-
-    public void OnExitTree()
-    {
-        if (!_subscribed)
-            return;
-        Players.Changed -= OnPlayersChanged;
-        Players.PlayerLeft -= OnPlayerLeft;
-        Players.MatchStatsChanged -= OnMatchStatsChanged;
-        _subscribed = false;
+        this.Subscribe(() => Players.Changed += OnPlayersChanged,
+            () => Players.Changed -= OnPlayersChanged);
+        this.Subscribe(() => Players.PlayerLeft += OnPlayerLeft,
+            () => Players.PlayerLeft -= OnPlayerLeft);
+        this.Subscribe(() => Players.MatchStatsChanged += OnMatchStatsChanged,
+            () => Players.MatchStatsChanged -= OnMatchStatsChanged);
     }
 
     private void OnPlayersChanged()

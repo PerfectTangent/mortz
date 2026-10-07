@@ -1,3 +1,4 @@
+using Mortz.Client.Hooks;
 using Mortz.Client.Players;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
@@ -139,15 +140,13 @@ public class ClientPlayersTests : RuntimeServiceTest
     }
 
     [Fact]
-    public void JoinAndLeaveEventsBracketThePlayersLifetime()
+    public void JoinAndLeaveHooksBracketThePlayersLifetime()
     {
-        PlayerTable<ClientPlayer, Counter> counter = Scope.Table<ClientPlayer, Counter>();
-        ClientPlayers players = RegisterRuntime(new ClientPlayers(Scope));
-        List<int> joined = [];
-        int lastSeen = 0;
-        players.PlayerJoined += player => joined.Add(player.PeerId);
-        // Leave subscribers get their last look at the player's state.
-        players.PlayerLeft += player => lastSeen = counter[player].Value;
+        FeatureScope scope = OpenScope("connection");
+        PlayerTable<ClientPlayer, Counter> counter = scope.Table<ClientPlayer, Counter>();
+        PlayerRecorder recorder = scope.Register(new PlayerRecorder(counter));
+        ClientPlayers players = scope.Register(new ClientPlayers(scope));
+        scope.Start();
 
         new RosterMsg([Entry(1, "Alice")]).Broadcast(Router);
         ClientPlayer alice = players.Find(1)!;
@@ -155,9 +154,19 @@ public class ClientPlayersTests : RuntimeServiceTest
 
         new RosterMsg([Entry(2, "Bob")]).Broadcast(Router);
 
-        Assert.Equal([1, 2], joined);
-        Assert.Equal(9, lastSeen);
+        Assert.Equal(["join:1", "join:2", "leave:1:9"], recorder.Trace);
         Assert.False(counter.TryGet(alice, out _));
+    }
+
+    /// <summary>Records player hooks; leaves note the table value, which hooks still read.</summary>
+    private sealed class PlayerRecorder(PlayerTable<ClientPlayer, Counter> counter) : IObservePlayers
+    {
+        public List<string> Trace { get; } = [];
+
+        public void PlayerJoined(ClientPlayer player) => Trace.Add($"join:{player.PeerId}");
+
+        public void PlayerLeft(ClientPlayer player) =>
+            Trace.Add($"leave:{player.PeerId}:{counter[player].Value}");
     }
 
     [Fact]

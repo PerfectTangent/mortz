@@ -1,5 +1,6 @@
 using Mortz.Client.Match;
 using Mortz.Client.Players;
+using Mortz.Client.Replication;
 using Mortz.Client.Session;
 using Mortz.Client.Stats;
 using Mortz.Core.Features;
@@ -11,8 +12,11 @@ using Mortz.Core.Terrain;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Match;
 using Mortz.Protocol.Net.Roster;
+using Mortz.Protocol.Net.Sim;
 using Mortz.Protocol.Net.Stats;
 using Mortz.Protocol.Replication;
+using Mortz.Protocol.Sim.Modifiers;
+using Mortz.Runtime.Tests.Core;
 using Xunit;
 
 namespace Mortz.Runtime.Tests.Client;
@@ -166,6 +170,36 @@ public class RuntimeScopeTests
         Assert.False(match.AcceptSnapshot([.. live.SerializeFor(1), 0], -1));
         Assert.False(match.AcceptSnapshot([0], -1));
         Assert.Equal(2, match.Interpolator.NewestTick);
+    }
+
+    [Fact]
+    public void LocalModifiersReachThePredictorThroughTheStatsHook()
+    {
+        NetRouter router = new();
+        Sender sender = new();
+        using ClientConnectionScope session = new(router, sender, () => 1, sender);
+        ClientMatchRuntime match = session.OpenMatch(7, MatchParticipation.Active, TestWorlds.Flat(),
+            TestWorlds.NoSpawnProtectionConfig, MapZones.None, 1, _ => { }, () => 0);
+        StatsModifier boost = new(ModifierId.SPECIAL, StatChange.Mul(Stat.GROUND_ACCEL, 2));
+        PlayerModifiersMsg modifiers = new(1, ModifierWire.Serialize([boost]), Revision: 1,
+            MatchGeneration: 7);
+        Assert.True(router.Dispatch(PlayerModifiersMsg.MsgId, PlayerModifiersMsg.Serialize(modifiers)));
+
+        Predictor boosted = new(TestWorlds.Flat(), TestWorlds.NoSpawnProtectionConfig);
+        boosted.SetModifiers([boost], 0, 1);
+        Predictor plain = new(TestWorlds.Flat(), TestWorlds.NoSpawnProtectionConfig);
+        PlayerState spawn = new() { PeerId = 1, Health = 100, Position = new Vec2(200, TestWorlds.FLOOR_Y) };
+        foreach (Predictor predictor in new[] { match.Predictor, boosted, plain })
+        {
+            predictor.Reconcile(spawn, -1, 0);
+            for (int tick = 0; tick < 20; tick++)
+            {
+                predictor.LocalTick(new PlayerInput(InputButtons.RIGHT));
+            }
+        }
+
+        Assert.Equal(boosted.State.Position, match.Predictor.State.Position);
+        Assert.NotEqual(plain.State.Position, match.Predictor.State.Position);
     }
 
     private static TerrainMask EmptyTerrain() => new(64, 64, (_, _) => false, (_, _) => false);

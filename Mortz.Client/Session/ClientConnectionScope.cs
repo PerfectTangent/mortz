@@ -27,7 +27,7 @@ public class ClientConnectionScope : IDisposable
         Features.Register(new Pings(Features, _players));
         Features.Register(new SessionWins(Features, _players));
         Features.Register(new MatchSetup());
-        ClientAdmin admin = Features.Register(new ClientAdmin(sender, localPeerId));
+        ClientAdmin admin = Features.Register(new ClientAdmin(Features, sender, localPeerId));
         Features.Register(new ClientChat(admin, sessionExit, sender));
         Features.Start();
     }

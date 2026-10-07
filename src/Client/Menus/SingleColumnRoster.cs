@@ -4,6 +4,7 @@ using Godot;
 using Mortz.Client.Players;
 using Mortz.Client.Stats;
 using Mortz.Core.Features;
+using Mortz.Extensions;
 using Mortz.Net;
 
 namespace Mortz.Client.Menus;
@@ -13,8 +14,6 @@ namespace Mortz.Client.Menus;
 public partial class SingleColumnRoster : ScrollContainer
 {
     [Export] private VBoxContainer _players = null!;
-
-    private bool _subscribed;
 
     [Dependency]
     private FeatureScope Scope => this.DependOn<FeatureScope>();
@@ -29,21 +28,10 @@ public partial class SingleColumnRoster : ScrollContainer
 
     public void OnResolved()
     {
-        Players.Changed += Render;
-        Pings.Changed += Render;
-        Wins.Changed += Render;
-        _subscribed = true;
+        this.Subscribe(() => Players.Changed += Render, () => Players.Changed -= Render);
+        this.Subscribe(() => Pings.Changed += Render, () => Pings.Changed -= Render);
+        this.Subscribe(() => Wins.Changed += Render, () => Wins.Changed -= Render);
         Render();
-    }
-
-    public void OnExitTree()
-    {
-        if (!_subscribed)
-            return;
-        Players.Changed -= Render;
-        Pings.Changed -= Render;
-        Wins.Changed -= Render;
-        _subscribed = false;
     }
 
     // Frees immediately so same-frame re-renders never stack dying slots.

@@ -7,6 +7,7 @@ using Mortz.Client.Stats;
 using Mortz.Client.Ui;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Teams;
+using Mortz.Extensions;
 using Mortz.Net;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Lobby;
@@ -26,8 +27,6 @@ public partial class TeamColumnsRoster : ScrollContainer
     [Export] private VBoxContainer _team1Slots = null!;
     [Export] private VBoxContainer _team2Slots = null!;
     [Export] private VBoxContainer _unassigned = null!;
-
-    private bool _subscribed;
 
     [Dependency]
     private FeatureScope Scope => this.DependOn<FeatureScope>();
@@ -52,23 +51,11 @@ public partial class TeamColumnsRoster : ScrollContainer
 
     public void OnResolved()
     {
-        Players.Changed += Render;
-        Setup.SwapOffersChanged += Render;
-        Pings.Changed += Render;
-        Wins.Changed += Render;
-        _subscribed = true;
+        this.Subscribe(() => Players.Changed += Render, () => Players.Changed -= Render);
+        this.Subscribe(() => Setup.SwapOffersChanged += Render, () => Setup.SwapOffersChanged -= Render);
+        this.Subscribe(() => Pings.Changed += Render, () => Pings.Changed -= Render);
+        this.Subscribe(() => Wins.Changed += Render, () => Wins.Changed -= Render);
         Render();
-    }
-
-    public void OnExitTree()
-    {
-        if (!_subscribed)
-            return;
-        Players.Changed -= Render;
-        Setup.SwapOffersChanged -= Render;
-        Pings.Changed -= Render;
-        Wins.Changed -= Render;
-        _subscribed = false;
     }
 
     // Frees immediately so same-frame re-renders never stack dying slots.

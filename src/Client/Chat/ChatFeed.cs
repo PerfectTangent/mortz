@@ -1,6 +1,7 @@
 using Godot;
 using Mortz.Core.Chat;
 using Mortz.Core.Text;
+using Mortz.Extensions;
 using Mortz.Protocol.Net;
 
 namespace Mortz.Client.Chat;
@@ -10,7 +11,6 @@ namespace Mortz.Client.Chat;
 public partial class ChatFeed : VBoxContainer
 {
     private ClientChat _chat = null!;
-    private bool _subscribed;
 
     /// <summary>Raised for the line a live entry appends, not during rebuilds.</summary>
     public event Action<Control>? LineAdded;
@@ -20,10 +20,10 @@ public partial class ChatFeed : VBoxContainer
     public void Bind(ClientChat chat)
     {
         _chat = chat;
-        Subscribe();
+        this.Subscribe(() => chat.LineAdded += OnEntryAdded, () => chat.LineAdded -= OnEntryAdded);
+        this.Subscribe(() => chat.Cleared += OnCleared, () => chat.Cleared -= OnCleared);
+        Rebuild();
     }
-
-    public override void _ExitTree() => Unsubscribe();
 
     // Not folded into the ?. call: a null-conditional skips argument
     // evaluation, and the line must exist even with no listeners.
@@ -43,25 +43,6 @@ public partial class ChatFeed : VBoxContainer
             AddLine(entry, animate: false);
         }
         Rebuilt?.Invoke();
-    }
-
-    private void Subscribe()
-    {
-        if (_subscribed)
-            return;
-        _chat.LineAdded += OnEntryAdded;
-        _chat.Cleared += OnCleared;
-        _subscribed = true;
-        Rebuild();
-    }
-
-    private void Unsubscribe()
-    {
-        if (!_subscribed)
-            return;
-        _chat.LineAdded -= OnEntryAdded;
-        _chat.Cleared -= OnCleared;
-        _subscribed = false;
     }
 
     private Control AddLine(ChatLine entry, bool animate)

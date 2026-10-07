@@ -1,4 +1,5 @@
 using System.Collections;
+using Mortz.Client.Hooks;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Teams;
@@ -37,7 +38,6 @@ public class ClientPlayers(FeatureScope scope) : IDisposable,
 
     public RosterSnapshot Table { get; private set; } = RosterSnapshot.Empty;
 
-    public event Action<ClientPlayer>? PlayerJoined;
     public event Action<ClientPlayer>? PlayerLeft;
     public event Action<ClientPlayer>? MatchStatsChanged;
 
@@ -66,7 +66,7 @@ public class ClientPlayers(FeatureScope scope) : IDisposable,
             return player;
         player = new ClientPlayer(peerId, _matchBaseStats);
         _players[peerId] = player;
-        PlayerJoined?.Invoke(player);
+        scope.Raise<IObservePlayers>(feature => feature.PlayerJoined(player));
         return player;
     }
 
@@ -179,6 +179,8 @@ public class ClientPlayers(FeatureScope scope) : IDisposable,
             return;
         if (!player.Match.ApplyModifiers(stats, modifiers, message.Revision, message.EffectiveTick))
             return;
+        // Features first: the predictor must see the stats before the HUD redraws.
+        scope.Raise<IObservePlayerStats>(feature => feature.MatchStatsChanged(player));
         MatchStatsChanged?.Invoke(player);
     }
 
@@ -195,10 +197,11 @@ public class ClientPlayers(FeatureScope scope) : IDisposable,
         }
         if (gone == null)
             return false;
-        // Subscribers get their last look at the player's state, then it goes.
+        // Hooks and views get their last look at the player's state, then it goes.
         foreach (ClientPlayer player in gone)
         {
             _players.Remove(player.PeerId);
+            scope.Raise<IObservePlayers>(feature => feature.PlayerLeft(player));
             PlayerLeft?.Invoke(player);
             scope.Forget(player);
             player.CloseMatch();

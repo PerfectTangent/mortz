@@ -15,7 +15,7 @@ public class ChatFeedTests : NodeServiceTest
 
     public ChatFeedTests()
     {
-        ClientAdmin admin = new(Sender, () => 1);
+        ClientAdmin admin = new(Scope, Sender, () => 1);
         _chat = RegisterRuntime(new ClientChat(admin, new Mortz.Client.Debug.FakeSessionExit(), Sender));
         _feed = Host(new ChatFeed());
         _feed.Bind(_chat);

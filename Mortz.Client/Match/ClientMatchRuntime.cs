@@ -17,7 +17,7 @@ using Mortz.Protocol.Replication;
 
 namespace Mortz.Client.Match;
 
-public class ClientMatchRuntime : IDisposable, IClientTick, IClientFrame, IHandle<MatchStartMsg>, IHandle<CarveMsg>,
+public class ClientMatchRuntime : IDisposable, IClientTick, IClientFrame, IObservePlayerStats, IHandle<MatchStartMsg>, IHandle<CarveMsg>,
     IHandle<ShellRetireMsg>, IHandle<MortarLifecycleMsg>, IHandle<MortarCorrectionMsg>,
     IHandle<FinalKillMsg>, IHandle<DeathMsg>
 {
@@ -62,12 +62,10 @@ public class ClientMatchRuntime : IDisposable, IClientTick, IClientFrame, IHandl
         Terrain = new ClientTerrain(terrain, config.Combat.MortarCarveRadius, localPeerId, clock);
         Mortars = new MortarReplicaSet(terrain, config.Combat.ToSnapshot().ToMutable(), zones);
         scope.Register(new ClientMatchStateAdapter(state, _objectiveWire));
-        scope.Register(new AnnouncementDirector(players, state));
+        scope.Register(new AnnouncementDirector(scope, players, state));
         scope.Register(this);
         scope.Own(state.Close);
         scope.Own(players.CloseMatch);
-        players.MatchStatsChanged += OnStatsChanged;
-        scope.Own(() => players.MatchStatsChanged -= OnStatsChanged);
     }
 
     /// <summary>Seeds a fresh match with full peer IDs before the reliable roster arrives.</summary>
@@ -242,7 +240,7 @@ public class ClientMatchRuntime : IDisposable, IClientTick, IClientFrame, IHandl
             Died?.Invoke(message);
     }
 
-    private void OnStatsChanged(ClientPlayer player)
+    public void MatchStatsChanged(ClientPlayer player)
     {
         if (player.PeerId == _localPeerId && player.Match != null)
         {

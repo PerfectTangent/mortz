@@ -2,6 +2,7 @@ using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Servers;
+using Mortz.Extensions;
 
 namespace Mortz.Client.Menus;
 
@@ -19,31 +20,22 @@ public partial class ServerBrowser : Control
 
     [Dependency] private ServerBrowserController Browser => this.DependOn<ServerBrowserController>();
     private readonly Dictionary<ServerEntry, ServerRow> _rowsByEntry = [];
-    private bool _subscribed;
 
     public override void _Notification(int what) => this.Notify(what);
 
     public void OnResolved()
     {
-        Browser.Changed += Render;
+        // Leaving the tree also ends the browsing session the view was showing.
+        this.Subscribe(() => Browser.Changed += Render, () =>
+        {
+            Browser.Changed -= Render;
+            Browser.Close();
+        });
         _directPanel.FindRequested += OnDirectFindRequested;
         _directPanel.JoinRequested += OnDirectJoinRequested;
         _directPanel.CancelRequested += OnDirectCancelRequested;
         VisibilityChanged += OnVisibilityChanged;
-        _subscribed = true;
         Render();
-    }
-
-    public override void _ExitTree()
-    {
-        if (!_subscribed) { return; }
-        Browser.Close();
-        Browser.Changed -= Render;
-        _directPanel.FindRequested -= OnDirectFindRequested;
-        _directPanel.JoinRequested -= OnDirectJoinRequested;
-        _directPanel.CancelRequested -= OnDirectCancelRequested;
-        VisibilityChanged -= OnVisibilityChanged;
-        _subscribed = false;
     }
 
     public void Open() => Browser.Open();

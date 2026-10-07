@@ -1,3 +1,5 @@
+using Mortz.Client.Hooks;
+using Mortz.Core.Features;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Admin;
 
@@ -6,7 +8,7 @@ namespace Mortz.Client.Admin;
 /// <summary>Connected-session admin authority: owns the handshake secrets and
 /// signs privileged actions. Human-readable progress goes out as status lines;
 /// chat displays them but owns none of this.</summary>
-public class ClientAdmin(IClientSender sender, Func<int> localPeerId) : IDisposable,
+public class ClientAdmin(FeatureScope scope, IClientSender sender, Func<int> localPeerId) : IDisposable,
     IHandle<AdminChallengeMsg>,
     IHandle<AdminStateMsg>
 {
@@ -15,7 +17,6 @@ public class ClientAdmin(IClientSender sender, Func<int> localPeerId) : IDisposa
 
     public bool IsAdmin => _flow is { IsAdmin: true };
     public event Action<bool>? AdminChanged;
-    public event Action<string>? StatusLine;
 
     public void Dispose()
     {
@@ -28,14 +29,14 @@ public class ClientAdmin(IClientSender sender, Func<int> localPeerId) : IDisposa
         ObjectDisposedException.ThrowIf(_closed, this);
         if (localPeerId() == 0)
         {
-            StatusLine?.Invoke("Connect to a server before authenticating.");
+            Status("Connect to a server before authenticating.");
             return;
         }
         bool wasAdmin = IsAdmin;
         _flow.Begin(password);
         if (wasAdmin)
             AdminChanged?.Invoke(false);
-        StatusLine?.Invoke("Requesting admin challenge...");
+        Status("Requesting admin challenge...");
     }
 
     public bool TrySignAdminAction(byte action, ReadOnlySpan<byte> payload,
@@ -47,7 +48,7 @@ public class ClientAdmin(IClientSender sender, Func<int> localPeerId) : IDisposa
         if (_closed)
             return;
         if (!_flow.TryAnswerChallenge(localPeerId(), message))
-            StatusLine?.Invoke("Invalid admin challenge.");
+            Status("Invalid admin challenge.");
     }
 
     public void Handle(in AdminStateMsg message)
@@ -56,8 +57,11 @@ public class ClientAdmin(IClientSender sender, Func<int> localPeerId) : IDisposa
             return;
         bool wasAdmin = IsAdmin;
         _flow.ApplyState(message);
-        StatusLine?.Invoke(message.Status);
+        Status(message.Status);
         if (wasAdmin != IsAdmin)
             AdminChanged?.Invoke(IsAdmin);
     }
+
+    private void Status(string line) =>
+        scope.Raise<IObserveAdminStatus>(feature => feature.AdminStatus(line));
 }

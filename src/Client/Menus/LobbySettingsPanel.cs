@@ -6,6 +6,7 @@ using Mortz.Client.Setup;
 using Mortz.Client.Ui;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
+using Mortz.Extensions;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Lobby;
 using Mortz.Shared;
@@ -32,7 +33,6 @@ public partial class LobbySettingsPanel : PanelContainer
     private bool _applyingState;
     // UpdateEditing also runs before Setup resolves.
     private LobbySelection? _selection;
-    private bool _subscribed;
     private string _previewMapId = "";
     private string _previewMapHash = "";
 
@@ -67,9 +67,10 @@ public partial class LobbySettingsPanel : PanelContainer
 
     public void OnResolved()
     {
-        Setup.SettingsChanged += OnSetupChanged;
-        Admin.AdminChanged += OnAdminChanged;
-        _subscribed = true;
+        this.Subscribe(() => Setup.SettingsChanged += OnSetupChanged,
+            () => Setup.SettingsChanged -= OnSetupChanged);
+        this.Subscribe(() => Admin.AdminChanged += OnAdminChanged,
+            () => Admin.AdminChanged -= OnAdminChanged);
         OnSetupChanged();
     }
 
@@ -77,11 +78,6 @@ public partial class LobbySettingsPanel : PanelContainer
     {
         _mapPicker.ItemSelected -= OnMapSelected;
         _modePicker.ItemSelected -= OnModeSelected;
-        if (!_subscribed)
-            return;
-        Setup.SettingsChanged -= OnSetupChanged;
-        Admin.AdminChanged -= OnAdminChanged;
-        _subscribed = false;
     }
 
     private void OnSetupChanged()

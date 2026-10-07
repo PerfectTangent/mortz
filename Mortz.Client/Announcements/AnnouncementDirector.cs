@@ -1,6 +1,7 @@
 using Mortz.Client.Hooks;
 using Mortz.Client.Match;
 using Mortz.Client.Players;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Events;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
@@ -26,11 +27,12 @@ public class AnnouncementDirector : IAnnouncementDirector, IHandle<GameEventMsg>
 
     public MatchPointState? MatchPoint { get; private set; }
 
-    public AnnouncementDirector(ClientPlayers players, ClientMatchState matchState)
+    public AnnouncementDirector(FeatureScope scope, ClientPlayers players, ClientMatchState matchState)
     {
         _players = players;
         _matchState = matchState;
         _matchState.MatchPointChanged += OnMatchPointChanged;
+        scope.Own(() => _matchState.MatchPointChanged -= OnMatchPointChanged);
         OnMatchPointChanged(_matchState.MatchPoint);
     }
 
@@ -38,7 +40,6 @@ public class AnnouncementDirector : IAnnouncementDirector, IHandle<GameEventMsg>
     {
         _closed = true;
         _pending.Clear();
-        _matchState.MatchPointChanged -= OnMatchPointChanged;
     }
 
     public void Frame(float delta)

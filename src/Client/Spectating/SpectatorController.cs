@@ -9,6 +9,7 @@ using Mortz.Core.Features;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Sim;
+using Mortz.Extensions;
 using Mortz.Net;
 
 namespace Mortz.Client.Spectating;
@@ -46,15 +47,11 @@ public partial class SpectatorController : Node
     {
         _participation = MatchState.Participation;
         _matchEnded = MatchState.Winner != null;
-        MatchState.ParticipationChanged += OnParticipationChanged;
-        MatchState.WinnerChanged += OnWinnerChanged;
+        this.Subscribe(() => MatchState.ParticipationChanged += OnParticipationChanged,
+            () => MatchState.ParticipationChanged -= OnParticipationChanged);
+        this.Subscribe(() => MatchState.WinnerChanged += OnWinnerChanged,
+            () => MatchState.WinnerChanged -= OnWinnerChanged);
         ApplyPresentation();
-    }
-
-    public void OnExitTree()
-    {
-        MatchState.ParticipationChanged -= OnParticipationChanged;
-        MatchState.WinnerChanged -= OnWinnerChanged;
     }
 
     private void OnParticipationChanged(MatchParticipation next)

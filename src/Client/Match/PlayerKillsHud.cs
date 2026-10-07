@@ -2,6 +2,7 @@ using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
 using Mortz.Core.Features;
+using Mortz.Extensions;
 using Mortz.Net;
 
 namespace Mortz.Client.Match;
@@ -11,8 +12,6 @@ namespace Mortz.Client.Match;
 public partial class PlayerKillsHud : Control
 {
     [Export] private Label _scoreLabel = null!;
-
-    private bool _subscribed;
 
     [Dependency]
     private FeatureScope Scope => this.DependOn<FeatureScope>();
@@ -25,17 +24,9 @@ public partial class PlayerKillsHud : Control
 
     public void OnResolved()
     {
-        MatchState.ScoresChanged += OnScoresChanged;
-        _subscribed = true;
+        this.Subscribe(() => MatchState.ScoresChanged += OnScoresChanged,
+            () => MatchState.ScoresChanged -= OnScoresChanged);
         Render();
-    }
-
-    public void OnExitTree()
-    {
-        if (!_subscribed)
-            return;
-        MatchState.ScoresChanged -= OnScoresChanged;
-        _subscribed = false;
     }
 
     // A just-swapped-out view can still get the swap's own event: skip it.

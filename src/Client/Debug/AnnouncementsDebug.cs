@@ -49,8 +49,9 @@ public partial class AnnouncementsDebug : Control,
     {
         _features.Register(_director);
         _features.Register(new ClientPlayers(_features));
-        ClientAdmin admin = _features.Register(new ClientAdmin(_network, () => _network.LocalPeerId));
+        ClientAdmin admin = _features.Register(new ClientAdmin(_features, _network, () => _network.LocalPeerId));
         _features.Register(new ClientChat(admin, _sessionExit, _network));
+        _features.Start();
         this.Provide();
     }
 

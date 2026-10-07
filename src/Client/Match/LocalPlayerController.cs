@@ -5,6 +5,7 @@ using Mortz.Client.Replication;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Sim;
+using Mortz.Extensions;
 
 namespace Mortz.Client.Match;
 
@@ -46,8 +47,6 @@ public partial class LocalPlayerController : Node2D
     {
         _runtime = runtime;
         runtime.SampleInput = Sample;
-        runtime.PacketSent += OnPacketSent;
-        runtime.Reconciled += OnReconciled;
     }
 
     private void OnPacketSent(int sequence) => PacketSent?.Invoke(sequence);
@@ -58,16 +57,13 @@ public partial class LocalPlayerController : Node2D
     public void OnResolved()
     {
         _participation = MatchState.Participation;
-        MatchState.ParticipationChanged += OnParticipationChanged;
+        this.Subscribe(() => MatchState.ParticipationChanged += OnParticipationChanged,
+            () => MatchState.ParticipationChanged -= OnParticipationChanged);
+        this.Subscribe(() => _runtime.PacketSent += OnPacketSent, () => _runtime.PacketSent -= OnPacketSent);
+        this.Subscribe(() => _runtime.Reconciled += OnReconciled, () => _runtime.Reconciled -= OnReconciled);
     }
 
-    public void OnExitTree()
-    {
-        MatchState.ParticipationChanged -= OnParticipationChanged;
-        _runtime.SampleInput = null;
-        _runtime.PacketSent -= OnPacketSent;
-        _runtime.Reconciled -= OnReconciled;
-    }
+    public void OnExitTree() => _runtime.SampleInput = null;
 
     private PlayerInput Sample()
     {

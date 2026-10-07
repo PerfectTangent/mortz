@@ -4,6 +4,7 @@ using Godot;
 using Mortz.Client.Ui;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Teams;
+using Mortz.Extensions;
 
 namespace Mortz.Client.Match;
 
@@ -13,8 +14,6 @@ public partial class TeamKillsHud : Control
 {
     [Export] private Label _team1Label = null!;
     [Export] private Label _team2Label = null!;
-
-    private bool _subscribed;
 
     [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
     private ClientMatchState MatchState => Scope.Feature<ClientMatchState>();
@@ -29,17 +28,9 @@ public partial class TeamKillsHud : Control
 
     public void OnResolved()
     {
-        MatchState.ScoresChanged += OnScoresChanged;
-        _subscribed = true;
+        this.Subscribe(() => MatchState.ScoresChanged += OnScoresChanged,
+            () => MatchState.ScoresChanged -= OnScoresChanged);
         Render();
-    }
-
-    public void OnExitTree()
-    {
-        if (!_subscribed)
-            return;
-        MatchState.ScoresChanged -= OnScoresChanged;
-        _subscribed = false;
     }
 
     // A just-swapped-out view can still get the swap's own event: skip it.

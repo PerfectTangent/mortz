@@ -4,6 +4,7 @@ using Godot;
 using Mortz.Client.Setup;
 using Mortz.Client.Ui;
 using Mortz.Core.Features;
+using Mortz.Extensions;
 
 namespace Mortz.Client.Menus;
 
@@ -14,8 +15,6 @@ public partial class RosterHost : ViewVariantHost<RosterLayout>
     [Export] private PackedScene _single = null!;
     [Export] private PackedScene _teamColumns = null!;
 
-    private bool _subscribed;
-
     [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
     private MatchSetup Setup => Scope.Feature<MatchSetup>();
 
@@ -23,17 +22,8 @@ public partial class RosterHost : ViewVariantHost<RosterLayout>
 
     public void OnResolved()
     {
-        Setup.TeamsChanged += Refresh;
-        _subscribed = true;
+        this.Subscribe(() => Setup.TeamsChanged += Refresh, () => Setup.TeamsChanged -= Refresh);
         Refresh();
-    }
-
-    public void OnExitTree()
-    {
-        if (!_subscribed)
-            return;
-        Setup.TeamsChanged -= Refresh;
-        _subscribed = false;
     }
 
     protected override RosterLayout CurrentKey() =>

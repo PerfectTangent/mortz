@@ -5,6 +5,7 @@ using Mortz.Client.Players;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
+using Mortz.Extensions;
 
 namespace Mortz.Client.Match;
 
@@ -22,14 +23,10 @@ public partial class WinnerBanner : Control
 
     public void OnResolved()
     {
-        MatchState.WinnerChanged += OnWinnerChanged;
+        this.Subscribe(() => MatchState.WinnerChanged += OnWinnerChanged,
+            () => MatchState.WinnerChanged -= OnWinnerChanged);
         if (MatchState.Winner is Victor winner)
             OnWinnerChanged(winner);
-    }
-
-    public void OnExitTree()
-    {
-        MatchState.WinnerChanged -= OnWinnerChanged;
     }
 
     private void OnWinnerChanged(Victor? winner)

@@ -77,6 +77,15 @@ public static class NodeExtensions
         return null;
     }
 
+    /// <summary>Subscribes now and unsubscribes when the node leaves the tree.
+    /// Views are never reparented, so leaving is final.</summary>
+    public static void Subscribe(this Node node, Action subscribe, Action unsubscribe)
+    {
+        subscribe();
+        node.Connect(Node.SignalName.TreeExiting, Callable.From(unsubscribe),
+            (uint)GodotObject.ConnectFlags.OneShot);
+    }
+
     public static void KillDescendants(this Node node)
     {
         foreach (Node child in node.GetChildren())

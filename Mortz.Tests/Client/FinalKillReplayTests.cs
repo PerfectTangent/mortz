@@ -71,7 +71,6 @@ public class FinalKillReplayTests : NodeServiceTest
             }
             finally
             {
-                effects.OnExitTree();
                 ClientClock.Reset();
             }
         }

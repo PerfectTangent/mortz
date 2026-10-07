@@ -5,6 +5,7 @@ using Mortz.Client.Setup;
 using Mortz.Client.Ui;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
+using Mortz.Extensions;
 
 namespace Mortz.Client.Match;
 
@@ -15,8 +16,6 @@ public partial class ScoreHudHost : ViewVariantHost<ScoreHudKind>
     [Export] private PackedScene _playerKills = null!;
     [Export] private PackedScene _teamKills = null!;
 
-    private bool _subscribed;
-
     [Dependency] private FeatureScope Scope => this.DependOn<FeatureScope>();
     private MatchSetup Setup => Scope.Feature<MatchSetup>();
 
@@ -24,17 +23,9 @@ public partial class ScoreHudHost : ViewVariantHost<ScoreHudKind>
 
     public void OnResolved()
     {
-        Setup.ConfigChanged += RefreshScores;
-        _subscribed = true;
+        this.Subscribe(() => Setup.ConfigChanged += RefreshScores,
+            () => Setup.ConfigChanged -= RefreshScores);
         RefreshScores();
-    }
-
-    public void OnExitTree()
-    {
-        if (!_subscribed)
-            return;
-        Setup.ConfigChanged -= RefreshScores;
-        _subscribed = false;
     }
 
     protected override ScoreHudKind CurrentKey() =>

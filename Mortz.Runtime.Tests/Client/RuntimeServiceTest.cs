@@ -15,12 +15,19 @@ public abstract class RuntimeServiceTest : IDisposable
 
     protected FeatureScope Scope { get; } = new("connection");
 
+    /// <summary>A routed scope left unstarted, for features that must hear each other's hooks.</summary>
+    protected FeatureScope OpenScope(string name)
+    {
+        FeatureScope scope = new(name, Router.Add, Router.Remove);
+        _scopes.Add(scope);
+        return scope;
+    }
+
     protected T RegisterRuntime<T>(T feature) where T : class
     {
-        FeatureScope scope = new(typeof(T).Name, Router.Add, Router.Remove);
+        FeatureScope scope = OpenScope(typeof(T).Name);
         scope.Register(feature);
         scope.Start();
-        _scopes.Add(scope);
         return feature;
     }
 

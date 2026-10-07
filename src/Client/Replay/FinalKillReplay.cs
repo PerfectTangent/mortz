@@ -8,6 +8,7 @@ using Mortz.Client.Spectating;
 using Mortz.Client.Views;
 using Mortz.Core.Features;
 using Mortz.Core.Sim;
+using Mortz.Extensions;
 using Mortz.Net;
 using Mortz.Protocol.Net.Match;
 
@@ -53,8 +54,6 @@ public partial class FinalKillReplay : Node
 
     public bool MatchFrozen => _matchFrozen;
 
-    private bool _subscribed;
-
     public override void _Notification(int what) => this.Notify(what);
 
     public void Initialize(MatchSceneRenderer renderer)
@@ -66,15 +65,12 @@ public partial class FinalKillReplay : Node
 
     public void OnResolved()
     {
-        Runtime.FinalKillReceived += OnFinalKill;
-        _subscribed = true;
+        this.Subscribe(() => Runtime.FinalKillReceived += OnFinalKill,
+            () => Runtime.FinalKillReceived -= OnFinalKill);
     }
 
     public override void _ExitTree()
     {
-        if (_subscribed)
-            Runtime.FinalKillReceived -= OnFinalKill;
-        _subscribed = false;
         ClientClock.Reset();
         _replayCamera.Enabled = false;
     }

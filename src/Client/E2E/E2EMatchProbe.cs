@@ -7,6 +7,7 @@ using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
 using Mortz.Core.Replication;
 using Mortz.Core.Sim;
+using Mortz.Extensions;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Match;
 using Mortz.Shared.Logging;
@@ -50,7 +51,8 @@ public partial class E2EMatchProbe : Node,
 
     public void OnResolved()
     {
-        _gameView.SnapshotApplied += LogHeartbeat;
+        this.Subscribe(() => _gameView.SnapshotApplied += LogHeartbeat,
+            () => _gameView.SnapshotApplied -= LogHeartbeat);
         _routed = Router;
         _routed.Add(this);
         Bridge.AttachMatch(_gameView, _localPlayer);
@@ -60,7 +62,6 @@ public partial class E2EMatchProbe : Node,
     {
         if (_routed == null)
             return;
-        _gameView.SnapshotApplied -= LogHeartbeat;
         _routed.Remove(this);
         _routed = null;
         Bridge.DetachMatch();

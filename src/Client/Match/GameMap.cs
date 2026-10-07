@@ -2,6 +2,7 @@ using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
 using Mortz.Core.Terrain;
+using Mortz.Extensions;
 using Mortz.Protocol.Net.Match;
 using Mortz.Shared;
 using Mortz.Shared.Logging;
@@ -96,16 +97,8 @@ public partial class GameMap : Node2D
 
     public void OnResolved()
     {
-        Terrain.Impact += PresentImpact;
-        Terrain.Restored += RestorePixels;
-    }
-
-    public void OnExitTree()
-    {
-        if (Terrain == null)
-            return;
-        Terrain.Impact -= PresentImpact;
-        Terrain.Restored -= RestorePixels;
+        this.Subscribe(() => Terrain.Impact += PresentImpact, () => Terrain.Impact -= PresentImpact);
+        this.Subscribe(() => Terrain.Restored += RestorePixels, () => Terrain.Restored -= RestorePixels);
     }
 
     private void PresentImpact(TerrainImpact impact)
