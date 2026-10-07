@@ -1,3 +1,4 @@
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Match.Scoring;
@@ -17,7 +18,7 @@ public class MatchRuntimeTests
     [Fact]
     public void AnOutcomeWithoutADeathEndsTheMatchWithoutInventingAReplay()
     {
-        MatchStateKeys keys = new(GENERATION);
+        FeatureScope scope = new("match");
         using MatchRuntime runtime = new(new TerrainMask(128, 128, (_, _) => false, (_, _) => false),
             new MatchConfig
             {
@@ -25,8 +26,8 @@ public class MatchRuntimeTests
                 {
                     EndCondition = new TimeLimitRules { Seconds = 1 },
                 }
-            }, 2, keys);
-        runtime.Seat(OpenPlayer(1, keys));
+            }, 2, scope, GENERATION);
+        runtime.Seat(OpenPlayer(1));
         Assert.Null(runtime.Advance(default).MatchEnded);
         while (runtime.World.Tick < SimConfig.TICK_RATE - 1)
         {
@@ -46,10 +47,10 @@ public class MatchRuntimeTests
     public void MutatingEditableRulesCannotChangeAnActiveMatch()
     {
         MatchConfig editable = new();
-        MatchStateKeys keys = new(GENERATION);
+        FeatureScope scope = new("match");
         using MatchRuntime runtime = new(new TerrainMask(128, 128, (_, _) => false, (_, _) => false),
-            editable, 2, keys);
-        runtime.Seat(OpenPlayer(1, keys));
+            editable, 2, scope, GENERATION);
+        runtime.Seat(OpenPlayer(1));
         MatchConfigSnapshot frozen = runtime.Config;
         PlayerStats stats = runtime.World.Stats[1];
         editable.Physics.Gravity = 0;
@@ -64,9 +65,9 @@ public class MatchRuntimeTests
     [Fact]
     public void AdvanceRunsTheFullDependencyOrderedPipeline()
     {
-        MatchStateKeys keys = new(GENERATION);
-        using MatchRuntime runtime = NewRuntime(keys);
-        Player victim = OpenPlayer(1, keys);
+        FeatureScope scope = new("match");
+        using MatchRuntime runtime = NewRuntime(scope);
+        Player victim = OpenPlayer(1);
         runtime.Seat(victim);
         runtime.World.QueueDamage(victim.PeerId, byte.MaxValue);
 
@@ -82,12 +83,12 @@ public class MatchRuntimeTests
     [Fact]
     public void AuthoredSpawnPointsReachTheWorld()
     {
-        MatchStateKeys keys = new(GENERATION);
-        using MatchRuntime runtime = NewRuntime(keys,
+        FeatureScope scope = new("match");
+        using MatchRuntime runtime = NewRuntime(scope,
             spawnPoints: [new Vec2(32, 64), new Vec2(96, 64)]);
 
-        runtime.Seat(OpenPlayer(50, keys));
-        runtime.Seat(OpenPlayer(10, keys));
+        runtime.Seat(OpenPlayer(50));
+        runtime.Seat(OpenPlayer(10));
 
         Assert.Equal(new Vec2(32, 64), runtime.World.Players[50].Position);
         Assert.Equal(new Vec2(96, 64), runtime.World.Players[10].Position);
@@ -96,14 +97,14 @@ public class MatchRuntimeTests
     [Fact]
     public void LobbyTeamsCarryIntoTheMatchAndLateJoinersBalance()
     {
-        MatchStateKeys keys = new(GENERATION);
-        using MatchRuntime runtime = NewRuntime(keys, teams: true);
+        FeatureScope scope = new("match");
+        using MatchRuntime runtime = NewRuntime(scope, teams: true);
 
-        runtime.Seat(OpenPlayer(1, keys), Team.RED);
-        runtime.Seat(OpenPlayer(2, keys), Team.RED);
-        runtime.Seat(OpenPlayer(3, keys), Team.BLUE);
+        runtime.Seat(OpenPlayer(1), Team.RED);
+        runtime.Seat(OpenPlayer(2), Team.RED);
+        runtime.Seat(OpenPlayer(3), Team.BLUE);
 
-        Team? lateJoiner = runtime.Seat(OpenPlayer(4, keys));
+        Team? lateJoiner = runtime.Seat(OpenPlayer(4));
 
         Assert.Equal(Team.RED, runtime.World.Players[1].Team);
         Assert.Equal(Team.RED, runtime.World.Players[2].Team);
@@ -114,19 +115,19 @@ public class MatchRuntimeTests
     [Fact]
     public void LobbyTeamsAreIgnoredWhenTeamsAreOff()
     {
-        MatchStateKeys keys = new(GENERATION);
-        using MatchRuntime runtime = NewRuntime(keys);
+        FeatureScope scope = new("match");
+        using MatchRuntime runtime = NewRuntime(scope);
 
-        Assert.Null(runtime.Seat(OpenPlayer(1, keys), Team.RED));
+        Assert.Null(runtime.Seat(OpenPlayer(1), Team.RED));
     }
 
     [Fact]
     public void SeatingSpectatingAndRemovalAreOwnedByTheRuntime()
     {
-        MatchStateKeys keys = new(GENERATION);
-        using MatchRuntime runtime = NewRuntime(keys);
-        Player seated = OpenPlayer(1, keys);
-        Player spectator = OpenPlayer(2, keys);
+        FeatureScope scope = new("match");
+        using MatchRuntime runtime = NewRuntime(scope);
+        Player seated = OpenPlayer(1);
+        Player spectator = OpenPlayer(2);
 
         runtime.Seat(seated);
         runtime.AddJipSpectator(spectator);
@@ -146,11 +147,11 @@ public class MatchRuntimeTests
     [Fact]
     public void WinnersIncludeOnlyPlayersStillSeated()
     {
-        MatchStateKeys keys = new(GENERATION);
-        using MatchRuntime runtime = NewRuntime(keys, teams: true);
-        Player blue = OpenPlayer(1, keys);
-        Player red = OpenPlayer(2, keys);
-        Player departedBlue = OpenPlayer(3, keys);
+        FeatureScope scope = new("match");
+        using MatchRuntime runtime = NewRuntime(scope, teams: true);
+        Player blue = OpenPlayer(1);
+        Player red = OpenPlayer(2);
+        Player departedBlue = OpenPlayer(3);
         runtime.Seat(blue, Team.BLUE);
         runtime.Seat(red, Team.RED);
         runtime.Seat(departedBlue, Team.BLUE);
@@ -165,14 +166,14 @@ public class MatchRuntimeTests
     [Fact]
     public void VictoryLapFreezesTheWorldRejectsInputsAndUsesItsOwnCountdown()
     {
-        MatchStateKeys keys = new(GENERATION);
-        using MatchRuntime runtime = NewRuntime(keys,
+        FeatureScope scope = new("match");
+        using MatchRuntime runtime = NewRuntime(scope,
             killTarget: 1,
             victoryLapTicks: 3,
             suicidePenalty: SuicidePenalty.REWARD_CLOSEST_ENEMY,
             spawnPoints: [new Vec2(10, 32), new Vec2(40, 32)]);
-        Player winner = OpenPlayer(1, keys);
-        Player victim = OpenPlayer(2, keys);
+        Player winner = OpenPlayer(1);
+        Player victim = OpenPlayer(2);
         runtime.Seat(winner);
         runtime.Seat(victim);
         runtime.World.QueueDamage(victim.PeerId, byte.MaxValue);
@@ -200,7 +201,7 @@ public class MatchRuntimeTests
     [Fact]
     public void DisposalIsIdempotentAndClosesTheRuntime()
     {
-        MatchRuntime runtime = NewRuntime(new MatchStateKeys(GENERATION));
+        MatchRuntime runtime = NewRuntime(new FeatureScope("match"));
 
         runtime.Dispose();
         runtime.Dispose();
@@ -209,7 +210,7 @@ public class MatchRuntimeTests
     }
 
     private static MatchRuntime NewRuntime(
-        MatchStateKeys keys,
+        FeatureScope scope,
         bool teams = false,
         int killTarget = 20,
         int victoryLapTicks = 3,
@@ -226,15 +227,9 @@ public class MatchRuntimeTests
                 SuicidePenalty = suicidePenalty,
                 SpawnImmunity = 0,
             },
-        }, victoryLapTicks, keys,
+        }, victoryLapTicks, scope, GENERATION,
             spawnPoints?.Select(point => new SpawnPoint(point)).ToArray());
     }
 
-    private static Player OpenPlayer(int peerId, MatchStateKeys keys)
-    {
-        Player player = new(peerId, $"Player {peerId}", serverKeyCount: 0,
-            serverGeneration: GENERATION);
-        player.OpenMatch(keys.Count, keys.Generation);
-        return player;
-    }
+    private static Player OpenPlayer(int peerId) => new(peerId, $"Player {peerId}");
 }

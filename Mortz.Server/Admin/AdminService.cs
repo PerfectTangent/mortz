@@ -1,3 +1,4 @@
+using Mortz.Core.Features;
 using Mortz.Protocol.Admin;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Admin;
@@ -12,10 +13,10 @@ namespace Mortz.Server.Admin;
 
 /// <summary>Admin challenge, grant and privileged-command authorization.</summary>
 public sealed class AdminService(
-    ServerStateKeys keys,
+    FeatureScope scope,
     IServerLink link,
     ServerClock clock,
-    ICurrentPhase phase,
+    PhaseHost phase,
     ILogger log,
     string password)
     :
@@ -25,7 +26,7 @@ public sealed class AdminService(
 {
     private const string LOBBY_ONLY = "Admin authentication is only available in the lobby.";
 
-    private readonly ServerStateKey<AdminSession> _session = keys.Claim<AdminSession>(typeof(AdminService));
+    private readonly PlayerTable<Player, AdminSession> _sessions = scope.Table<Player, AdminSession>();
     private readonly AdminAuthenticator _crypto = new(password);
 
     public void Handle(Player sender, in AdminAuthRequestMsg message)
@@ -37,7 +38,7 @@ public sealed class AdminService(
         }
 
         byte[] nonce = CryptoRandom.GetBytes(AdminCrypto.NONCE_BYTES);
-        AdminChallengeResult result = _crypto.Begin(sender.State(_session), clock.Ms, nonce,
+        AdminChallengeResult result = _crypto.Begin(_sessions[sender], clock.Ms, nonce,
             out byte[] challenge);
         if (result == AdminChallengeResult.STARTED)
         {
@@ -62,7 +63,7 @@ public sealed class AdminService(
             return;
         }
 
-        AdminProofResult result = _crypto.Verify(sender.State(_session), sender.PeerId, clock.Ms,
+        AdminProofResult result = _crypto.Verify(_sessions[sender], sender.PeerId, clock.Ms,
             message.Proof);
         bool accepted = result == AdminProofResult.ACCEPTED;
         string status = accepted
@@ -79,7 +80,7 @@ public sealed class AdminService(
             log.Information("player {PeerId} authenticated as admin", sender.PeerId);
     }
 
-    public bool IsAdmin(Player player) => _crypto.IsAdmin(player.State(_session));
+    public bool IsAdmin(Player player) => _crypto.IsAdmin(_sessions[player]);
 
     public bool Authorize(Player player, in LobbyMapUpdateMsg message) =>
         Authorize(player, message.Sequence, SetLobbyMapAction.ACTION,
@@ -99,7 +100,7 @@ public sealed class AdminService(
 
     private bool Authorize(Player player, ulong sequence, byte action,
         ReadOnlySpan<byte> payload, ReadOnlySpan<byte> tag) =>
-        _crypto.VerifyCommand(player.State(_session), player.PeerId, sequence, action, payload, tag);
+        _crypto.VerifyCommand(_sessions[player], player.PeerId, sequence, action, payload, tag);
 
     /// <summary>Zeroes the password; per-player key material is disposed with each AdminSession.</summary>
     public void Dispose() => _crypto.Dispose();

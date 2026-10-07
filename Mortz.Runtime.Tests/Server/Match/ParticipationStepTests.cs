@@ -71,10 +71,10 @@ public class ParticipationStepTests
     [Fact]
     public void InitializesSeatsAndJipSpectators()
     {
-        MatchCells cells = new();
-        ParticipationStep participation = new(cells.Keys);
-        Player seated = cells.GetOrJoin(1);
-        Player spectator = cells.GetOrJoin(2);
+        MatchSeats seats = new();
+        ParticipationStep participation = new(seats.Scope);
+        Player seated = seats.GetOrJoin(1);
+        Player spectator = seats.GetOrJoin(2);
 
         participation.Seat(seated);
         participation.AddJipSpectator(spectator);
@@ -128,12 +128,12 @@ public class ParticipationStepTests
 
     private sealed class Fixture
     {
-        private readonly MatchCells _cells = new();
+        private readonly MatchSeats _seats = new();
 
         public Fixture(int respawnTicks, RespawnStrategy? respawns = null)
         {
-            Participation = new ParticipationStep(_cells.Keys);
-            Player = _cells.GetOrJoin(1);
+            Participation = new ParticipationStep(_seats.Scope);
+            Player = _seats.GetOrJoin(1);
             TerrainMask terrain = new(32, 32, (_, _) => false, (_, _) => false);
             World = new SimWorld(terrain, new MatchConfig
             {
@@ -162,7 +162,7 @@ public class ParticipationStepTests
 
         public IReadOnlyList<MatchParticipationChange> Advance(IReadOnlyList<Death> deaths)
         {
-            return Participation.Apply(new MatchContext(World, _cells.Seated), deaths);
+            return Participation.Apply(new MatchContext(World, _seats.Seated), deaths);
         }
     }
 }

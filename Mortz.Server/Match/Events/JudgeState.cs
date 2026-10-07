@@ -1,7 +1,6 @@
 namespace Mortz.Server.Match.Events;
 
-/// <summary>Match-lifetime cell: everything the event judge remembers about
-/// one player between frames.</summary>
+/// <summary>What the event judge remembers about one player.</summary>
 public sealed class JudgeState
 {
     /// <summary>Kills since their own last death.</summary>

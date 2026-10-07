@@ -1,32 +1,7 @@
-using Mortz.Core.Features;
-using Mortz.Server.Players;
-
 namespace Mortz.Server.Phases;
 
-public abstract class ServerPhase : IDisposable
+/// <summary>The feature that anchors a phase scope.</summary>
+public abstract class ServerPhase
 {
     public abstract ServerPhaseKind Kind { get; }
-
-    public abstract FeatureScope Features { get; }
-
-    public IReadOnlyList<object> Services => Features.Implementing<object>();
-
-    public virtual void OpenPhaseKeys(Player player) { }
-
-    /// <summary>Called once every roster player has this phase's state open. Joins after this use PlayerJoined instead.</summary>
-    public abstract void Begin();
-
-    public virtual void PlayerJoined(Player player) { }
-
-    public abstract void PlayerLeft(Player player);
-
-    public abstract PhaseRequest Advance(ServerTime time);
-
-    public virtual void Inputs(Player player, byte[] packet)
-    {
-    }
-
-    public virtual void Load(Player player, int generation, bool initialPhase) { }
-
-    public virtual void Dispose() => Features.Dispose();
 }

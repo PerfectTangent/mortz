@@ -44,7 +44,7 @@ public class GameEventsStepTests
         fixture.Advance([fixture.Kill(1, 2)]);
         Player leaver = fixture.Player(1);
 
-        fixture.Cells.Leave(leaver);
+        fixture.Seats.Leave(leaver);
         fixture.GameEvents.PlayerLeft(leaver);
         IReadOnlyList<Judgment> afterRejoin = fixture.Advance([fixture.Kill(2, 1)]);
 
@@ -60,15 +60,15 @@ public class GameEventsStepTests
         {
             TerrainMask terrain = new(32, 32, (_, _) => false, (_, _) => false);
             _world = new SimWorld(terrain, new MatchConfig(), Array.Empty<SpawnPoint>());
-            GameEventJudge judge = new(Cells.Keys, Cells.Seated, _ => null);
+            GameEventJudge judge = new(Seats.Scope, Seats.Seated, _ => null);
             GameEvents = new GameEventsStep(judge);
         }
 
-        public MatchCells Cells { get; } = new();
+        public MatchSeats Seats { get; } = new();
 
         public GameEventsStep GameEvents { get; }
 
-        public Player Player(int peerId) => Cells.GetOrJoin(peerId);
+        public Player Player(int peerId) => Seats.GetOrJoin(peerId);
 
         public IReadOnlyList<Judgment> Advance(IReadOnlyList<ScoredKill> eliminations) =>
             GameEvents.Judge(eliminations, _world.Tick);

@@ -13,10 +13,10 @@ using Mortz.Protocol.Replication;
 using Mortz.Protocol.Sim.Modifiers;
 using Mortz.Protocol.Terrain;
 using Mortz.Server.Content;
+using Mortz.Server.Hooks;
 using Mortz.Server.Match.Events;
 using Mortz.Server.Match.Scoring;
 using Mortz.Server.Players;
-using Mortz.Server.Services;
 using Serilog;
 using ModeRules = Mortz.Core.Match.Configuration.ModeRulesSnapshot;
 
@@ -34,8 +34,8 @@ public class MatchReplication(
     bool printNetStats,
     bool allowJoinInProgress = true)
     : IObserveMatchRoster,
-        IEnterMatch,
-        IObserveMatchInput,
+        ILoadPhase,
+        IReceiveInputs,
         IObserveMatchUpdate,
         ISyncJip
 {
@@ -58,10 +58,10 @@ public class MatchReplication(
         link.SendSnapshot(jipPlayer.PeerId, CaptureSnapshot().SerializeFor(jipPlayer.PeerId, _objectiveWire), -1);
     }
 
-    public void Enter(Player player, int generation, bool initialPhase)
+    public void Load(Player player, PhaseLoad load)
     {
-        SendWelcome(player, generation, initialPhase);
-        if (initialPhase)
+        SendWelcome(player, load.Generation, load.Initial);
+        if (load.Initial)
             SendCurrentState(player);
     }
 
@@ -106,7 +106,7 @@ public class MatchReplication(
         }
     }
 
-    public void MatchUpdated(in MatchUpdate update, ServerTime time)
+    public void MatchUpdated(in MatchUpdate update)
     {
         // Tick is frozen during VictoryLap; skip periodic snapshot/correction broadcasts.
         if (runtime.Stage == MatchStage.VICTORY_LAP && update.MatchEnded == null)
@@ -168,7 +168,7 @@ public class MatchReplication(
         if (update.Tick % NetConfig.TICKS_PER_MORTAR_CORRECTION == 0 && runtime.World.Mortars.Count > 0)
             BroadcastMortarCorrections();
         if (printNetStats && update.Tick % SimConfig.TICK_RATE == 0)
-            PrintStats(time);
+            PrintStats(update.Time);
 
         if (update.MatchEnded is Victor winner)
         {
@@ -177,7 +177,7 @@ public class MatchReplication(
         }
     }
 
-    public void InputReceived(int payloadBytes) => _inputPayloadBytes += payloadBytes;
+    public void Inputs(Player player, byte[] packet) => _inputPayloadBytes += packet.Length;
 
     private void SendResult(Victor winner, int? peerId = null)
     {

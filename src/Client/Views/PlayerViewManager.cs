@@ -85,9 +85,11 @@ public partial class PlayerViewManager : Node2D
         PlayerViewState state,
         MatchRenderMode mode = MatchRenderMode.LIVE)
     {
+        // Buffered frames can still hold a player the roster just retired.
+        if (Players.Find(peerId) is not ClientPlayer player)
+            return;
         _placed.Add(peerId);
         bool isLocal = peerId == Network.LocalPeerId;
-        ClientPlayer player = Players.GetOrCreate(peerId);
         ClientMatchPlayer match = player.Match ??
                                   throw new InvalidOperationException("Cannot place a player outside a match.");
         if (!isLocal)

@@ -14,11 +14,11 @@ public class GameEventJudgeTests
     private const int VICTIM = 2;
     private const int OTHER = 3;
 
-    private readonly MatchCells _cells = new();
+    private readonly MatchSeats _seats = new();
     private readonly Dictionary<int, Team?> _teams = [];
     private readonly GameEventJudge _judge;
 
-    public GameEventJudgeTests() => _judge = new GameEventJudge(_cells.Keys, _cells.Seated,
+    public GameEventJudgeTests() => _judge = new GameEventJudge(_seats.Scope, _seats.Seated,
         player => _teams.GetValueOrDefault(player.PeerId));
 
     [Fact]
@@ -147,9 +147,8 @@ public class GameEventJudgeTests
     {
         RunStreak(VICTIM, kills: 6, startTick: 0);
 
-        // Their cells die with them; rejoining mints fresh ones.
-        Player leaver = _cells.GetOrJoin(VICTIM);
-        _cells.Leave(leaver);
+        Player leaver = _seats.GetOrJoin(VICTIM);
+        _seats.Leave(leaver);
         _judge.PlayerLeft(leaver);
 
         List<Judgment> events = _judge.JudgeFrame(
@@ -163,8 +162,8 @@ public class GameEventJudgeTests
     {
         _judge.JudgeFrame([Kill(KILLER, VICTIM)], tick: 0);
 
-        Player leaver = _cells.GetOrJoin(KILLER);
-        _cells.Leave(leaver);
+        Player leaver = _seats.GetOrJoin(KILLER);
+        _seats.Leave(leaver);
         _judge.PlayerLeft(leaver);
 
         // The killer rejoins as a fresh player; the old grudge must not fire.
@@ -305,9 +304,9 @@ public class GameEventJudgeTests
         _teams[KILLER] = Team.BLUE;
         _teams[VICTIM] = Team.RED;
         _teams[OTHER] = Team.RED;
-        _cells.GetOrJoin(KILLER);
-        _cells.GetOrJoin(VICTIM);
-        _cells.GetOrJoin(OTHER);
+        _seats.GetOrJoin(KILLER);
+        _seats.GetOrJoin(VICTIM);
+        _seats.GetOrJoin(OTHER);
     }
 
     /// <summary>The judge only reads Kind from the score; ids and tallies stay
@@ -317,7 +316,7 @@ public class GameEventJudgeTests
 
     private ScoredKill Suicide(int victim, SuicideCause cause)
     {
-        Player player = _cells.GetOrJoin(victim);
+        Player player = _seats.GetOrJoin(victim);
         DeathKind kind = cause == SuicideCause.FALL ? DeathKind.FALL : DeathKind.SUICIDE;
         return new ScoredKill(player, player, Score(kind),
             Owned: false, FirstBlood: false, ShellId: -1);
@@ -329,8 +328,8 @@ public class GameEventJudgeTests
     {
         Player? credited = killer == 0 || kind == DeathKind.UNCREDITED
             ? null
-            : _cells.GetOrJoin(killer);
-        return new ScoredKill(credited, _cells.GetOrJoin(victim), Score(kind), owned,
+            : _seats.GetOrJoin(killer);
+        return new ScoredKill(credited, _seats.GetOrJoin(victim), Score(kind), owned,
             firstBlood, shellId);
     }
 

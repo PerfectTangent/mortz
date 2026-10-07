@@ -1,5 +1,5 @@
 using Mortz.Protocol.Net.Stats;
-using Mortz.Server.Services;
+using Mortz.Server.Hooks;
 
 namespace Mortz.Server.Pings;
 

@@ -1,4 +1,5 @@
 using Mortz.Client.Players;
+using Mortz.Core.Features;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Stats;
 
@@ -12,23 +13,23 @@ public sealed class PingSample
 
 /// <summary>Applies the ping stream onto players. Each update is a full table,
 /// so absent players reset to no sample.</summary>
-public class Pings(ClientPlayers players) : IHandle<PingUpdateMsg>
+public class Pings(FeatureScope scope, ClientPlayers players) : IHandle<PingUpdateMsg>
 {
-    private readonly SessionStateKey<PingSample> _ping = players.SessionKeys.Claim<PingSample>(typeof(Pings));
+    private readonly PlayerTable<ClientPlayer, PingSample> _pings = scope.Table<ClientPlayer, PingSample>();
 
     public event Action? Changed;
 
-    public int? Of(ClientPlayer player) => player.State(_ping).Ms;
+    public int? Of(ClientPlayer player) => _pings[player].Ms;
 
     public void Handle(in PingUpdateMsg message)
     {
-        foreach (ClientPlayer player in players)
+        foreach ((ClientPlayer _, PingSample sample) in _pings.Entries)
         {
-            player.State(_ping).Ms = null;
+            sample.Ms = null;
         }
         foreach (PeerPing ping in message.Pings)
         {
-            players.GetOrCreate(ping.PeerId).State(_ping).Ms = ping.PingMs;
+            _pings[players.GetOrCreate(ping.PeerId)].Ms = ping.PingMs;
         }
         Changed?.Invoke();
     }

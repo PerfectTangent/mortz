@@ -12,16 +12,16 @@ namespace Mortz.Runtime.Tests.Server.Match;
 /// <summary>A GameMode over a bare world, fed hand-built deaths.</summary>
 public sealed class ModeFixture
 {
-    private readonly MatchCells _cells = new();
+    private readonly MatchSeats _seats = new();
 
     public ModeFixture(ModeRules rules, MatchObjective? objective = null)
     {
         rules.SpawnImmunity = 0;
         TerrainMask terrain = new(128, 128, (_, _) => false, (_, _) => false);
         World = new SimWorld(terrain, new MatchConfig { Rules = rules }, Array.Empty<SpawnPoint>());
-        Context = new MatchContext(World, _cells.Seated);
+        Context = new MatchContext(World, _seats.Seated);
         Mode = new GameMode(World.Config.Rules, objective ?? NoObjective.Instance);
-        Scoring = new ScoringStep(World.Config.Rules, _cells.Keys, _cells.Seated);
+        Scoring = new ScoringStep(World.Config.Rules, _seats.Scope, _seats.Seated);
     }
 
     public SimWorld World { get; }
@@ -32,7 +32,7 @@ public sealed class ModeFixture
 
     public GameMode Mode { get; }
 
-    public Player Player(int peerId) => _cells.GetOrJoin(peerId);
+    public Player Player(int peerId) => _seats.GetOrJoin(peerId);
 
     public void Seat(int peerId, Team? team = null)
     {

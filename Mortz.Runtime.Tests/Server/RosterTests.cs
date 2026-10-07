@@ -1,4 +1,3 @@
-using Mortz.Server.Phases;
 using Mortz.Server.Players;
 using Xunit;
 
@@ -6,17 +5,10 @@ namespace Mortz.Runtime.Tests.Server;
 
 public class RosterTests
 {
-    private sealed class Tally
-    {
-        public int Count;
-    }
-
-    private readonly ServerStateKeys _keys = new(generation: 1);
-
     [Fact]
     public void ASelectedSkinBecomesPartOfThePlayerIdentity()
     {
-        Roster roster = new(_keys);
+        Roster roster = new();
 
         Player player = roster.Join(1, "hello", requestedSkin: 24);
 
@@ -28,7 +20,7 @@ public class RosterTests
     [Fact]
     public void ABlankNameFallsBackToThePeerId()
     {
-        Roster roster = new(_keys);
+        Roster roster = new();
 
         Assert.Equal("Player 7", roster.Join(7, "   ").Name);
         Assert.Equal("Player 8", roster.Join(8, "").Name);
@@ -37,7 +29,7 @@ public class RosterTests
     [Fact]
     public void ANameOfNothingButControlRunesFallsBackToo()
     {
-        Roster roster = new(_keys);
+        Roster roster = new();
 
         Assert.Equal("Player 3", roster.Join(3, "\r\n‮").Name);
     }
@@ -45,7 +37,7 @@ public class RosterTests
     [Fact]
     public void ANameIsSanitizedOnce()
     {
-        Roster roster = new(_keys);
+        Roster roster = new();
 
         Assert.Equal("hello", roster.Join(1, "  hello‮  ").Name);
     }
@@ -53,7 +45,7 @@ public class RosterTests
     [Fact]
     public void IterationIsAscendingPeerIdRegardlessOfJoinOrder()
     {
-        Roster roster = new(_keys);
+        Roster roster = new();
         roster.Join(9, "nine");
         roster.Join(2, "two");
         roster.Join(5, "five");
@@ -64,7 +56,7 @@ public class RosterTests
     [Fact]
     public void FindReturnsTheSamePlayerAndNullForAStranger()
     {
-        Roster roster = new(_keys);
+        Roster roster = new();
         Player joined = roster.Join(4, "four");
 
         Assert.Same(joined, roster.Find(4));
@@ -74,7 +66,7 @@ public class RosterTests
     [Fact]
     public void LeavingRemovesThePlayerAndReturnsThemOnce()
     {
-        Roster roster = new(_keys);
+        Roster roster = new();
         Player joined = roster.Join(4, "four");
 
         Assert.Same(joined, roster.Leave(4));
@@ -84,41 +76,24 @@ public class RosterTests
     }
 
     [Fact]
-    public void RejoiningMintsAFreshPlayerWithFreshState()
+    public void RejoiningMintsAFreshPlayer()
     {
-        ServerStateKey<Tally> key = _keys.Claim<Tally>();
-        Roster roster = new(_keys);
+        Roster roster = new();
         Player before = roster.Join(4, "four");
-        before.State(key).Count = 5;
 
         roster.Leave(4);
-        before.Close(ServerPhaseKind.LOBBY);
         Player after = roster.Join(4, "four");
 
         Assert.NotSame(before, after);
-        Assert.Equal(0, after.State(key).Count);
     }
 
     [Fact]
     public void JoiningTwiceOnOnePeerReplacesTheEntry()
     {
-        Roster roster = new(_keys);
+        Roster roster = new();
         roster.Join(4, "four");
         Player second = roster.Join(4, "again");
 
         Assert.Same(second, Assert.Single(roster));
-    }
-
-    [Fact]
-    public void EveryPlayerIsSizedForEveryKeyClaimedBeforeTheyJoined()
-    {
-        ServerStateKey<Tally> first = _keys.Claim<Tally>();
-        ServerStateKey<Tally> second = _keys.Claim<Tally>();
-        Roster roster = new(_keys);
-
-        Player player = roster.Join(1, "one");
-
-        Assert.Equal(0, player.State(first).Count);
-        Assert.Equal(0, player.State(second).Count);
     }
 }

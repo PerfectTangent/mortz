@@ -1,25 +1,26 @@
 using Mortz.Core.Chat;
+using Mortz.Core.Features;
 using Mortz.Core.Text;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Chat;
+using Mortz.Server.Hooks;
 using Mortz.Server.Players;
-using Mortz.Server.Services;
 using Mortz.Server.Settings;
 
 namespace Mortz.Server.Chat;
 
 /// <summary>Player chat, dice rolls and the system lines around them.</summary>
-public sealed class ChatService(ServerStateKeys keys, IServerLink link, ServerClock clock, Random dice)
+public sealed class ChatService(FeatureScope scope, IServerLink link, ServerClock clock, Random dice)
     :
         IHandle<Player, ChatSendMsg>,
         IHandle<Player, RollRequestMsg>,
         IObservePlayers
 {
-    private readonly ServerStateKey<ChatBudget> _budget = keys.Claim<ChatBudget>(typeof(ChatService));
+    private readonly PlayerTable<Player, ChatBudget> _budgets = scope.Table<Player, ChatBudget>();
 
     public void Handle(Player sender, in ChatSendMsg message)
     {
-        if (sender.State(_budget).TryAccept(clock.Ms, message.Text, out string text,
+        if (_budgets[sender].TryAccept(clock.Ms, message.Text, out string text,
                 out ChatRejectReason reason))
         {
             Broadcast(new ChatLine.Player(sender.PeerId, sender.Name, text));
@@ -42,7 +43,7 @@ public sealed class ChatService(ServerStateKeys keys, IServerLink link, ServerCl
     /// <summary>Silent when rate limited, same as chat: replying would amplify spam.</summary>
     public void Handle(Player sender, in RollRequestMsg message)
     {
-        if (!sender.State(_budget).TryAcceptRoll(clock.Ms))
+        if (!_budgets[sender].TryAcceptRoll(clock.Ms))
             return;
         int value = dice.Next(DiceRoll.MIN, DiceRoll.MAX + 1);
         Broadcast(new ChatLine.Roll(sender.PeerId, sender.Name, value));

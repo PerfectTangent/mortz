@@ -1,3 +1,4 @@
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Sim;
 using Mortz.Core.Terrain;
@@ -25,11 +26,10 @@ public class MatchTickTests
 
     private static MatchRuntime NewRuntime()
     {
-        MatchStateKeys keys = new(1);
+        FeatureScope scope = new("match");
         MatchRuntime runtime = new(new TerrainMask(64, 64, (_, _) => false, (_, _) => false),
-            new MatchConfig { Rules = new ModeRules { SpawnImmunity = 0 } }, 10, keys);
-        Player player = new(1, "player", 0, 1);
-        player.OpenMatch(keys.Count, keys.Generation);
+            new MatchConfig { Rules = new ModeRules { SpawnImmunity = 0 } }, 10, scope, 1);
+        Player player = new(1, "player");
         runtime.Seat(player);
         return runtime;
     }

@@ -7,7 +7,7 @@ namespace Mortz.Server.Players;
 
 /// <summary>Everyone currently admitted, in ascending peer id. The one place a
 /// identity is decided, so whoever holds a Player holds its name and skin.</summary>
-public sealed class Roster(ServerStateKeys keys) : IReadOnlyCollection<Player>
+public sealed class Roster : IReadOnlyCollection<Player>
 {
     private readonly SortedDictionary<int, Player> _players = [];
 
@@ -26,7 +26,7 @@ public sealed class Roster(ServerStateKeys keys) : IReadOnlyCollection<Player>
             throw new ArgumentOutOfRangeException(nameof(requestedSkin));
         string sanitized = PlayerNameSanitizer.Sanitize(requestedName);
         string name = sanitized.Length > 0 ? sanitized : $"Player {peerId}";
-        Player player = new(peerId, name, keys.Count, keys.Generation, (byte)requestedSkin, account);
+        Player player = new(peerId, name, (byte)requestedSkin, account);
         _players[peerId] = player;
         return player;
     }

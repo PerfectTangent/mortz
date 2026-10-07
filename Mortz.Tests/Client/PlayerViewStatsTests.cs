@@ -7,6 +7,7 @@ using Mortz.Client.Views;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Sim.Modifiers;
 using Mortz.Net;
+using Mortz.Protocol.Net.Roster;
 using Mortz.Protocol.Net.Sim;
 using Mortz.Protocol.Replication;
 using Mortz.Protocol.Sim.Modifiers;
@@ -28,10 +29,11 @@ public class PlayerViewStatsTests : NodeServiceTest
         PlayerViewManager manager = TakeManagerFromGameViewScene();
         manager.FakeDependency<INetwork>(new FakeNetwork());
         manager.FakeDependency<ISfx>(new NullSfx());
-        ClientPlayers players = RegisterRuntime(new ClientPlayers());
+        ClientPlayers players = RegisterRuntime(new ClientPlayers(Scope));
         players.OpenMatch(new MatchConfig());
         manager.FakeDependency(players);
         HostRouted(manager);
+        SeatPlayers();
         manager.BeginFrame();
         manager.Place(2, ViewState());
         PlayerView view = manager.ViewForTest(2);
@@ -49,10 +51,11 @@ public class PlayerViewStatsTests : NodeServiceTest
         PlayerViewManager manager = TakeManagerFromGameViewScene();
         manager.FakeDependency<INetwork>(new FakeNetwork());
         manager.FakeDependency<ISfx>(new NullSfx());
-        ClientPlayers players = RegisterRuntime(new ClientPlayers());
+        ClientPlayers players = RegisterRuntime(new ClientPlayers(Scope));
         players.OpenMatch(new MatchConfig());
         manager.FakeDependency(players);
         HostRouted(manager);
+        SeatPlayers();
 
         float baseRadius = TestWorlds.Stats.ParryRadius;
         byte[] bigParry = ModifierWire.Serialize(
@@ -79,10 +82,11 @@ public class PlayerViewStatsTests : NodeServiceTest
         PlayerViewManager manager = TakeManagerFromGameViewScene();
         manager.FakeDependency<INetwork>(new FakeNetwork());
         manager.FakeDependency<ISfx>(new NullSfx());
-        ClientPlayers players = RegisterRuntime(new ClientPlayers());
+        ClientPlayers players = RegisterRuntime(new ClientPlayers(Scope));
         players.OpenMatch(new MatchConfig());
         manager.FakeDependency(players);
         HostRouted(manager);
+        SeatPlayers();
 
         manager.BeginFrame();
         manager.Place(2, ViewState() with
@@ -112,6 +116,11 @@ public class PlayerViewStatsTests : NodeServiceTest
         Assert.False(spree.Active);
         Assert.True(bleeding.Active);
     }
+
+    private void SeatPlayers() => new RosterMsg([
+        new RosterEntry(2, "Bob", 0, null, 1),
+        new RosterEntry(3, "Carol", 0, null, 2),
+    ]).Broadcast(Router);
 
     private static PlayerViewManager TakeManagerFromGameViewScene()
     {

@@ -9,7 +9,7 @@ namespace Mortz.Runtime.Tests.Server.Match;
 
 public class MatchScoresTests
 {
-    private readonly MatchCells _cells = new();
+    private readonly MatchSeats _seats = new();
 
     private static ModeRules Cfg(bool teams = false,
         SuicidePenalty suicidePenalty = SuicidePenalty.NONE) => new()
@@ -19,11 +19,11 @@ public class MatchScoresTests
         };
 
     private MatchScores Scores(ModeRules config) =>
-        new(config.ToSnapshot(), _cells.Keys, _cells.Seated);
+        new(config.ToSnapshot(), _seats.Scope, _seats.Seated);
 
     private Player Seat(MatchScores scores, int peerId, Team? team = null)
     {
-        Player player = _cells.GetOrJoin(peerId);
+        Player player = _seats.GetOrJoin(peerId);
         scores.Seat(player, team);
         return player;
     }
@@ -32,7 +32,7 @@ public class MatchScoresTests
     public void ATeamWithTheTeamsRuleOff_IsUnconstructible()
     {
         MatchScores s = Scores(Cfg());
-        Player player = _cells.GetOrJoin(1);
+        Player player = _seats.GetOrJoin(1);
 
         Assert.Throws<ArgumentException>(() => s.Seat(player, Team.BLUE));
     }
@@ -164,7 +164,7 @@ public class MatchScoresTests
         s.ScoreDeath(p2.PeerId, p3, p2, null);
         Assert.Equal(2, s.TeamKills[Team.BLUE]);
 
-        _cells.Leave(p1); // rage quit keeps the team's points on the board
+        _seats.Leave(p1); // rage quit keeps the team's points on the board
         Assert.Equal(2, s.TeamKills[Team.BLUE]);
         Assert.DoesNotContain(s.Rows(), row => row.Player.PeerId == 1);
     }
@@ -190,7 +190,7 @@ public class MatchScoresTests
         MatchScores s = Scores(Cfg());
         Player p1 = Seat(s, 1);
         Player p2 = Seat(s, 2);
-        _cells.Leave(p1);
+        _seats.Leave(p1);
 
         // shell outlived its shooter
         DeathScore result = s.ScoreDeath(p1.PeerId, p2, null, null);

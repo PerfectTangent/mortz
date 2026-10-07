@@ -1,4 +1,5 @@
 using Mortz.Content;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Scoring;
@@ -174,26 +175,25 @@ public class DeadlockMatchTests
     {
         Assert.Contains("control", Assert.Single(Config().Errors(MapZones.None)));
         Assert.Contains("control", Assert.Throws<ArgumentException>(() =>
-            new MatchRuntime(TestWorlds.Flat(), Config(), 0, new MatchStateKeys(1))).Message);
+            new MatchRuntime(TestWorlds.Flat(), Config(), 0, new FeatureScope("match"), 1)).Message);
         MapZones untagged = new([new MapZone("control", ["deadlock"], ZoneShape.Rect(0, 0, 400, 300), null)]);
         Assert.Contains("control", Assert.Throws<ArgumentException>(() =>
-            new MatchRuntime(TestWorlds.Flat(), Config(), 0, new MatchStateKeys(1), zones: untagged)).Message);
-        using MatchRuntime deathmatch = new(TestWorlds.Flat(), new MatchConfig(), 0, new MatchStateKeys(1));
+            new MatchRuntime(TestWorlds.Flat(), Config(), 0, new FeatureScope("match"), 1, zones: untagged)).Message);
+        using MatchRuntime deathmatch = new(TestWorlds.Flat(), new MatchConfig(), 0, new FeatureScope("match"), 1);
         Assert.IsType<NoObjectiveState>(deathmatch.Objective);
     }
 
     private class Fixture : IDisposable
     {
-        private readonly MatchStateKeys _keys = new(1);
+        private readonly FeatureScope _scope = new("match");
         public MatchRuntime Runtime { get; }
         public Player Blue { get; }
         public DeadlockObjectiveState State => Assert.IsType<DeadlockObjectiveState>(Runtime.Objective);
 
         public Fixture(MatchConfig? config = null)
         {
-            Runtime = new MatchRuntime(TestWorlds.Flat(), config ?? Config(), 2, _keys,
+            Runtime = new MatchRuntime(TestWorlds.Flat(), config ?? Config(), 2, _scope, 1,
                 [new SpawnPoint(new Vec2(200, 250), Team.BLUE), new SpawnPoint(new Vec2(210, 250), Team.RED)], Zones());
-            _keys.Seal();
             Blue = Open(1);
             Runtime.Seat(Blue, Team.BLUE);
             Runtime.Seat(Open(2), Team.RED);
@@ -201,8 +201,7 @@ public class DeadlockMatchTests
 
         public Player Open(int id)
         {
-            Player player = new(id, $"Player {id}", 0, 1);
-            player.OpenMatch(_keys.Count, _keys.Generation);
+            Player player = new(id, $"Player {id}");
             return player;
         }
 

@@ -1,27 +1,34 @@
+using Mortz.Core.Features;
 using Mortz.Protocol.Net.Stats;
+using Mortz.Server.Hooks;
+using Mortz.Server.Match;
+using Mortz.Server.Phases;
 using Mortz.Server.Players;
 using Serilog;
 
 namespace Mortz.Server.Wins;
 
-/// <summary>Session win tallies. A leaver's count dies with their state cell,
-/// so nothing removes anything.</summary>
 public sealed class WinsService(
-    ServerStateKeys keys,
+    FeatureScope scope,
     Roster roster,
     IServerLink link,
-    ILogger log)
+    ILogger log) : IObserveMatchUpdate, ILoadPhase
 {
-    private readonly ServerStateKey<SessionWins> _wins = keys.Claim<SessionWins>(typeof(WinsService));
+    private readonly PlayerTable<Player, SessionWins> _wins = scope.Table<Player, SessionWins>();
 
-    public void SendTo(int peerId) =>
-        link.Send(peerId, SessionStatsProtocol.Encode(Table()));
+    public void MatchUpdated(in MatchUpdate update) => Record(update.Winners);
+
+    public void Load(Player player, PhaseLoad load)
+    {
+        if (load.Kind == ServerPhaseKind.LOBBY)
+            link.Send(player.PeerId, SessionStatsProtocol.Encode(Table()));
+    }
 
     public void Record(IReadOnlyList<Player> winners)
     {
         foreach (Player player in winners)
         {
-            SessionWins wins = player.State(_wins);
+            SessionWins wins = _wins[player];
             wins.Count++;
             log.Information("{PlayerName} now has {Wins} session win(s)", player.Name, wins.Count);
         }
@@ -33,7 +40,7 @@ public sealed class WinsService(
         int index = 0;
         foreach (Player player in roster)
         {
-            table[index++] = new PeerWins(player.PeerId, player.State(_wins).Count);
+            table[index++] = new PeerWins(player.PeerId, _wins[player].Count);
         }
         return table;
     }

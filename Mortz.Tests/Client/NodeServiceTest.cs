@@ -1,5 +1,6 @@
 using Chickensoft.AutoInject;
 using Godot;
+using Mortz.Core.Features;
 using Mortz.Protocol.Net;
 using Mortz.Runtime.Tests.Net;
 
@@ -11,16 +12,20 @@ namespace Mortz.Tests.Client;
 public abstract class NodeServiceTest : IDisposable
 {
     private readonly List<Node> _hosted = [];
-    private readonly List<object> _runtime = [];
+    private readonly List<IDisposable> _runtime = [];
 
     protected void OwnRuntime(IDisposable runtime) => _runtime.Add(runtime);
 
     protected T RegisterRuntime<T>(T feature) where T : class
     {
-        Router.Add(feature);
-        _runtime.Add(feature);
+        FeatureScope scope = new(typeof(T).Name, Router.Add, Router.Remove);
+        scope.Register(feature);
+        scope.Start();
+        _runtime.Add(scope);
         return feature;
     }
+
+    protected FeatureScope Scope { get; } = new("connection");
 
     /// <summary>The client-side router every hosted handler registers with,
     /// the same instance the loopback dispatches into.</summary>
@@ -51,12 +56,11 @@ public abstract class NodeServiceTest : IDisposable
 
     public void Dispose()
     {
-        foreach (object feature in _runtime)
+        foreach (IDisposable runtime in _runtime)
         {
-            Router.Remove(feature);
-            if (feature is IDisposable disposable)
-                disposable.Dispose();
+            runtime.Dispose();
         }
+        Scope.Dispose();
         foreach (Node node in _hosted)
         {
             node.GetParent()?.RemoveChild(node);

@@ -7,6 +7,7 @@ using Mortz.Client.Audio;
 using Mortz.Client.Chat;
 using Mortz.Client.Players;
 using Mortz.Client.Session;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Events;
 using Mortz.Core.Match.Scoring;
 using Mortz.Net;
@@ -36,7 +37,7 @@ public partial class AnnouncementsDebug : Control,
     private readonly NetRouter _router = new();
     private readonly FakeSessionExit _sessionExit = new();
 
-    private readonly ClientPlayers _players = new();
+    private readonly ClientPlayers _players = new(new FeatureScope("debug"));
     private ClientAdmin _admin = null!;
     private ClientChat _chat = null!;
     [Export] private Sfx _sfx = null!;

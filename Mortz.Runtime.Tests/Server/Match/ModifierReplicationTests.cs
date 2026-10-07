@@ -1,3 +1,4 @@
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Sim.Modifiers;
 using Mortz.Protocol.Net.Sim;
@@ -17,13 +18,11 @@ public class ModifierReplicationTests
     [Fact]
     public void MutationAndInitialSyncShareTheSameRevisionAndEffectiveTick()
     {
-        Roster roster = new(new ServerStateKeys(1));
+        Roster roster = new();
         Player player = roster.Join(1, "player");
-        MatchStateKeys keys = new(3);
+        FeatureScope scope = new("match");
         MapSnapshot map = TestServer.Map("arena", "Arena");
-        using MatchRuntime runtime = new(map.BuildMask(), new MatchConfig(), 10, keys);
-        keys.Seal();
-        player.OpenMatch(keys.Count, keys.Generation);
+        using MatchRuntime runtime = new(map.BuildMask(), new MatchConfig(), 10, scope, 3);
         runtime.Seat(player);
         RecordingTransport wire = new();
         ReadyLink link = new(wire);
@@ -37,7 +36,7 @@ public class ModifierReplicationTests
         runtime.World.AddModifier(1, new StatsModifier(ModifierId.SPECIAL,
             StatChange.Mul(Stat.MAX_RUN_SPEED, 2)));
         MatchUpdate update = runtime.Advance(default);
-        replication.MatchUpdated(update, default);
+        replication.MatchUpdated(update);
         PlayerModifiersMsg changed = Assert.Single(wire.Messages.Select(sent => sent.Message)
             .OfType<PlayerModifiersMsg>());
         Assert.Equal(1, changed.Revision);
@@ -55,11 +54,10 @@ public class ModifierReplicationTests
 
         wire.Messages.Clear();
         runtime.World.RemoveModifier(1, ModifierId.SPECIAL);
-        replication.MatchUpdated(runtime.Advance(default), default);
+        replication.MatchUpdated(runtime.Advance(default));
         PlayerModifiersMsg removed = wire.Last<PlayerModifiersMsg>();
         Assert.Equal(2, removed.Revision);
         Assert.Equal(3, removed.EffectiveTick);
         Assert.Empty(ModifierWire.Deserialize(removed.Modifiers));
-        player.CloseMatch();
     }
 }

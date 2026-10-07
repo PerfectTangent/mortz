@@ -41,8 +41,8 @@ public class ServerPublicationTests
     {
         Backend backend = new();
         ServerPublication publication = new(backend);
-        Player guest = new(2, "Guest", 0, 1);
-        Player verified = new(3, "Steam player", 0, 1, account: new VerifiedAccount(AccountProvider.STEAM, 42));
+        Player guest = new(2, "Guest");
+        Player verified = new(3, "Steam player", account: new VerifiedAccount(AccountProvider.STEAM, 42));
         publication.Advance(Info(2), [guest, verified], true, true, 0);
         publication.Advance(Info(2), [guest, verified], true, true, 1000);
         Assert.Equal(1, backend.Created);
@@ -60,7 +60,7 @@ public class ServerPublicationTests
     {
         Backend backend = new();
         using ServerPublication publication = new(backend);
-        Player old = new(2, "Guest", 0, 1), replacement = new(2, "Guest", 0, 1);
+        Player old = new(2, "Guest"), replacement = new(2, "Guest");
         publication.Advance(Info(1), [old], true, true, 0);
         publication.Advance(Info(1), [replacement], true, true, 1000);
         Assert.Equal([101UL], backend.Ended);
@@ -76,7 +76,7 @@ public class ServerPublicationTests
     {
         Backend backend = new() { FailCreate = true };
         ServerPublication publication = new(backend);
-        Player guest = new(2, "Guest", 0, 1);
+        Player guest = new(2, "Guest");
         publication.Advance(Info(1), [guest], true, true, 0);
         Assert.Empty(backend.Updates);
         Assert.Empty(backend.Ended);

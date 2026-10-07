@@ -1,3 +1,4 @@
+using Mortz.Core.Features;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Sim;
 using Mortz.Server.Players;
@@ -9,19 +10,19 @@ public readonly record struct MatchParticipationChange(
     MatchParticipation State);
 
 /// <summary>Owns match participation and respawn presentation transitions.</summary>
-public class ParticipationStep(MatchStateKeys keys)
+public class ParticipationStep(FeatureScope scope)
 {
     public const int DEATH_VIEW_DURATION_TICKS = SimConfig.TICK_RATE * 2;
 
-    private readonly MatchStateKey<ParticipationState> _key = keys.Claim<ParticipationState>(typeof(ParticipationStep));
+    private readonly PlayerTable<Player, ParticipationState> _states = scope.Table<Player, ParticipationState>();
 
     public void Seat(Player player) =>
-        player.State(_key).Current = MatchParticipation.Active;
+        _states[player].Current = MatchParticipation.Active;
 
     public void AddJipSpectator(Player player) =>
-        player.State(_key).Current = MatchParticipation.JipSpectator;
+        _states[player].Current = MatchParticipation.JipSpectator;
 
-    public MatchParticipation Of(Player player) => player.State(_key).Current;
+    public MatchParticipation Of(Player player) => _states[player].Current;
 
     public IReadOnlyList<MatchParticipationChange> Apply(MatchContext match, IReadOnlyList<Death> deaths)
     {
@@ -30,7 +31,7 @@ public class ParticipationStep(MatchStateKeys keys)
         foreach ((int peerId, Player member) in match.SeatedPlayers)
         {
             PlayerState player = world.Players[peerId];
-            ParticipationState state = member.State(_key);
+            ParticipationState state = _states[member];
             if (player.IsAlive)
             {
                 Change(peerId, state, MatchParticipation.Active, changes);

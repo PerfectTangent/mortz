@@ -1,16 +1,14 @@
+using Mortz.Core.Features;
 using Mortz.Server.Players;
 
 namespace Mortz.Runtime.Tests.Server.Match;
 
-/// <summary>Mints players with open match cells for one match lifetime. Join
-/// players only after every match system under test has claimed its keys.</summary>
-public sealed class MatchCells
+/// <summary>Mints seated players inside one match scope.</summary>
+public sealed class MatchSeats
 {
-    private const int GENERATION = 1;
-
     private readonly SortedDictionary<int, Player> _seated = [];
 
-    public MatchStateKeys Keys { get; } = new(GENERATION);
+    public FeatureScope Scope { get; } = new("match");
 
     public IReadOnlyDictionary<int, Player> Seated => _seated;
 
@@ -18,9 +16,7 @@ public sealed class MatchCells
     {
         if (_seated.TryGetValue(peerId, out Player? present))
             return present;
-        Player player = new(peerId, $"Player {peerId}", serverKeyCount: 0,
-            serverGeneration: GENERATION);
-        player.OpenMatch(Keys.Count, Keys.Generation);
+        Player player = new(peerId, $"Player {peerId}");
         _seated[peerId] = player;
         return player;
     }

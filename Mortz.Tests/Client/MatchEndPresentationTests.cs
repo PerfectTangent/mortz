@@ -35,7 +35,7 @@ public class MatchEndPresentationTests : NodeServiceTest
 
         Host(spectatorHud);
         Host(camera);
-        ClientPlayers players = RegisterRuntime(new ClientPlayers());
+        ClientPlayers players = RegisterRuntime(new ClientPlayers(Scope));
         new LobbyStateMsg([new LobbyMember(7, "alice", false, null)], []).Broadcast(Router);
         ClientMatchState matchState = new(3, MatchParticipation.JipSpectator);
 

@@ -253,8 +253,7 @@ public class LobbySessionTests
         if (_players.TryGetValue(peerId, out Player? player))
             return player;
 
-        player = new Player(peerId, $"Player {peerId}", serverKeyCount: 0,
-            serverGeneration: 1);
+        player = new Player(peerId, $"Player {peerId}");
         _players.Add(peerId, player);
         return player;
     }

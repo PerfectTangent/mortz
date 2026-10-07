@@ -1,3 +1,4 @@
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Participation;
@@ -28,18 +29,18 @@ public sealed class MatchRuntime : IDisposable
     public int SeatedPlayerCount => _seated.Count;
 
     public MatchRuntime(TerrainMask terrain, MatchConfig config, int victoryLapTicks,
-        MatchStateKeys keys, IReadOnlyList<SpawnPoint>? spawnPoints = null,
+        FeatureScope scope, int generation, IReadOnlyList<SpawnPoint>? spawnPoints = null,
         MapZones? zones = null)
     {
-        Generation = keys.Generation;
+        Generation = generation;
         World = new SimWorld(terrain, config, spawnPoints, zones);
         Context = new MatchContext(World, _seated);
 
-        _participation = new ParticipationStep(keys);
-        _scoring = new ScoringStep(World.Config.Rules, keys, _seated);
+        _participation = new ParticipationStep(scope);
+        _scoring = new ScoringStep(World.Config.Rules, scope, _seated);
         _mode = new GameMode(World.Config.Rules, World.Config.Rules.Objective.Create(World.Zones));
         _gameEvents = new GameEventsStep(
-            new GameEventJudge(keys, _seated, _scoring.TeamOf));
+            new GameEventJudge(scope, _seated, _scoring.TeamOf));
         _ending = new EndingStep(victoryLapTicks);
     }
 
@@ -156,6 +157,7 @@ public sealed class MatchRuntime : IDisposable
             GameEvents = [.. judgments],
             ParticipationChanges = [.. participation],
             MatchEnded = ending.Winner,
+            Winners = ending.Winner is Victor victor ? [.. Winners(victor)] : [],
             FinalKill = ending.FinalKill,
             ReturnToLobby = _ending.ReturnToLobby,
             ModifierChanges = [.. World.DrainModifierChanges()],

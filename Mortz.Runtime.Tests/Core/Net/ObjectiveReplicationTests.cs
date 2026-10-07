@@ -1,5 +1,6 @@
 using Mortz.Client.Match;
 using Mortz.Client.Players;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Participation;
@@ -56,8 +57,10 @@ public class ObjectiveReplicationTests
         ((DeadlockObjectiveRules)config.Rules.Objective).AbsenceDelay = 2;
         NetRouter router = new() { MatchGeneration = 7 };
         ClientMatchState state = new(7, MatchParticipation.JipSpectator);
-        using ClientMatchRuntime runtime = new(state, new ClientPlayers(), TestWorlds.Flat(), config,
-            MapZones.None, 3, router, _ => { }, () => 0);
+        using FeatureScope scope = new("match", router.Add, router.Remove);
+        ClientMatchRuntime runtime = new(scope, state, new ClientPlayers(scope), TestWorlds.Flat(), config,
+            MapZones.None, 3, _ => { }, () => 0);
+        scope.Start();
         MatchSnapshot initial = new(10, [], 7) { Objective = _live };
         Assert.True(runtime.InitializeSnapshot(initial.Serialize(_wire), -1));
         Assert.Equal(_live, state.Objective);

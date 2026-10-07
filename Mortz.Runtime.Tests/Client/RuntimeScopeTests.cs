@@ -104,14 +104,11 @@ public class RuntimeScopeTests
     }
 
     [Fact]
-    public void ScopeRejectsDuplicateRegistrationAndLateStateClaims()
+    public void ScopeRejectsDuplicateRegistration()
     {
-        using FeatureScope scope = new(_ => { }, _ => { });
+        using FeatureScope scope = new("connection", _ => { }, _ => { });
         object feature = scope.Register(new object());
         Assert.Throws<InvalidOperationException>(() => scope.Register(feature));
-        SessionStateKeys keys = new(1);
-        keys.Seal();
-        Assert.Throws<InvalidOperationException>(() => keys.Claim<object>());
     }
 
     [Fact]

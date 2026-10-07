@@ -1,3 +1,4 @@
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
@@ -10,10 +11,10 @@ namespace Mortz.Server.Match;
 /// <summary>Owns match scoring and turns ordered deaths into scored eliminations.</summary>
 public class ScoringStep(
     ModeRulesSnapshot rules,
-    MatchStateKeys keys,
+    FeatureScope scope,
     IReadOnlyDictionary<int, Player> seated)
 {
-    private readonly MatchScores _scores = new(rules, keys, seated);
+    private readonly MatchScores _scores = new(rules, scope, seated);
     private bool _firstBloodClaimed;
 
     public TeamKills TeamKills => _scores.TeamKills;

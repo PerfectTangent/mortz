@@ -19,7 +19,7 @@ internal sealed class TestServer : IDisposable
     private static readonly ContentCatalog _catalog = LoadEmptyCatalog();
 
     public TestServer(string adminPassword = "", MatchConfig? rules = null,
-        IMatchObserver? observer = null, IMatchControl? control = null,
+        object? observer = null, IMatchControl? control = null,
         bool allowJoinInProgress = true, string applicationVersion = "1.2.3-test",
         int victoryLapTicks = 7 * SimConfig.TICK_RATE)
     {
@@ -39,7 +39,7 @@ internal sealed class TestServer : IDisposable
             VictoryLapTicks = victoryLapTicks,
         };
         Server = new GameServer(Boot, Link, Maps, Logger.None,
-            observer ?? new NullMatchObserver(), control ?? new NullMatchControl(), applicationVersion);
+            control ?? new NullMatchControl(), applicationVersion, observer == null ? null : [observer]);
     }
 
     public RecordingTransport Link { get; } = new();

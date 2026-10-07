@@ -1,4 +1,5 @@
 using System.Collections;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Teams;
 using Mortz.Core.Sim;
@@ -17,18 +18,14 @@ namespace Mortz.Client.Players;
 /// ascending peer id. Any stream may materialize a player first; the full
 /// tables (lobby state and match roster broadcasts) confirm identity and are
 /// the only thing that retires one.</summary>
-public class ClientPlayers : IDisposable,
+public class ClientPlayers(FeatureScope scope) : IDisposable,
     IReadOnlyCollection<ClientPlayer>,
     IHandle<RosterMsg>,
     IHandle<LobbyStateMsg>,
     IHandle<TypingStateMsg>,
     IHandle<PlayerModifiersMsg>
 {
-    private static int _nextGeneration;
-
     private readonly SortedDictionary<int, ClientPlayer> _players = [];
-
-    public SessionStateKeys SessionKeys { get; } = new(++_nextGeneration);
 
     private bool _disposed;
     private MatchConfig? _matchConfig;
@@ -65,10 +62,9 @@ public class ClientPlayers : IDisposable,
     public ClientPlayer GetOrCreate(int peerId)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        SessionKeys.Seal();
         if (_players.TryGetValue(peerId, out ClientPlayer? player))
             return player;
-        player = new ClientPlayer(peerId, SessionKeys, _matchBaseStats);
+        player = new ClientPlayer(peerId, _matchBaseStats);
         _players[peerId] = player;
         PlayerJoined?.Invoke(player);
         return player;
@@ -109,10 +105,6 @@ public class ClientPlayers : IDisposable,
             return;
         _disposed = true;
         CloseMatch();
-        foreach (ClientPlayer player in _players.Values)
-        {
-            player.Retire();
-        }
         _players.Clear();
     }
 
@@ -162,7 +154,8 @@ public class ClientPlayers : IDisposable,
 
     public void Handle(in TypingStateMsg message)
     {
-        GetOrCreate(message.PeerId).ApplyTyping(message.IsTyping);
+        // Never creates: the server clears a leaver's typing after the broadcast that retires them.
+        Find(message.PeerId)?.ApplyTyping(message.IsTyping);
     }
 
     public void Handle(in PlayerModifiersMsg message)
@@ -207,7 +200,8 @@ public class ClientPlayers : IDisposable,
         {
             _players.Remove(player.PeerId);
             PlayerLeft?.Invoke(player);
-            player.Retire();
+            scope.Forget(player);
+            player.CloseMatch();
         }
         return true;
     }

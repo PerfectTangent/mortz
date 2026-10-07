@@ -13,8 +13,8 @@ public class PingsTests : RuntimeServiceTest
 
     public PingsTests()
     {
-        _players = RegisterRuntime(new ClientPlayers());
-        Pings pings = new(_players);
+        _players = RegisterRuntime(new ClientPlayers(Scope));
+        Pings pings = new(Scope, _players);
         _pings = RegisterRuntime(pings);
     }
 

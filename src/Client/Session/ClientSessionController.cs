@@ -1,6 +1,7 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
+using Mortz.Client.Hooks;
 using Mortz.Client.Hosting;
 using Mortz.Client.MapEditor;
 using Mortz.Client.Match;
@@ -472,7 +473,7 @@ public partial class ClientSessionController : Node, ISessionExit,
         }
         catch (IOException exception)
         {
-            runtime.Dispose();
+            connectedSession.Connection.CloseMatch();
             gameView.Free();
             RejectMatchLoad($"Invalid terrain sync: {exception.Message}");
             return;
@@ -493,11 +494,8 @@ public partial class ClientSessionController : Node, ISessionExit,
 
     private void ReceiveSnapshot(byte[] data, int ack) => _matchRuntime?.AcceptSnapshot(data, ack);
 
-    public override void _PhysicsProcess(double delta)
-    {
-        if (_matchRuntime is ClientMatchRuntime runtime)
-            runtime.Tick(runtime.SampleInput?.Invoke() ?? default);
-    }
+    public override void _PhysicsProcess(double delta) =>
+        _connectedSession?.Connection?.Features.Raise<IClientTick>(feature => feature.Tick());
 
     // Connection work must continue while gameplay processing is paused.
     private void AdvanceSession()
@@ -507,7 +505,8 @@ public partial class ClientSessionController : Node, ISessionExit,
         AdvanceLocalServer();
     }
 
-    public override void _Process(double delta) => _matchRuntime?.Advance((float)delta);
+    public override void _Process(double delta) =>
+        _connectedSession?.Connection?.Features.Raise<IClientFrame>(feature => feature.Frame((float)delta));
 
     private void RejectMatchLoad(string reason)
     {

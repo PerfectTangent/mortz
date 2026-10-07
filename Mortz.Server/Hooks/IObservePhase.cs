@@ -1,6 +1,6 @@
 using Mortz.Server.Phases;
 
-namespace Mortz.Server.Services;
+namespace Mortz.Server.Hooks;
 
 /// <summary>The server entered the lobby or a match.</summary>
 public interface IObservePhase

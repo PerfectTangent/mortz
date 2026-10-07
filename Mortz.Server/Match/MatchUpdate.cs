@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Sim;
 using Mortz.Server.Match.Events;
+using Mortz.Server.Players;
 
 namespace Mortz.Server.Match;
 
@@ -30,6 +31,8 @@ public sealed record MatchUpdate
     public ImmutableArray<MatchParticipationChange> ParticipationChanges { get; init; } = [];
 
     public Victor? MatchEnded { get; init; }
+
+    public ImmutableArray<Player> Winners { get; init; } = [];
 
     public FinalKillEvent? FinalKill { get; init; }
 

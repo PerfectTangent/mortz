@@ -1,9 +1,8 @@
-using Mortz.Core.Match;
 using Mortz.Core.Match.Teams;
 
 namespace Mortz.Server.Match.Scoring;
 
-/// <summary>Match-lifetime cell: one player's scoreboard row.</summary>
+/// <summary>One player's scoreboard row.</summary>
 public sealed class ScoreState
 {
     public Team? Team { get; set; }

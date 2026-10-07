@@ -1,3 +1,4 @@
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
@@ -123,16 +124,14 @@ public class GameModeOutcomeTests
         {
             rules.SpawnImmunity = 0;
             rules.Respawn = new FixedRespawnRules { Delay = 0 };
-            MatchStateKeys keys = new(1);
+            FeatureScope scope = new("match");
             Runtime = new MatchRuntime(new TerrainMask(128, 128, (_, y) => y >= 96, (_, _) => false),
                 new MatchConfig { Rules = rules },
-                2, keys, [new SpawnPoint(new Vec2(8, 96)), new SpawnPoint(new Vec2(24, 96)),
+                2, scope, 1, [new SpawnPoint(new Vec2(8, 96)), new SpawnPoint(new Vec2(24, 96)),
                     new SpawnPoint(new Vec2(40, 96))]);
-            keys.Seal();
-            Players = Enumerable.Range(1, 3).Select(id => new Player(id, $"Player {id}", 0, 1)).ToArray();
+            Players = Enumerable.Range(1, 3).Select(id => new Player(id, $"Player {id}")).ToArray();
             foreach (Player player in Players)
             {
-                player.OpenMatch(keys.Count, keys.Generation);
                 Runtime.Seat(player);
             }
         }
@@ -147,10 +146,6 @@ public class GameModeOutcomeTests
 
         public void Dispose()
         {
-            foreach (Player player in Players)
-            {
-                player.CloseMatch();
-            }
             Runtime.Dispose();
         }
     }

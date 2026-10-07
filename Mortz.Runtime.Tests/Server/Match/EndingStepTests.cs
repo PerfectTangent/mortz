@@ -60,7 +60,7 @@ public class EndingStepTests
 
         public ScoredKill WinningKill(Death death)
         {
-            Player victim = new(death.PeerId, $"Player {death.PeerId}", 0, 1);
+            Player victim = new(death.PeerId, $"Player {death.PeerId}");
             DeathScore score = new(
                 death.KillerId,
                 death.PeerId,

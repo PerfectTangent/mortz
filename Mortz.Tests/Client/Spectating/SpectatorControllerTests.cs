@@ -38,7 +38,7 @@ public class SpectatorControllerTests : NodeServiceTest
         Host(_camera);
 
         _controller.FakeDependency<INetwork>(new FakeNetwork { LocalPeerId = 1 });
-        ClientPlayers players = RegisterRuntime(new ClientPlayers());
+        ClientPlayers players = RegisterRuntime(new ClientPlayers(Scope));
         players.OpenMatch(new MatchConfig());
         _controller.FakeDependency(players);
         _matchState = new ClientMatchState(3, MatchParticipation.JipSpectator);

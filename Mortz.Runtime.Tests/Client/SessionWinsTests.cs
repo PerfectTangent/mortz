@@ -13,8 +13,8 @@ public class SessionWinsTests : RuntimeServiceTest
 
     public SessionWinsTests()
     {
-        _players = RegisterRuntime(new ClientPlayers());
-        SessionWins wins = new(_players);
+        _players = RegisterRuntime(new ClientPlayers(Scope));
+        SessionWins wins = new(Scope, _players);
         _wins = RegisterRuntime(wins);
     }
 

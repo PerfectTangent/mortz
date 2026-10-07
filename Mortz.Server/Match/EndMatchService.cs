@@ -3,9 +3,9 @@ using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Match;
 using Mortz.Server.Admin;
 using Mortz.Server.Chat;
+using Mortz.Server.Hooks;
 using Mortz.Server.Phases;
 using Mortz.Server.Players;
-using Mortz.Server.Services;
 
 namespace Mortz.Server.Match;
 
@@ -14,8 +14,7 @@ namespace Mortz.Server.Match;
 public sealed class EndMatchService(
     AdminService admin,
     ChatService chat,
-    ICurrentPhase phase,
-    IPhaseTransitionRequests transitions)
+    PhaseHost phases)
     : IHandle<Player, EndMatchRequestMsg>, IObservePhase
 {
     private string? _pendingAnnounce;
@@ -24,14 +23,14 @@ public sealed class EndMatchService(
     {
         if (!admin.Authorize(sender, message))
             return;
-        if (phase.Kind != ServerPhaseKind.MATCH)
+        if (phases.Kind != ServerPhaseKind.MATCH)
         {
             chat.SendTo(sender.PeerId, new ChatLine.System("No match is running."));
             return;
         }
 
         _pendingAnnounce = sender.Name;
-        transitions.RequestReturnToLobby();
+        phases.RequestReturnToLobby();
     }
 
     /// <summary>Deferred to the fresh lobby so the line lands in the lobby chats.</summary>

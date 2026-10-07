@@ -1,3 +1,4 @@
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
@@ -6,27 +7,25 @@ using Mortz.Server.Players;
 
 namespace Mortz.Server.Match.Scoring;
 
-/// <summary>Rows live in each seated player's score cell; team kill totals
-/// accumulate here at kill time, so a leaver's kills stay counted.</summary>
 public sealed class MatchScores(
     ModeRulesSnapshot config,
-    MatchStateKeys keys,
+    FeatureScope scope,
     IReadOnlyDictionary<int, Player> seated)
 {
-    private readonly MatchStateKey<ScoreState> _key = keys.Claim<ScoreState>(typeof(MatchScores));
+    private readonly PlayerTable<Player, ScoreState> _scores = scope.Table<Player, ScoreState>();
     private readonly SuicidePenaltyStrategy _suicidePenalty = SuicidePenaltyStrategy.Create(config.SuicidePenalty);
     private TeamKills _teamKills;
 
     public TeamKills TeamKills => _teamKills;
     public TeamDeaths TeamDeaths { get; private set; }
 
-    public ScoreState Of(Player player) => player.State(_key);
+    public ScoreState Of(Player player) => _scores[player];
 
     public void Seat(Player player, Team? team)
     {
         if (team != null && !config.Teams)
             throw new ArgumentException("Team assignment with the Teams rule off.", nameof(team));
-        player.State(_key).Team = team;
+        _scores[player].Team = team;
     }
 
     /// <summary>Applies one death to the individual and team tallies.

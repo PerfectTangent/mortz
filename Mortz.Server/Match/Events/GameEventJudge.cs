@@ -1,3 +1,4 @@
+using Mortz.Core.Features;
 using Mortz.Core.Match.Events;
 using Mortz.Core.Match.Teams;
 using Mortz.Core.Sim;
@@ -9,8 +10,7 @@ namespace Mortz.Server.Match.Events;
 /// <summary>One shell fired by one killer, for counting same-shell kills.</summary>
 public readonly record struct KillerShell(int KillerId, int ShellId);
 
-/// <summary>Turns each frame's scored deaths into game events. First blood
-/// arrives pre-judged; the rest come from the judge cells.</summary>
+/// <summary>Turns each frame's scored deaths into game events.</summary>
 public sealed class GameEventJudge
 {
     /// <summary>Streak a victim must carry for their death to be a shutdown.</summary>
@@ -33,21 +33,21 @@ public sealed class GameEventJudge
     public const int SUICIDE_WINDOW_TICKS =
         (int)(SUICIDE_WINDOW_SECONDS * SimConfig.TICK_RATE);
 
-    private readonly MatchStateKey<JudgeState> _key;
+    private readonly PlayerTable<Player, JudgeState> _states;
     private readonly IReadOnlyDictionary<int, Player> _seated;
     private readonly Func<Player, Team?> _teamOf;
 
     /// <summary>TeamOf is the live team lookup; only team wipes read it, and
     /// outside Teams mode it returns null for everyone.</summary>
-    public GameEventJudge(MatchStateKeys keys, IReadOnlyDictionary<int, Player> seated,
+    public GameEventJudge(FeatureScope scope, IReadOnlyDictionary<int, Player> seated,
         Func<Player, Team?> teamOf)
     {
-        _key = keys.Claim<JudgeState>(typeof(GameEventJudge));
+        _states = scope.Table<Player, JudgeState>();
         _seated = seated;
         _teamOf = teamOf;
     }
 
-    public JudgeState Of(Player player) => player.State(_key);
+    public JudgeState Of(Player player) => _states[player];
 
     public byte KillingSpreeMagnitude(Player player) => ClampToByte(Of(player).Streak);
 
@@ -150,8 +150,7 @@ public sealed class GameEventJudge
         return events;
     }
 
-    /// <summary>The leaver's own state dies with their cells; this scrubs the
-    /// references other players' cells still hold.</summary>
+    /// <summary>Scrubs references other players' entries still hold to the leaver.</summary>
     public void PlayerLeft(Player leaver)
     {
         foreach (Player member in _seated.Values)

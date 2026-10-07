@@ -9,14 +9,14 @@ public partial class ServerPump
 {
     internal ServerE2EHandler? E2E { get; private set; }
 
-    partial void AttachE2E(ref IMatchObserver observer, ref IMatchControl control)
+    partial void AttachE2E(List<object> diagnostics, ref IMatchControl control)
     {
         if (!E2ELaunch.Enabled)
             return;
 
         E2EMatchControl matchControl = new();
         E2E = ServerE2ERoot.Attach(this, matchControl);
-        observer = E2E;
+        diagnostics.Add(E2E.Events);
         control = matchControl;
     }
 }

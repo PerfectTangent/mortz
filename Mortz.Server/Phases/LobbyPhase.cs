@@ -1,7 +1,9 @@
 using Mortz.Core.Features;
 using Mortz.Core.Match.Teams;
+using Mortz.Protocol.Net;
 using Mortz.Server.Admin;
 using Mortz.Server.Chat;
+using Mortz.Server.Hooks;
 using Mortz.Server.Lobby;
 using Mortz.Server.Players;
 using Mortz.Server.Settings;
@@ -10,51 +12,50 @@ using Serilog;
 namespace Mortz.Server.Phases;
 
 /// <summary>Everything whose lifetime is exactly one lobby.</summary>
-public sealed class LobbyPhase : ServerPhase
+public sealed class LobbyPhase : ServerPhase, IBeginPhase, IObservePlayers, ILoadPhase
 {
     private readonly LobbySession _session;
     private readonly LobbyReplication _replication;
+    private readonly IServerLink _link;
     private readonly Roster _roster;
     private readonly ILogger _log;
     private readonly IPhaseTransitionRequests _transitions;
-    public override FeatureScope Features { get; } = new();
 
-    private LobbyPhase(Roster roster, SettingsService settings, AdminService admin,
-        ChatService chat, IServerLink link, ILogger log, IPhaseTransitionRequests transitions)
+    private LobbyPhase(SettingsService settings, Roster roster, IServerLink link, ILogger log,
+        IPhaseTransitionRequests transitions)
     {
         _session = new LobbySession(settings.Config.Rules.Teams);
         _replication = new LobbyReplication(link);
+        _link = link;
         _roster = roster;
         _log = log;
         _transitions = transitions;
-
-        LobbyService lobby = new(_session, Apply);
-        LobbySettingsService lobbySettings = new(
-            settings, admin, chat, _session, Apply, log);
-        Features.Register(lobby);
-        Features.Register(lobbySettings);
-        Features.Start();
     }
 
     public override ServerPhaseKind Kind => ServerPhaseKind.LOBBY;
-
 
     public bool CanStart => _session.CanStart;
 
     public SeatAssignment[] Seats => _session.Seats;
 
-    public static LobbyPhase Open(Roster roster, SettingsService settings, AdminService admin,
-        ChatService chat, IServerLink link, ILogger log, IPhaseTransitionRequests transitions) =>
-        new(roster, settings, admin, chat, link, log, transitions);
+    public static LobbyPhase Open(FeatureScope scope, Roster roster, SettingsService settings,
+        AdminService admin, ChatService chat, IServerLink link, ILogger log,
+        IPhaseTransitionRequests transitions)
+    {
+        LobbyPhase phase = scope.Register(new LobbyPhase(settings, roster, link, log, transitions));
+        scope.Register(new LobbyService(phase._session, phase.Apply));
+        scope.Register(new LobbySettingsService(settings, admin, chat, phase._session, phase.Apply, log));
+        return phase;
+    }
 
-    public override void Begin() => Apply(_session.Initialize(_roster));
+    public void Begin() => Apply(_session.Initialize(_roster));
 
-    public override void PlayerJoined(Player player) => Apply(_session.Join(player));
+    public void PlayerJoined(Player player) => Apply(_session.Join(player));
 
-    public override void PlayerLeft(Player player) => Apply(_session.Leave(player));
+    public void PlayerLeft(Player player) => Apply(_session.Leave(player));
 
-    /// <summary>Lobby transitions arrive through the coordinator, never from here.</summary>
-    public override PhaseRequest Advance(ServerTime time) => PhaseRequest.NONE;
+    public void Load(Player player, PhaseLoad load) =>
+        _link.Send(player.PeerId, new LobbyLoadMsg(load.Generation));
 
     private void Apply(LobbyUpdate? update)
     {

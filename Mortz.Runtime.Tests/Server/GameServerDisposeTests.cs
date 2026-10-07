@@ -4,9 +4,7 @@ using Xunit;
 
 namespace Mortz.Runtime.Tests.Server;
 
-/// <summary>Orderly shutdown. The order services and cells go down in is not
-/// visible from outside, so what is asserted here is that every live shape
-/// survives it and that a second call does nothing at all.</summary>
+/// <summary>Shutdown works for every live shape, and a second Dispose does nothing.</summary>
 public class GameServerDisposeTests
 {
     [Fact]
@@ -23,7 +21,7 @@ public class GameServerDisposeTests
     }
 
     [Fact]
-    public void ShuttingDownMidMatchClosesTheMatchCellsToo()
+    public void ShuttingDownMidMatchClosesTheMatchScopeToo()
     {
         TestServer server = new();
         server.Connect(7, "alice");

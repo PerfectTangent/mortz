@@ -1,11 +1,14 @@
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Sim;
 using Mortz.Core.Terrain;
 using Mortz.Protocol.Net.Match;
 using Mortz.Server;
+using Mortz.Server.Hooks;
 using Mortz.Server.Match;
 using Mortz.Server.Match.Services;
+using Mortz.Server.Phases;
 using Mortz.Server.Players;
 using Serilog.Core;
 using Xunit;
@@ -25,7 +28,7 @@ public class MatchPointServiceTests : IDisposable
 
     public MatchPointServiceTests()
     {
-        MatchStateKeys keys = new(GENERATION);
+        FeatureScope scope = new("match");
         _runtime = new MatchRuntime(
             new TerrainMask(128, 128, (_, _) => false, (_, _) => false),
             new MatchConfig
@@ -38,15 +41,16 @@ public class MatchPointServiceTests : IDisposable
                 },
             },
             victoryLapTicks: 3,
-            keys,
+            scope,
+            GENERATION,
             [
                 new SpawnPoint(new Vec2(10, 32)),
                 new SpawnPoint(new Vec2(40, 32)),
                 new SpawnPoint(new Vec2(80, 32)),
             ]);
-        _winner = OpenPlayer(1, keys);
-        _firstVictim = OpenPlayer(2, keys);
-        _secondVictim = OpenPlayer(3, keys);
+        _winner = OpenPlayer(1);
+        _firstVictim = OpenPlayer(2);
+        _secondVictim = OpenPlayer(3);
         _runtime.Seat(_winner);
         _runtime.Seat(_firstVictim);
         _runtime.Seat(_secondVictim);
@@ -60,7 +64,7 @@ public class MatchPointServiceTests : IDisposable
     {
         MatchUpdate entered = Kill(_firstVictim);
 
-        _matchPoint.MatchUpdated(entered, default);
+        _matchPoint.MatchUpdated(entered);
 
         MatchPointMsg entry = _transport.Last<MatchPointMsg>();
         Assert.True(entry.Active);
@@ -68,11 +72,11 @@ public class MatchPointServiceTests : IDisposable
         Assert.Equal(1, entry.Remaining);
 
         _transport.Messages.Clear();
-        _matchPoint.MatchUpdated(_runtime.Advance(default), default);
+        _matchPoint.MatchUpdated(_runtime.Advance(default));
         Assert.DoesNotContain(_transport.Messages, sent => sent.Message is MatchPointMsg);
 
         MatchUpdate won = Kill(_secondVictim);
-        _matchPoint.MatchUpdated(won, default);
+        _matchPoint.MatchUpdated(won);
 
         Assert.False(_transport.Last<MatchPointMsg>().Active);
         Assert.Null(_matchPoint.Active);
@@ -81,11 +85,11 @@ public class MatchPointServiceTests : IDisposable
     [Fact]
     public void SyncsTheCurrentStateAfterLateJoinLoading()
     {
-        _matchPoint.MatchUpdated(Kill(_firstVictim), default);
+        _matchPoint.MatchUpdated(Kill(_firstVictim));
         _transport.Messages.Clear();
-        Player jipPlayer = new(9, "jip", serverKeyCount: 0, serverGeneration: GENERATION);
+        Player jipPlayer = new(9, "jip");
 
-        _matchPoint.Enter(jipPlayer, GENERATION, initialPhase: false);
+        _matchPoint.Load(jipPlayer, new PhaseLoad(ServerPhaseKind.MATCH, GENERATION, false));
         Assert.Empty(_transport.Messages);
 
         _matchPoint.Sync(jipPlayer);
@@ -101,11 +105,5 @@ public class MatchPointServiceTests : IDisposable
         return _runtime.Advance(default);
     }
 
-    private static Player OpenPlayer(int peerId, MatchStateKeys keys)
-    {
-        Player player = new(peerId, $"player {peerId}", serverKeyCount: 0,
-            serverGeneration: GENERATION);
-        player.OpenMatch(keys.Count, keys.Generation);
-        return player;
-    }
+    private static Player OpenPlayer(int peerId) => new(peerId, $"player {peerId}");
 }

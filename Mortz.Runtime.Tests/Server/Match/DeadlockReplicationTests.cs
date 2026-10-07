@@ -1,3 +1,4 @@
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Teams;
@@ -8,8 +9,10 @@ using Mortz.Protocol.Replication;
 using Mortz.Runtime.Tests.Core;
 using Mortz.Server;
 using Mortz.Server.Content;
+using Mortz.Server.Hooks;
 using Mortz.Server.Match;
 using Mortz.Server.Match.Services;
+using Mortz.Server.Phases;
 using Mortz.Server.Players;
 using Serilog.Core;
 using Xunit;
@@ -31,16 +34,14 @@ public class DeadlockReplicationTests
             InitialTerrain = TestWorlds.Flat(),
             Zones = DeadlockMatchTests.Zones(),
         };
-        MatchStateKeys keys = new(3);
-        Roster roster = new(new ServerStateKeys(1));
+        FeatureScope scope = new("match");
+        Roster roster = new();
         RecordingTransport wire = new();
         ReadyLink link = new(wire);
-        using MatchRuntime runtime = new(map.BuildMask(), config, 2, keys, zones: map.Zones);
-        keys.Seal();
+        using MatchRuntime runtime = new(map.BuildMask(), config, 2, scope, 3, zones: map.Zones);
         for (int id = 1; id <= 3; id++)
         {
             Player player = roster.Join(id, $"P{id}");
-            player.OpenMatch(keys.Count, keys.Generation);
             if (id < 3) runtime.Seat(player, id == 1 ? Team.BLUE : Team.RED);
             else runtime.AddJipSpectator(player);
             link.BeginLoading(id, 3, 0);
@@ -53,13 +54,13 @@ public class DeadlockReplicationTests
         runtime.World.Teleport(2, new Vec2(200, 250));
         MatchReplication replication = new(runtime, roster, map, new TerrainHistory(), link, Logger.None, false);
         replication.RosterChanged();
-        replication.Enter(roster.Find(3)!, 3, true);
+        replication.Load(roster.Find(3)!, new PhaseLoad(ServerPhaseKind.MATCH, 3, Initial: true));
         MatchLoadMsg bootstrap = wire.Last<MatchLoadMsg>();
         Assert.IsType<DeadlockObjectiveState>(MatchSnapshot.Deserialize(bootstrap.InitialSnapshot, objectiveWire).Objective);
         wire.Messages.Clear();
         for (int tick = 0; tick < 61; tick++)
         {
-            replication.MatchUpdated(runtime.Advance(default), default);
+            replication.MatchUpdated(runtime.Advance(default));
         }
         Assert.NotEqual(0, runtime.World.Tick % NetConfig.TICKS_PER_SNAPSHOT);
         if (spectatorLoading)
@@ -88,17 +89,15 @@ public class DeadlockReplicationTests
             InitialTerrain = TestWorlds.Flat(),
             Zones = DeadlockMatchTests.Zones(),
         };
-        MatchStateKeys keys = new(3);
-        Roster roster = new(new ServerStateKeys(1));
+        FeatureScope scope = new("match");
+        Roster roster = new();
         RecordingTransport wire = new();
         ReadyLink link = new(wire);
-        using MatchRuntime runtime = new(map.BuildMask(), config, 2, keys, zones: map.Zones);
-        keys.Seal();
+        using MatchRuntime runtime = new(map.BuildMask(), config, 2, scope, 3, zones: map.Zones);
         Player blue = roster.Join(1, "Blue");
         Player spectator = roster.Join(2, "Spectator");
         foreach (Player player in roster)
         {
-            player.OpenMatch(keys.Count, keys.Generation);
             link.BeginLoading(player.PeerId, 3, 0);
             link.Ready(player.PeerId, 3);
         }
@@ -109,7 +108,7 @@ public class DeadlockReplicationTests
         replication.RosterChanged();
         for (int tick = 0; tick < 4; tick++)
         {
-            replication.MatchUpdated(runtime.Advance(default), default);
+            replication.MatchUpdated(runtime.Advance(default));
         }
         Assert.Equal(400, Assert.IsType<DeadlockObjectiveState>(runtime.Objective).BlueProgress);
         runtime.Remove(blue);
@@ -120,7 +119,7 @@ public class DeadlockReplicationTests
 
         for (int tick = 0; tick < NetConfig.TICKS_PER_SNAPSHOT; tick++)
         {
-            replication.MatchUpdated(runtime.Advance(default), default);
+            replication.MatchUpdated(runtime.Advance(default));
         }
 
         SentSnapshot sent = Assert.Single(wire.Snapshots);

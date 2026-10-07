@@ -1,6 +1,6 @@
 using Mortz.Server.Players;
 
-namespace Mortz.Server.Services;
+namespace Mortz.Server.Hooks;
 
 /// <summary>A player was admitted, or left.</summary>
 public interface IObservePlayers

@@ -25,20 +25,20 @@ public partial class ServerPump : Node
 
     public override void _Notification(int what) => this.Notify(what);
 
-    partial void AttachE2E(ref IMatchObserver observer, ref IMatchControl control);
+    partial void AttachE2E(List<object> diagnostics, ref IMatchControl control);
 
     public GameServer Start(ServerBootLoad load, IAdmissionVerifier verifier)
     {
         NetworkManager network = Network;
         _network = network;
-        IMatchObserver observer = new NullMatchObserver();
+        List<object> diagnostics = [];
         IMatchControl control = new NullMatchControl();
-        AttachE2E(ref observer, ref control);
+        AttachE2E(diagnostics, ref control);
         string version = typeof(ServerPump).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion;
         Server = new GameServer(load.Boot, new GodotTransport(network),
             new GodotMapSource(load.Content), MortzLog.For("server"),
-            observer, control, version);
+            control, version, diagnostics);
         _admission = new ServerAdmission(verifier, network, Time.GetTicksMsec);
         _admission.Admitted += Server.Connect;
         _admission.Departed += Server.Disconnect;

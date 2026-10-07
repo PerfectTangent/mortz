@@ -1,3 +1,4 @@
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Scoring;
@@ -6,7 +7,6 @@ using Mortz.Core.Sim;
 using Mortz.Core.Terrain;
 using Mortz.Server.Match;
 using Mortz.Server.Match.Modes;
-using Mortz.Server.Players;
 using Xunit;
 
 namespace Mortz.Runtime.Tests.Server.Match;
@@ -56,7 +56,7 @@ public class ObjectiveLifecycleTests
     public void NoObjectiveHasNoWinnerAndNeverChanges()
     {
         using MatchRuntime runtime = new(new TerrainMask(8, 8, (_, _) => false, (_, _) => false),
-            new MatchConfig(), 0, new MatchStateKeys(1));
+            new MatchConfig(), 0, new FeatureScope("match"), 1);
         runtime.Advance(default);
         runtime.Advance(default);
         Assert.Same(NoObjectiveState.Instance, runtime.Objective);

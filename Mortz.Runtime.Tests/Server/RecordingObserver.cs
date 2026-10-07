@@ -1,13 +1,12 @@
-using Mortz.Server.Diagnostics;
+using Mortz.Server.Hooks;
 using Mortz.Server.Match;
 using Mortz.Server.Phases;
 using Mortz.Server.Players;
 
 namespace Mortz.Runtime.Tests.Server;
 
-/// <summary>Writes down what the server told it, so a test can assert on the
-/// observer contract instead of reaching into the server.</summary>
-public sealed class RecordingObserver : IMatchObserver
+/// <summary>A root feature that records the hooks the server raised.</summary>
+public sealed class RecordingObserver : IObservePlayers, IObservePhase, IObserveMatchUpdate
 {
     private readonly List<string> _trace = [];
 
@@ -15,13 +14,11 @@ public sealed class RecordingObserver : IMatchObserver
 
     public MatchUpdate? LastUpdate { get; private set; }
 
-    public void PlayerJoined(Player player, ServerPhaseKind phase) =>
-        _trace.Add($"join:{player.PeerId}");
+    public void PlayerJoined(Player player) => _trace.Add($"join:{player.PeerId}");
 
-    public void PlayerLeft(Player player, ServerPhaseKind phase) =>
-        _trace.Add($"leave:{player.PeerId}");
+    public void PlayerLeft(Player player) => _trace.Add($"leave:{player.PeerId}");
 
-    public void PhaseChanged(ServerPhaseKind kind) => _trace.Add($"phase:{kind}");
+    public void PhaseChanged(ServerPhaseKind phase) => _trace.Add($"phase:{phase}");
 
-    public void MatchAdvanced(MatchUpdate update) => LastUpdate = update;
+    public void MatchUpdated(in MatchUpdate update) => LastUpdate = update;
 }

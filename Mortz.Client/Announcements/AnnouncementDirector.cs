@@ -1,3 +1,4 @@
+using Mortz.Client.Hooks;
 using Mortz.Client.Match;
 using Mortz.Client.Players;
 using Mortz.Core.Match.Events;
@@ -11,7 +12,7 @@ namespace Mortz.Client.Announcements;
 /// <summary>Turns one render frame's game events into announcements. Keeps the
 /// match-point state for late subscribers.</summary>
 public class AnnouncementDirector : IAnnouncementDirector, IHandle<GameEventMsg>,
-    IClientFrameFeature, IDisposable
+    IClientFrame, IDisposable
 {
     private readonly ClientPlayers _players;
     private readonly ClientMatchState _matchState;
@@ -40,7 +41,7 @@ public class AnnouncementDirector : IAnnouncementDirector, IHandle<GameEventMsg>
         _matchState.MatchPointChanged -= OnMatchPointChanged;
     }
 
-    public void Advance(float delta)
+    public void Frame(float delta)
     {
         if (_closed || _pending.Count == 0)
             return;

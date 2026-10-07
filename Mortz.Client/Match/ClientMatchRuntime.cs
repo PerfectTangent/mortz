@@ -1,4 +1,5 @@
 using Mortz.Client.Announcements;
+using Mortz.Client.Hooks;
 using Mortz.Client.Players;
 using Mortz.Client.Replication;
 using Mortz.Core.Features;
@@ -16,11 +17,10 @@ using Mortz.Protocol.Replication;
 
 namespace Mortz.Client.Match;
 
-public class ClientMatchRuntime : IDisposable, IHandle<MatchStartMsg>, IHandle<CarveMsg>,
+public class ClientMatchRuntime : IDisposable, IClientTick, IClientFrame, IHandle<MatchStartMsg>, IHandle<CarveMsg>,
     IHandle<ShellRetireMsg>, IHandle<MortarLifecycleMsg>, IHandle<MortarCorrectionMsg>,
     IHandle<FinalKillMsg>, IHandle<DeathMsg>
 {
-    private readonly FeatureScope _scope;
     private readonly ClientPlayers _players;
     private readonly int _localPeerId;
     private readonly Action<byte[]> _sendInputs;
@@ -46,9 +46,9 @@ public class ClientMatchRuntime : IDisposable, IHandle<MatchStartMsg>, IHandle<C
     public event Action<DeathMsg>? Died;
     public event Action<FinalKillMsg>? FinalKillReceived;
 
-    public ClientMatchRuntime(ClientMatchState state, ClientPlayers players,
+    public ClientMatchRuntime(FeatureScope scope, ClientMatchState state, ClientPlayers players,
         TerrainMask terrain, MatchConfig config, MapZones zones, int localPeerId,
-        NetRouter router, Action<byte[]> sendInputs, Func<ulong> clock)
+        Action<byte[]> sendInputs, Func<ulong> clock)
     {
         State = state;
         _players = players;
@@ -62,15 +62,13 @@ public class ClientMatchRuntime : IDisposable, IHandle<MatchStartMsg>, IHandle<C
         Predictor = new Predictor(terrain, config, zones);
         Terrain = new ClientTerrain(terrain, config.Combat.MortarCarveRadius, localPeerId, clock);
         Mortars = new MortarReplicaSet(terrain, config.Combat.ToSnapshot().ToMutable(), zones);
-        _scope = new FeatureScope(router.Add, router.Remove);
-        _scope.Register(new ClientMatchStateAdapter(state, _objectiveWire));
-        Announcements = _scope.Register(new AnnouncementDirector(players, state));
-        _scope.Register(this);
-        _scope.Own(state.Close);
-        _scope.Own(players.CloseMatch);
+        scope.Register(new ClientMatchStateAdapter(state, _objectiveWire));
+        Announcements = scope.Register(new AnnouncementDirector(players, state));
+        scope.Register(this);
+        scope.Own(state.Close);
+        scope.Own(players.CloseMatch);
         players.MatchStatsChanged += OnStatsChanged;
-        _scope.Own(() => players.MatchStatsChanged -= OnStatsChanged);
-        _scope.Start();
+        scope.Own(() => players.MatchStatsChanged -= OnStatsChanged);
     }
 
     /// <summary>Seeds a fresh match with full peer IDs before the reliable roster arrives.</summary>
@@ -136,6 +134,8 @@ public class ClientMatchRuntime : IDisposable, IHandle<MatchStartMsg>, IHandle<C
         SnapshotApplied?.Invoke(simulation);
     }
 
+    public void Tick() => Tick(SampleInput?.Invoke() ?? default);
+
     public void Tick(PlayerInput input)
     {
         if (!CanAdvance)
@@ -157,15 +157,11 @@ public class ClientMatchRuntime : IDisposable, IHandle<MatchStartMsg>, IHandle<C
         }
     }
 
-    public void Advance(float delta)
+    public void Frame(float delta)
     {
         if (_closed)
             return;
         Terrain.Advance();
-        foreach (IClientFrameFeature feature in _scope.Implementing<IClientFrameFeature>())
-        {
-            feature.Advance(delta);
-        }
         CorrectionOffset *= MathF.Max(0f, 1f - 10f * delta);
     }
 
@@ -256,11 +252,6 @@ public class ClientMatchRuntime : IDisposable, IHandle<MatchStartMsg>, IHandle<C
         }
     }
 
-    public void Dispose()
-    {
-        if (_closed)
-            return;
-        _closed = true;
-        _scope.Dispose();
-    }
+    /// <summary>Called by the match scope as it closes; close the scope, not this.</summary>
+    public void Dispose() => _closed = true;
 }

@@ -1,25 +1,27 @@
+using Mortz.Server.Hooks;
 using Mortz.Server.Phases;
 
 namespace Mortz.Server.Match.Services;
 
 public class EmptyMatchTimeout(
     MatchRuntime runtime,
-    ServerClock clock)
-    : IObserveMatchRoster, IAdvanceMatch
+    ServerClock clock,
+    IPhaseTransitionRequests transitions)
+    : IObserveMatchRoster, IAdvance
 {
     private const ulong TIMEOUT_MS = 10_000;
     private ulong? _emptySinceMs;
 
-    public PhaseRequest Advance(ServerTime time)
+    public void Advance(ServerTime time)
     {
         if (_emptySinceMs is not ulong emptySince ||
             time.Ms < emptySince ||
             time.Ms - emptySince < TIMEOUT_MS)
         {
-            return PhaseRequest.NONE;
+            return;
         }
 
-        return PhaseRequest.RETURN_TO_LOBBY;
+        transitions.RequestReturnToLobby();
     }
 
     public void RosterChanged()

@@ -4,8 +4,7 @@ using Mortz.Protocol.Net.Chat;
 using Mortz.Protocol.Net.Lobby;
 using Mortz.Protocol.Net.Query;
 using Mortz.Protocol.Net.Stats;
-using Mortz.Server.Diagnostics;
-using Mortz.Server.Match;
+using Mortz.Server.Hooks;
 using Mortz.Server.Phases;
 using Mortz.Server.Players;
 using Xunit;
@@ -46,14 +45,12 @@ public class GameServerConnectTests : IDisposable
         Assert.Equal(0, server.Server.PlayerCount);
     }
 
-    private class AccountObserver : IMatchObserver
+    private class AccountObserver : IObservePlayers
     {
         public Player? Joined;
         public Player? Left;
-        public void PlayerJoined(Player player, ServerPhaseKind phase) => Joined = player;
-        public void PlayerLeft(Player player, ServerPhaseKind phase) => Left = player;
-        public void PhaseChanged(ServerPhaseKind kind) { }
-        public void MatchAdvanced(MatchUpdate update) { }
+        public void PlayerJoined(Player player) => Joined = player;
+        public void PlayerLeft(Player player) => Left = player;
     }
 
     [Fact]

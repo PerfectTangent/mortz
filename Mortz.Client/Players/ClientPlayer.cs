@@ -8,12 +8,8 @@ namespace Mortz.Client.Players;
 /// <summary>One player this client has heard of, from any stream.</summary>
 public sealed class ClientPlayer(
     int peerId,
-    SessionStateKeys sessionKeys,
     PlayerStats? matchBaseStats)
 {
-    private object?[]? _session;
-    private bool _retired;
-
     public int PeerId { get; } = peerId;
 
     public ClientMatchPlayer? Match { get; private set; } =
@@ -43,14 +39,6 @@ public sealed class ClientPlayer(
     /// <summary>Identity changed: first confirmation, rename, team move,
     /// ready toggle, skin change.</summary>
     public event Action? Changed;
-
-    public T State<T>(SessionStateKey<T> key) where T : class, new()
-    {
-        ObjectDisposedException.ThrowIf(_retired, this);
-        if (key.Generation != sessionKeys.Generation)
-            throw new InvalidOperationException($"Stale {typeof(T).Name} state key.");
-        return Cell<T>(ref _session, sessionKeys.Count, key.Index);
-    }
 
     public bool Apply(LobbyMember member) => Confirm(_identity with
     {
@@ -88,35 +76,5 @@ public sealed class ClientPlayer(
         Match = null;
     }
 
-    /// <summary>Left the server: match cells, then session cells, reverse
-    /// claim order within each.</summary>
-    public void Retire()
-    {
-        if (_retired)
-            return;
-        _retired = true;
-        CloseMatch();
-        DisposeReverse(_session);
-        _session = null;
-    }
-
-    private static T Cell<T>(ref object?[]? cells, int count, int index) where T : class, new()
-    {
-        cells ??= new object?[count];
-
-        return (T)(cells[index] ??= new T());
-    }
-
     public static string UnknownName(int peerId) => $"<unknown {peerId}>";
-
-    private static void DisposeReverse(object?[]? cells)
-    {
-        if (cells == null)
-            return;
-        for (int i = cells.Length - 1; i >= 0; i--)
-        {
-            if (cells[i] is IDisposable disposable)
-                disposable.Dispose();
-        }
-    }
 }

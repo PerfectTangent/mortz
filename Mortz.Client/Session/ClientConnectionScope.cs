@@ -27,39 +27,35 @@ public class ClientConnectionScope : IDisposable
     public ClientConnectionScope(NetRouter router, IClientSender sender, Func<int> localPeerId, ISessionExit sessionExit)
     {
         _router = router;
-        Features = new FeatureScope(router.Add, router.Remove);
-        Players = Features.Register(new ClientPlayers());
-        Pings = Features.Register(new Pings(Players));
-        Wins = Features.Register(new SessionWins(Players));
+        Features = new FeatureScope("connection", router.Add, router.Remove);
+        Players = Features.Register(new ClientPlayers(Features));
+        Pings = Features.Register(new Pings(Features, Players));
+        Wins = Features.Register(new SessionWins(Features, Players));
         Setup = Features.Register(new MatchSetup());
         Admin = Features.Register(new ClientAdmin(sender, localPeerId));
         Chat = Features.Register(new ClientChat(Admin, sessionExit, sender));
-        Players.SessionKeys.Seal();
-        Features.OwnState(Players.Dispose, Players.SessionKeys.Describe);
-        Features.Own(CloseMatch);
         Features.Start();
     }
 
     public ClientMatchRuntime OpenMatch(ClientMatchState state, TerrainMask terrain,
         MatchConfig config, MapZones zones, int localPeerId, Action<byte[]> sendInputs, Func<ulong> clock)
     {
-        if (Features.Lifetime.IsCancellationRequested)
-            throw new ObjectDisposedException(nameof(ClientConnectionScope));
-        CloseMatch();
+        ObjectDisposedException.ThrowIf(Features.IsClosed, this);
+        FeatureScope scope = Features.OpenChild("match");
         _router.MatchGeneration = state.Generation;
-        Match = new ClientMatchRuntime(state, Players, terrain, config, zones, localPeerId,
-            _router, sendInputs, clock);
-        return Match;
+        ClientMatchRuntime match = new(scope, state, Players, terrain, config, zones, localPeerId,
+            sendInputs, clock);
+        scope.Own(() =>
+        {
+            Match = null;
+            _router.MatchGeneration = -1;
+        });
+        scope.Start();
+        Match = match;
+        return match;
     }
 
-    public void CloseMatch()
-    {
-        Match?.Dispose();
-        Match = null;
-        _router.MatchGeneration = -1;
-    }
-
-    public string Describe() => Features.Describe();
+    public void CloseMatch() => Features.CloseChild();
 
     public void Dispose() => Features.Dispose();
 }

@@ -1,32 +1,28 @@
 #if TOOLS
 using Godot;
 using Mortz.Core.Match.Objectives;
-using Mortz.Core.Match.Scoring;
 using Mortz.Core.Sim;
 using Mortz.E2E.Protocol;
 using Mortz.Server.Diagnostics;
-using Mortz.Server.Match;
-using Mortz.Server.Match.Scoring;
 using Mortz.Server.Phases;
-using Mortz.Server.Players;
 using Mortz.Shared.E2E;
 
 namespace Mortz.Server.E2E;
 
 /// <summary>The server end of the control protocol.</summary>
-public partial class ServerE2EHandler : Node, IE2EHandler, IMatchObserver
+public partial class ServerE2EHandler : Node, IE2EHandler
 {
     private E2EDriver _driver = null!;
 
     // Field-initialized so nothing depends on tree order. Real objects under
     // E2E, null objects otherwise. ServerPump reads them without a flag check.
     private E2EMatchControl _control = null!;
-    private readonly Dictionary<int, string> _names = [];
 
     private IE2EResponder? _responder;
-    private ServerPhaseKind _phase = ServerPhaseKind.LOBBY;
 
     public E2EProcessRole Role => E2EProcessRole.SERVER;
+
+    public ServerE2EEvents Events { get; } = new();
 
     /// <summary>Must be called right after instantiating, before entering the tree.</summary>
     public void Initialize(E2EDriver driver, E2EMatchControl control)
@@ -38,6 +34,7 @@ public partial class ServerE2EHandler : Node, IE2EHandler, IMatchObserver
     public override void _Ready()
     {
         _responder = _driver.Responder;
+        Events.Responder = _responder;
         _driver.Attach(this);
     }
 
@@ -76,50 +73,14 @@ public partial class ServerE2EHandler : Node, IE2EHandler, IMatchObserver
         }
     }
 
-    // ---- IMatchObserver ----
-
-    public void PlayerJoined(Player player, ServerPhaseKind phase)
-    {
-        _names[player.PeerId] = player.Name;
-        _responder?.Emit(new PlayerJoinedEvent(player.PeerId, player.Name, Map(phase), player.Account));
-    }
-
-    public void PlayerLeft(Player player, ServerPhaseKind phase)
-    {
-        _names.Remove(player.PeerId);
-        _responder?.Emit(new PlayerLeftEvent(player.PeerId, Map(phase)));
-    }
-
-    public void PhaseChanged(ServerPhaseKind kind)
-    {
-        _phase = kind;
-        _responder?.Emit(new PhaseChangedEvent(Map(kind)));
-    }
-
-    public void MatchAdvanced(MatchUpdate update)
-    {
-        if (_responder is not IE2EResponder responder)
-            return;
-        if (update.Tick % SimConfig.TICK_RATE == 0)
-            responder.Emit(new MatchTickEvent(update.Tick));
-        foreach (ScoredKill kill in update.Eliminations)
-        {
-            responder.Emit(new EliminationEvent(update.Tick,
-                kill.Score.KillerId, kill.Score.VictimId,
-                kill.Score.Kind == DeathKind.SUICIDE));
-        }
-        if (update.MatchEnded is Victor victor)
-            responder.Emit(Ended(update.Tick, victor));
-    }
-
     // ---- translation ----
 
     private void ReadState(ServerStateRequest request, IE2EResponder responder)
     {
-        if (_phase != ServerPhaseKind.MATCH)
+        if (Events.Phase != ServerPhaseKind.MATCH)
         {
             responder.Respond(new ServerStateResponse(request.Id, E2EPhase.LOBBY, 0,
-                _names.Select(pair => new E2EServerPlayer(
+                Events.Names.Select(pair => new E2EServerPlayer(
                     pair.Key, pair.Value, Vec2.Zero, Vec2.Zero, 0, 0)).ToArray()));
             return;
         }
@@ -137,7 +98,7 @@ public partial class ServerE2EHandler : Node, IE2EHandler, IMatchObserver
     /// Refused instead of hanging.</summary>
     private void InMatch(Guid id, IE2EResponder responder, Action enqueue)
     {
-        if (_phase != ServerPhaseKind.MATCH)
+        if (Events.Phase != ServerPhaseKind.MATCH)
         {
             responder.Respond(new CommandFailedResponse(id, E2EError.INVALID_STATE,
                 "The server is not in a match."));
@@ -167,17 +128,7 @@ public partial class ServerE2EHandler : Node, IE2EHandler, IMatchObserver
             id, outcome.RemainingHealth, outcome.Died, outcome.AppliedTick));
     }
 
-    private static MatchEndedEvent Ended(int tick, Victor victor) => victor switch
-    {
-        Victor.Player player => new MatchEndedEvent(tick, E2EVictorKind.PLAYER, player.PeerId),
-        Victor.Team team => new MatchEndedEvent(tick, E2EVictorKind.TEAM, (int)team.Value),
-        _ => new MatchEndedEvent(tick, E2EVictorKind.NOBODY, 0),
-    };
-
     private new string Name(int peerId) =>
-        _names.TryGetValue(peerId, out string? name) ? name : $"Player {peerId}";
-
-    private static E2EPhase Map(ServerPhaseKind kind) =>
-        kind == ServerPhaseKind.MATCH ? E2EPhase.MATCH : E2EPhase.LOBBY;
+        Events.Names.TryGetValue(peerId, out string? name) ? name : $"Player {peerId}";
 }
 #endif

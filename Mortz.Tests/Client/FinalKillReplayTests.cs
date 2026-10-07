@@ -7,6 +7,7 @@ using Mortz.Client.Match;
 using Mortz.Client.Players;
 using Mortz.Client.Replay;
 using Mortz.Client.Views;
+using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Sim;
@@ -14,6 +15,7 @@ using Mortz.Core.Sim.Modifiers;
 using Mortz.Core.Terrain;
 using Mortz.Net;
 using Mortz.Protocol.Net.Match;
+using Mortz.Protocol.Net.Roster;
 using Mortz.Protocol.Replication;
 using Mortz.Runtime.Tests.Net;
 using Mortz.Shared;
@@ -46,7 +48,7 @@ public class FinalKillReplayTests : NodeServiceTest
             FinalKillReplay replay = shell.GetNode<FinalKillReplay>("FinalKillReplay");
             Camera2D replayCamera = shell.GetNode<Camera2D>("ReplayCamera");
             Sprite2D replayTerrain = map.GetNode<Sprite2D>("ReplayTerrain");
-            using ClientMatchRuntime runtime = Runtime(map, new ClientPlayers());
+            using ClientMatchRuntime runtime = Runtime(map, new ClientPlayers(Scope));
             effects.FakeDependency(runtime);
             replay.FakeDependency(runtime);
             effects.OnResolved();
@@ -182,9 +184,13 @@ public class FinalKillReplayTests : NodeServiceTest
         GameMap map = CreateMap(withDestructibleTerrain: true);
         FakeNetwork network = new() { LocalPeerId = LOCAL_ID };
         RecordingSfx sfx = new();
-        ClientPlayers clientPlayers = new();
+        ClientPlayers clientPlayers = new(Scope);
         RegisterRuntime(clientPlayers);
         clientPlayers.OpenMatch(new MatchConfig());
+        new RosterMsg([
+            new RosterEntry(LOCAL_ID, "Killer", 0, null, 1),
+            new RosterEntry(VICTIM_ID, "Victim", 0, null, 2),
+        ]).Broadcast(Router);
 
         EffectsSpawner effects = Take<EffectsSpawner>(shell, "Effects");
         PlayerViewManager players = Take<PlayerViewManager>(shell, "Players");
@@ -238,9 +244,11 @@ public class FinalKillReplayTests : NodeServiceTest
 
     private ClientMatchRuntime Runtime(GameMap map, ClientPlayers players)
     {
-        ClientMatchRuntime runtime = new(new ClientMatchState(0, MatchParticipation.Active),
-            players, map.Mask, new MatchConfig(), MapZones.None, LOCAL_ID, Router, _ => { }, () => 0);
-        OwnRuntime(runtime);
+        FeatureScope scope = new("match", Router.Add, Router.Remove);
+        ClientMatchRuntime runtime = new(scope, new ClientMatchState(0, MatchParticipation.Active),
+            players, map.Mask, new MatchConfig(), MapZones.None, LOCAL_ID, _ => { }, () => 0);
+        scope.Start();
+        OwnRuntime(scope);
         return runtime;
     }
 
