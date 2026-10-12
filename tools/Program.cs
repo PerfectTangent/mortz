@@ -1,4 +1,5 @@
 using DotNetEnv;
+using Mortz.Tools.Mapping;
 
 namespace Mortz.Tools;
 
@@ -14,14 +15,19 @@ public static class Program
             {
                 case "convert-lxl": ConvertLxl.Run(args[1..]); return 0;
                 case "export": Export.Run(args[1..]); return 0;
+                case "map": return MapCommand.Run(args[1..]);
+                case "pack": PackCommand.Run(args[1..]); return 0;
                 case "official": OfficialOverlay.Run(args[1..]); return 0;
                 case "publish-playtest": PublishPlaytest.Run(args[1..]); return 0;
                 default:
                     Console.Error.WriteLine("usage:");
                     Console.Error.WriteLine("  dotnet run --project tools -- convert-lxl <path.lxl> <mapId> [--scale N] [--players N] [--out DIR]");
                     Console.Error.WriteLine("  dotnet run --project tools -- export [client|server|all] [--steam|--standalone] [--linux|--windows] [--debug] [--require-official]");
+                    Console.Error.WriteLine("  dotnet run --project tools -- map schema");
+                    Console.Error.WriteLine("  dotnet run --project tools -- map build [<pack-dir>[/<map-id>]]");
                     Console.Error.WriteLine("  dotnet run --project tools -- official check");
                     Console.Error.WriteLine("  dotnet run --project tools -- official import-3d [--blender PATH] [--rebuild]");
+                    Console.Error.WriteLine("  dotnet run --project tools -- pack new <dir> <id> <name>");
                     Console.Error.WriteLine("  dotnet run --project tools -- publish-playtest [--skip-build] [--only itch,steam,docker]");
                     return 1;
             }

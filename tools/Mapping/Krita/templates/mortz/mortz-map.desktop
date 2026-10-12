@@ -1,0 +1,6 @@
+[Desktop Entry]
+Icon=template_web_design
+Name=Mortz map
+Type=Link
+URL[$e]=.source/mortz-map.kra
+X-KDE-Hidden=false

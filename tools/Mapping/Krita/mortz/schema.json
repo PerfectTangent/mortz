@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "stats": [
+    "mortar_gravity",
+    "max_ammo",
+    "reload_per_shell",
+    "parry_radius",
+    "parry_window",
+    "parry_cooldown",
+    "max_health",
+    "max_run_speed",
+    "ground_accel",
+    "ground_friction",
+    "air_accel",
+    "gravity",
+    "max_fall_speed",
+    "total_jumps",
+    "jump_speed",
+    "air_jump_speed",
+    "wall_slide_max_fall",
+    "wall_jump_speed_y",
+    "wall_jump_kick_x",
+    "coyote_base",
+    "coyote_bonus_per_100_speed",
+    "coyote_max",
+    "dash_speed",
+    "dash_cooldown",
+    "rope_speed",
+    "rope_max_range",
+    "rope_pull_accel",
+    "rope_shorten_speed",
+    "rope_release_cooldown",
+    "rope_miss_cooldown"
+  ],
+  "ops": [
+    "add",
+    "mul"
+  ],
+  "teams": [
+    "blue",
+    "red"
+  ],
+  "idPattern": "^[a-z0-9][a-z0-9_-]*$",
+  "collisionAlpha": 128,
+  "limits": {
+    "minWidth": 320,
+    "minHeight": 240,
+    "maxSize": 8192,
+    "minPlayers": 1,
+    "maxPlayers": 8,
+    "maxEffectZones": 64
+  },
+  "guides": {
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "body": {
+      "width": 32,
+      "height": 32
+    },
+    "jump": 56.7,
+    "doubleJump": 104.6,
+    "wallJump": 142.4,
+    "rope": 520,
+    "blastRadius": 48,
+    "blastCoreRadius": 24,
+    "parryRadius": 35,
+    "mortarRange": 703.1
+  }
+}

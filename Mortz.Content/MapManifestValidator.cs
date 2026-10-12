@@ -10,7 +10,12 @@ public enum ContentValidationMode
     ENFORCE,
 }
 
-public readonly record struct MapDimensions(int Width, int Height);
+public readonly record struct MapDimensions(int Width, int Height)
+{
+    public const int MIN_WIDTH = 320;
+    public const int MIN_HEIGHT = 240;
+    public const int MAX_SIZE = 8192;
+}
 
 public static class MapManifestValidator
 {

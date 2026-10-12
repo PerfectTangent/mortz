@@ -14,7 +14,7 @@ public readonly record struct MapEditorMapBounds(long X, long Y, long Width, lon
 
 public static class MapEditorMapBoundsFitter
 {
-    public const int MAX_TEXTURE_DIMENSION = 8192;
+    public const int MAX_TEXTURE_DIMENSION = MapDimensions.MAX_SIZE;
 
     public static MapEditorMapBounds FitBrushes(IEnumerable<MapEditorBrush> brushes)
     {

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=Krita/PythonPlugin
+X-KDE-Library=mortz
+X-Python-2-Compatible=false
+Name=Mortz map tools
+Comment=Author Mortz maps and export them for the game

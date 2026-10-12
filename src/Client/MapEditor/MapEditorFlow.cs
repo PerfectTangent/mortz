@@ -122,9 +122,11 @@ public partial class MapEditorFlow : Node
             ShowError($"The map ID '{id}' is already in use here.");
             return;
         }
-        if (width is < 320 or > 8192 || height is < 240 or > 8192)
+        if (width is < MapDimensions.MIN_WIDTH or > MapDimensions.MAX_SIZE ||
+            height is < MapDimensions.MIN_HEIGHT or > MapDimensions.MAX_SIZE)
         {
-            ShowError("Map size must be between 320 x 240 and 8192 x 8192.");
+            ShowError($"Map size must be between {MapDimensions.MIN_WIDTH} x {MapDimensions.MIN_HEIGHT} " +
+                      $"and {MapDimensions.MAX_SIZE} x {MapDimensions.MAX_SIZE}.");
             return;
         }
 

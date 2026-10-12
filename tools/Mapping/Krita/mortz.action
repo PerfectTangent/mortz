@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Default shortcuts for the Mortz actions. Rebind them in Settings > Configure Krita >
+     Keyboard Shortcuts. Names match actions.ALL. -->
+<ActionCollection version="2" name="Scripts">
+  <Actions category="Scripts">
+    <text>Mortz</text>
+    <Action name="mortz_check_map">
+      <icon></icon>
+      <text>Check Mortz map</text>
+      <whatsThis></whatsThis>
+      <toolTip>Check Mortz map</toolTip>
+      <iconText>Check Mortz map</iconText>
+      <activationFlags>1</activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>Ctrl+Alt+K</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+    <Action name="mortz_export_map">
+      <icon></icon>
+      <text>Export Mortz map</text>
+      <whatsThis></whatsThis>
+      <toolTip>Export Mortz map</toolTip>
+      <iconText>Export Mortz map</iconText>
+      <activationFlags>1</activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>Ctrl+Alt+E</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+    <Action name="mortz_fit_canvas">
+      <icon></icon>
+      <text>Fit canvas to terrain</text>
+      <whatsThis></whatsThis>
+      <toolTip>Fit canvas to terrain</toolTip>
+      <iconText>Fit canvas to terrain</iconText>
+      <activationFlags>1</activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut></shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+    <Action name="mortz_add_spawn">
+      <icon></icon>
+      <text>Add spawn</text>
+      <whatsThis></whatsThis>
+      <toolTip>Add spawn</toolTip>
+      <iconText>Add spawn</iconText>
+      <activationFlags>1</activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>Ctrl+Alt+P</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+    <Action name="mortz_guides_to_spawn">
+      <icon></icon>
+      <text>Move reach guides to selected spawn</text>
+      <whatsThis></whatsThis>
+      <toolTip>Move reach guides to selected spawn</toolTip>
+      <iconText>Move reach guides to selected spawn</iconText>
+      <activationFlags>1</activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut></shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+    <Action name="mortz_rebuild_guides">
+      <icon></icon>
+      <text>Rebuild guides</text>
+      <whatsThis></whatsThis>
+      <toolTip>Rebuild guides</toolTip>
+      <iconText>Rebuild guides</iconText>
+      <activationFlags>1</activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut></shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+  </Actions>
+</ActionCollection>

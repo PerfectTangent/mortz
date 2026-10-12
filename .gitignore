@@ -23,3 +23,5 @@ TestResults/
 # IDE
 .idea/
 .vscode/
+
+__pycache__/
