@@ -19,9 +19,6 @@ public partial class MainMenu : Control
         string adminPassword, string serverName, int skin, bool allowJoinInProgress);
 
     [Signal]
-    public delegate void MapEditorRequestedEventHandler();
-
-    [Signal]
     public delegate void NavigationRequestedEventHandler();
 
     [Export] private MenuBackdrop _backdrop = null!;
@@ -129,12 +126,6 @@ public partial class MainMenu : Control
         _pendingAction = PendingAction.NONE;
         ShowPanel(_settingsScreen);
         _settingsScreen.Open();
-    }
-
-    public void OnMapEditorPressed()
-    {
-        EmitSignal(SignalName.NavigationRequested);
-        EmitSignal(SignalName.MapEditorRequested);
     }
 
     public void OnBackPressed()

@@ -4,7 +4,6 @@ using Godot;
 using Mortz.Client.Admin;
 using Mortz.Client.Hooks;
 using Mortz.Client.Hosting;
-using Mortz.Client.MapEditor;
 using Mortz.Client.Match;
 using Mortz.Client.Menus;
 using Mortz.Client.Servers;
@@ -46,7 +45,6 @@ public partial class ClientSessionController : Node, ISessionExit,
     [Export] private PackedScene _lobbyScene = null!;
     [Export] private PackedScene _sessionScene = null!;
     [Export] private PackedScene _menuScene = null!;
-    [Export] private PackedScene _mapEditorScene = null!;
 
     private readonly ClientConnectionAttempt _connection = new(CONNECT_RETRIES);
     private readonly ClientSession _session = new();
@@ -60,7 +58,6 @@ public partial class ClientSessionController : Node, ISessionExit,
     private ConnectedSession? _connectedSession;
     private Lobby? _lobby;
     private MainMenu? _menu;
-    private MapEditorScreen? _mapEditor;
     private string? _pendingLocalAdminPassword;
     private OwnedServerProcess? _localServer;
     private Task<HostControlMessage>? _localStartup;
@@ -508,7 +505,7 @@ public partial class ClientSessionController : Node, ISessionExit,
     }
 
     public override void _Process(double delta) =>
-        _connectedSession?.Connection?.Features.Raise<IClientFrame>(feature => feature.Frame((float)delta));
+        _connectedSession?.Connection.Features.Raise<IClientFrame>(feature => feature.Frame((float)delta));
 
     private void RejectMatchLoad(string reason)
     {
@@ -548,7 +545,6 @@ public partial class ClientSessionController : Node, ISessionExit,
         _menu = _menuScene.Instantiate<MainMenu>();
         _menu.HostRequested += OnHostRequested;
         _menu.NavigationRequested += CancelMenuConnection;
-        _menu.MapEditorRequested += OpenMapEditor;
         AddChild(_menu);
         if (autoStartIntro)
             _menu.AutoStartIntro();
@@ -558,26 +554,6 @@ public partial class ClientSessionController : Node, ISessionExit,
     {
         Detach(_menu);
         _menu = null;
-    }
-
-    private void OpenMapEditor()
-    {
-        if (_mapEditor != null)
-            return;
-        DisposeMenu();
-        _mapEditor = _mapEditorScene.Instantiate<MapEditorScreen>();
-        _mapEditor.Closed += CloseMapEditor;
-        AddChild(_mapEditor);
-    }
-
-    private void CloseMapEditor()
-    {
-        if (_mapEditor != null)
-            _mapEditor.Closed -= CloseMapEditor;
-        Detach(_mapEditor);
-        _mapEditor = null;
-        CreateMenu(autoStartIntro: true);
-        _menu!.ShowHome();
     }
 
     private void CreateConnectedSession()
@@ -616,7 +592,9 @@ public partial class ClientSessionController : Node, ISessionExit,
         {
             if (IsInstanceValid(this) && IsInsideTree() && _lobby == null && connection != null &&
                 ReferenceEquals(connection, _connectedSession) && _session.Stage == ClientSessionStage.LOBBY)
+            {
                 MountLobby(generation);
+            }
         };
     }
 #endif
