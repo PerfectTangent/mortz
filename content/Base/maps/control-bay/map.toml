@@ -5,16 +5,16 @@ x = 752
 y = 320
 team = "blue"
 [[spawn_points]]
-x = 824
+x = 815
 y = 320
 team = "blue"
 [[spawn_points]]
-x = 207
+x = 208
 y = 448
 team = "blue"
 [[spawn_points]]
-x = 312
-y = 448
+x = 304
+y = 447
 team = "blue"
 [[spawn_points]]
 x = 1168
