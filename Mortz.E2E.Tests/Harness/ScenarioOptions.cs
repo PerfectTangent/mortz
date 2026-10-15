@@ -37,4 +37,7 @@ public sealed record ScenarioOptions
     public string? SlowScreenPlayer { get; init; }
 
     public int ScreenLoadDelayMs { get; init; } = 4_000;
+
+    /// <summary>The server logs wire and payload byte counts once a second during a match.</summary>
+    public bool NetStats { get; init; }
 }

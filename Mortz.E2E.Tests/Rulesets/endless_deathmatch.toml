@@ -1,0 +1,9 @@
+# Free for all with a kill target nobody reaches in a measurement run.
+[rules]
+score = "kills"
+teams = false
+suicide_penalty = "kill_no_negative"
+
+[rules.end_condition]
+type = "score_target"
+target = 999

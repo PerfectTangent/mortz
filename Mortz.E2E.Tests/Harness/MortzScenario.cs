@@ -37,8 +37,6 @@ public sealed class MortzScenario : IAsyncDisposable
     private readonly bool _windowed;
     private readonly E2EProcess _serverProcess;
     private MatchSetup? _setup;
-    private int _gamePort;
-    private int _queryPort = -1;
     private bool _torndown;
 
     public ServerDriver Server { get; }
@@ -51,12 +49,12 @@ public sealed class MortzScenario : IAsyncDisposable
     /// and the --e2e-run marker every child carries.</summary>
     public string RunId { get; }
 
-    /// <summary>The port ENet actually bound, since the server starts with
+    /// <summary>The port the server actually bound, since it starts with
     /// --port 0.</summary>
-    public int GamePort => _gamePort;
+    public int GamePort { get; private set; }
 
     /// <summary>-1 unless the scenario asked for a query port.</summary>
-    public int QueryPort => _queryPort;
+    public int QueryPort { get; private set; } = -1;
 
     public string ArtifactDirectory => _artifacts.Directory;
 
@@ -161,8 +159,8 @@ public sealed class MortzScenario : IAsyncDisposable
                 _ => true, Budget.Ready, cancellationToken: cancellationToken);
         if (listening.GamePort <= 0)
             throw _serverProcess.Failure($"The server reported game port {listening.GamePort}.");
-        _gamePort = listening.GamePort;
-        _queryPort = listening.QueryPort;
+        GamePort = listening.GamePort;
+        QueryPort = listening.QueryPort;
     }
 
     /// <summary>Launches the cast and waits until every one of them has seen the
@@ -199,7 +197,7 @@ public sealed class MortzScenario : IAsyncDisposable
                 _ => true, Budget.Connect, cancellationToken: cancellationToken);
             Task first = await Task.WhenAny(connected, refused);
             if (first == refused && refused.IsCompletedSuccessfully)
-                throw client.Failure($"Client '{name}' could not reach 127.0.0.1:{_gamePort}.");
+                throw client.Failure($"Client '{name}' could not reach 127.0.0.1:{GamePort}.");
 
             ConnectedEvent joined = await connected;
             driver = new ClientDriver(client, Budget, name, joined.PeerId);
@@ -329,8 +327,8 @@ public sealed class MortzScenario : IAsyncDisposable
             _options.Name,
             E2EProtocolSchema.Hash,
             _options.Timescale,
-            _gamePort,
-            _queryPort,
+            GamePort,
+            QueryPort,
             _sweepActions,
             _clients.Select(client => client.Process.Describe())
                 .Prepend(_serverProcess.Describe())
@@ -401,6 +399,8 @@ public sealed class MortzScenario : IAsyncDisposable
             arguments.Add(allowJoinInProgress ? "--allow-jip" : "--no-jip");
         if (options.QueryPort is int queryPort)
             arguments.AddRange(["--query-port", queryPort.ToString()]);
+        if (options.NetStats)
+            arguments.Add("--net-stats");
         return arguments;
     }
 
@@ -423,16 +423,17 @@ public sealed class MortzScenario : IAsyncDisposable
 
     private IReadOnlyList<string> ClientArguments(string name, int index)
     {
-        List<string> arguments = ["--path", RepoRoot.Path];
-        arguments.AddRange(WindowArguments(index));
-        arguments.AddRange([
+        List<string> arguments =
+        [
+            "--path", RepoRoot.Path,
+            .. WindowArguments(index),
             "++",
             "--e2e", "--e2e-run", RunId,
             "--connect", "127.0.0.1",
-            "--port", _gamePort.ToString(),
+            "--port", GamePort.ToString(),
             "--name", name,
             "--timescale", Timescale(_options),
-        ]);
+        ];
         if (name == _options.SlowScreenPlayer)
         {
             arguments.AddRange([

@@ -7,7 +7,7 @@ public static class NetConfig
 {
     public const int BROADCAST_PEER_ID = 0;
     public const int SERVER_PEER_ID = 1;
-    public const int PROTOCOL_VERSION = 53;
+    public const int PROTOCOL_VERSION = 54;
 
     public const ulong PHASE_READY_TIMEOUT_MS = 30_000;
 

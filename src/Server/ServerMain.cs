@@ -1,7 +1,6 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
-using Mortz.Net;
 using Mortz.Protocol.Hosting;
 using Mortz.Server.Admission;
 using Mortz.Server.Hosting;
@@ -26,7 +25,6 @@ public partial class ServerMain : Node
     [Export] private ServerPump _pump = null!;
     [Export] private ServerQueryResponder _query = null!;
 
-    [Dependency] private NetworkManager Network => this.DependOn<NetworkManager>();
     private ServerRuntime? _runtime;
     private GameServer _server = null!;
     private ServerCapabilities _lastCapabilities;
@@ -79,7 +77,7 @@ public partial class ServerMain : Node
             packetRouter = steam;
         }
 #endif
-        _server = _pump.Start(_host.Load.Value, verifier);
+        _server = _pump.Start(_host.Load.Value, _host.Transport!, verifier);
         _runtime = new ServerRuntime(platform,
             port => _query.Start(port, _server.Describe,
 #if TOOLS
@@ -141,6 +139,6 @@ public partial class ServerMain : Node
         // Release admission before Steam; the runtime then closes the shared query socket.
         _pump.Stop();
         _runtime?.Dispose();
-        Network.Shutdown();
+        _host.Stop();
     }
 }

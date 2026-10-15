@@ -273,7 +273,7 @@ public class SimWorldTests
         SimWorld w = new SimWorld(TestWorlds.Flat(), TestWorlds.NoSpawnProtectionConfig);
         w.AddPlayer(1);
         w.AddPlayer(2);
-        w.AddPlayer(1282034813); // real ENet peer ids are large: must not overflow off-map
+        w.AddPlayer(1282034813); // any int peer id must not overflow off-map
 
         foreach (PlayerState p in w.Players.Values)
         {

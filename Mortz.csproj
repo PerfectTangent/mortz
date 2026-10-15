@@ -30,6 +30,7 @@
     <Compile Remove="Mortz.Client\**" />
     <Compile Remove="Mortz.Server\**" />
     <Compile Remove="Mortz.Net.Gen\**" />
+    <Compile Remove="Mortz.Net.Gns\**" />
     <Compile Remove="tools\**" />
     <Compile Remove="build\**" />
   </ItemGroup>
@@ -38,6 +39,8 @@
     <ProjectReference Include="Mortz.Client\Mortz.Client.csproj" />
     <ProjectReference Include="Mortz.Content\Mortz.Content.csproj" />
     <ProjectReference Include="Mortz.Server\Mortz.Server.csproj" />
+    <!-- Tells the binding which native library a publish (Godot export) targets. -->
+    <ProjectReference Include="Mortz.Net.Gns\Mortz.Net.Gns.csproj" AdditionalProperties="GnsRuntime=$(RuntimeIdentifier)" />
     <!-- Debug only: TOOLS is the E2E gate; this reference must not survive into an export. -->
     <ProjectReference Include="Mortz.E2E.Protocol\Mortz.E2E.Protocol.csproj"
                       Condition="'$(Configuration)' == 'Debug'" />

@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Mortz.E2E.Tests;
 
-/// <summary>Real ENet and real Godot scene lifecycle coverage for the
+/// <summary>Real GameNetworkingSockets and real Godot scene lifecycle coverage for the
 /// server-to-client readiness.</summary>
 public sealed class ReadinessScenarios
 {

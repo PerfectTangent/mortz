@@ -13,6 +13,7 @@
     <ProjectReference Include="../Mortz.Client/Mortz.Client.csproj" />
     <ProjectReference Include="../Mortz.Server/Mortz.Server.csproj" />
     <ProjectReference Include="../Mortz.Content/Mortz.Content.csproj" />
+    <ProjectReference Include="../Mortz.Net.Gns/Mortz.Net.Gns.csproj" />
     <ProjectReference Include="../Mortz.Net.Gen/Mortz.Net.Gen.csproj" />
     <ProjectReference Include="../Mortz.Net.Gen/Mortz.Net.Gen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <Compile Include="../Mortz.Tests/Client/FakeSessionExit.cs" Link="Client/FakeSessionExit.cs" />

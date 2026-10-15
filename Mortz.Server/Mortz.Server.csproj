@@ -9,6 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Mortz.Protocol/Mortz.Protocol.csproj" />
+    <ProjectReference Include="../Mortz.Net.Gns/Mortz.Net.Gns.csproj" />
     <PackageReference Include="Serilog" Version="4.4.0" />
   </ItemGroup>
   <ItemGroup>

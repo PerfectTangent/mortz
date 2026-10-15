@@ -6,7 +6,7 @@ using Xunit;
 namespace Mortz.E2E.Tests;
 
 /// <summary>The floor every other scenario stands on. Real processes boot,
-/// really connect over ENet, really shut down clean.</summary>
+/// really connect over GameNetworkingSockets, really shut down clean.</summary>
 public sealed class SmokeScenarios
 {
     [Fact]
@@ -74,7 +74,7 @@ public sealed class SmokeScenarios
         ServerStateResponse state = await scenario.Server.StateAsync(
             TestContext.Current.CancellationToken);
         Assert.Equal(E2EPhase.MATCH, state.Phase);
-        // ENet hands out random peer ids, so neither side has a natural order.
+        // Peer ids follow connection order, which the two clients race for.
         Assert.Equal(
             new[] { alice.PeerId, bob.PeerId }.Order().ToArray(),
             state.Players.Select(player => player.PeerId).Order().ToArray());

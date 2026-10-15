@@ -226,7 +226,7 @@ public class SimWorld
             return pool[assignment % pool.Length].Position;
         }
 
-        // Long math: ENet peer ids are large random ints, int multiply overflows.
+        // Long math: a large peer id would overflow an int multiply.
         int margin = (int)SimConfig.PLAYER_HALF_WIDTH * 3;
         float x = margin + (int)(Math.Abs((long)peerId * 193) % (Terrain.Width - 2 * margin));
         for (int y = (int)SimConfig.PLAYER_HALF_HEIGHT * 2 + 1; y < Terrain.Height; y++)

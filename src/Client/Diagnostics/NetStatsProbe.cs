@@ -4,6 +4,7 @@ using Godot;
 using Mortz.Client.Match;
 using Mortz.Core.Sim;
 using Mortz.Net;
+using Mortz.Net.Gns;
 using Mortz.Shared;
 using Mortz.Shared.Logging;
 using Serilog;
@@ -84,7 +85,7 @@ public partial class NetStatsProbe : Node
         if (++_frames < SimConfig.TICK_RATE)
             return;
         _frames = 0;
-        (double sent, double recv, double sentPk, double recvPk) = Network.PopWireStats();
+        GnsRealTimeStatus status = Network.Status ?? default;
         int newest = _gameView.NewestSnapshotTick;
         float interpTicks = newest >= 0 ? newest - _gameView.RenderTick : -1;
         double snapAge = _lastSnapshotMsec > 0 ? Time.GetTicksMsec() - _lastSnapshotMsec : -1;
@@ -96,7 +97,8 @@ public partial class NetStatsProbe : Node
             "corr={Correction:F2}px up={SentBytes:F0}B/{SentPackets:F0}pk " +
             "down={RecvBytes:F0}B/{RecvPackets:F0}pk",
             Time.GetUnixTimeFromSystem(), _localPlayer.NextSeq, newest, _gameView.RenderTick,
-            interpTicks, snapAge, rttAvg, _rttMax, corrAvg, sent, sentPk, recv, recvPk);
+            interpTicks, snapAge, rttAvg, _rttMax, corrAvg, status.OutBytesPerSec, status.OutPacketsPerSec,
+            status.InBytesPerSec, status.InPacketsPerSec);
         _rttSum = 0; _rttMax = 0; _rttCount = 0;
         _corrSum = 0; _corrCount = 0;
     }

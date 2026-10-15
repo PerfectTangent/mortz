@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>Mortz.Net.Gns</RootNamespace>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <NoWarn>$(NoWarn);EnableGenerateDocumentationFile</NoWarn>
+  </PropertyGroup>
+  <!-- Copies the native library into every referencing project's output, so tests, the editor
+       and exports find it next to the assemblies. The SDK doesn't pass a publish's
+       RuntimeIdentifier to referenced projects, so the Godot project passes it as GnsRuntime (a
+       Windows export built on Linux needs the .dll). Without it, the host OS decides. -->
+  <PropertyGroup>
+    <GnsWindows Condition="'$(GnsRuntime)' != ''">$(GnsRuntime.StartsWith('win'))</GnsWindows>
+    <GnsWindows Condition="'$(GnsRuntime)' == ''">$([MSBuild]::IsOSPlatform('Windows'))</GnsWindows>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(GnsWindows)' != 'true'">
+    <None Include="../native/gns/linux-x64/libGameNetworkingSockets.so" Link="libGameNetworkingSockets.so"
+          CopyToOutputDirectory="PreserveNewest" Visible="false"
+          Condition="Exists('../native/gns/linux-x64/libGameNetworkingSockets.so')" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(GnsWindows)' == 'true'">
+    <None Include="../native/gns/win-x64/GameNetworkingSockets.dll" Link="GameNetworkingSockets.dll"
+          CopyToOutputDirectory="PreserveNewest" Visible="false"
+          Condition="Exists('../native/gns/win-x64/GameNetworkingSockets.dll')" />
+  </ItemGroup>
+</Project>
