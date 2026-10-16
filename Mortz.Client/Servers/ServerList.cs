@@ -16,12 +16,17 @@ public class ServerList
         {
             try
             {
-                ServerEndpoint endpoint = favorite.QueryPort is int queryPort
-                    ? new ServerEndpoint(favorite.Address, favorite.Port, queryPort)
-                    : new ServerEndpoint(favorite.Address, favorite.Port);
+                ServerEndpoint endpoint = new(favorite.Address, favorite.Port,
+                    favorite.QueryPort ?? ServerQueryProtocol.QueryPort(favorite.Port));
                 if (Find(endpoint) == null)
                 {
-                    _entries.Add(new ServerEntry(endpoint, ServerSource.FAVORITE, favorite.Label));
+                    ServerEntry entry = new(endpoint, ServerSource.FAVORITE, favorite.Label);
+                    if (favorite.ServerId is string serverId && ServerQueryMetadata.IsServerId(serverId))
+                    {
+                        entry.ServerId = serverId;
+                        entry.RelayOnly = true;
+                    }
+                    _entries.Add(entry);
                 }
             }
             catch (ArgumentException) { }
@@ -32,7 +37,7 @@ public class ServerList
     public IEnumerable<FavoriteServer> Favorites =>
         _entries.Where(entry => entry.Source == ServerSource.FAVORITE)
             .Select(entry => new FavoriteServer(entry.Endpoint.Address, entry.Endpoint.Port,
-                entry.Label, entry.Endpoint.QueryPort));
+                entry.Label, entry.Endpoint.QueryPort, entry.ServerId.Length > 0 ? entry.ServerId : null));
 
     public ServerEntry? Find(ServerEndpoint endpoint) => _entries.FirstOrDefault(entry =>
         entry.Endpoint.Port == endpoint.Port &&
@@ -65,12 +70,35 @@ public class ServerList
 
     public ServerEntry? ApplyInternet(InternetServer server)
     {
-        ServerEntry? entry = AddDiscovered(server.Endpoint, ServerSource.STEAM);
-        if (entry != null)
+        string serverId = server.Info.ServerId;
+        ServerEntry? saved = serverId.Length > 0 ? _entries.FirstOrDefault(item => item.ServerId == serverId) : null;
+        if (saved != null)
         {
-            entry.SteamAccountId = server.AccountId;
+            saved.Endpoint = server.Endpoint;
+            saved.SeenOnSteam = true;
+        }
+        bool known = saved == null && Find(server.Endpoint) != null;
+        ServerEntry? entry = saved ?? AddDiscovered(server.Endpoint, ServerSource.STEAM);
+        if (entry == null) { return null; }
+        entry.SteamAccountId = server.AccountId;
+        if (!known)
+        {
+            entry.RelayOnly = true;
+            entry.ServerId = serverId;
+            ApplyReply(entry.Endpoint, server.Info, server.PingMs);
         }
         return entry;
+    }
+
+    /// <summary>Saved Steam servers are reachable only through Steam's list, so the ones it
+    /// did not return are offline.</summary>
+    public void MarkUnlisted()
+    {
+        foreach (ServerEntry entry in _entries.Where(entry => entry is { RelayOnly: true, SeenOnSteam: false }))
+        {
+            entry.Status = ServerStatus.OFFLINE;
+            entry.PingMs = 0;
+        }
     }
 
     public void MarkProbing()
@@ -143,7 +171,14 @@ public class ServerList
     {
         if (!entry.CanToggleFavorite) return false;
         if (entry.Source != ServerSource.FAVORITE)
+        {
             entry.Source = ServerSource.FAVORITE;
+            // An offline Steam favorite has only a stale FakeIP to show otherwise.
+            if (entry.RelayOnly && entry.Label.Length == 0)
+                entry.Label = entry.Info?.Name ?? "";
+        }
+        else if (entry.RelayOnly && !entry.SeenOnSteam)
+            _entries.Remove(entry);
         else if (entry.SeenOnSteam)
             entry.Source = ServerSource.STEAM;
         else if (entry.SeenOnLan)

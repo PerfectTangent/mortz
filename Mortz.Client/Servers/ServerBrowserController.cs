@@ -5,7 +5,8 @@ namespace Mortz.Client.Servers;
 public enum BrowserNotice { NONE, FOUND, INCOMPATIBLE, NO_RESPONSE, PINNED }
 public enum DirectConnectState { CLOSED, EDITING, PROBING, NOT_FOUND }
 
-public readonly record struct ServerJoinRequest(string Address, int Port, ulong KnownSteamAccountId = 0);
+public readonly record struct ServerJoinRequest(string Address, int Port, ulong KnownSteamAccountId = 0,
+    bool RelayOnly = false);
 
 public class ServerBrowserController : IDisposable
 {
@@ -16,7 +17,6 @@ public class ServerBrowserController : IDisposable
     private IDisposable? _request;
     private long _generation;
     private ulong _internetDeadline;
-    private int _internetResults;
     private readonly HashSet<ServerEndpoint> _internetEndpoints = [];
     private readonly Func<IEnumerable<FavoriteServer>> _readFavorites;
     private readonly Action<IEnumerable<FavoriteServer>> _saveFavorites;
@@ -42,15 +42,7 @@ public class ServerBrowserController : IDisposable
     public IReadOnlyList<ServerEntry> Entries => _list.Entries;
     public ServerEntry? Selected { get; private set; }
     public InternetDiscoveryState InternetState { get; private set; }
-    public string DiscoveryStatus => InternetState switch
-    {
-        InternetDiscoveryState.SEARCHING => "Searching Steam servers… LAN, favorites and direct joining are available.",
-        InternetDiscoveryState.COMPLETE => $"Steam search complete ({_internetResults} found). LAN, favorites and direct joining are available.",
-        InternetDiscoveryState.TIMED_OUT => "Steam search timed out. LAN, favorites and direct joining are available.",
-        InternetDiscoveryState.FAILED => "Steam search failed. LAN, favorites and direct joining are available.",
-        InternetDiscoveryState.READY => "Steam discovery is ready. Refresh to search.",
-        _ => "Steam discovery is unavailable. LAN, favorites and direct joining are available.",
-    };
+    public int InternetResults { get; private set; }
     public BrowserNotice Notice { get; private set; }
     public ServerEndpoint? NoticeEndpoint { get; private set; }
     public DirectConnectState DirectState { get; private set; }
@@ -91,11 +83,11 @@ public class ServerBrowserController : IDisposable
         }
         Notice = BrowserNotice.NONE;
         _list.MarkProbing();
-        if (Selected != null) { Selected = _list.Find(Selected.Endpoint); }
-        NotifyChanged();
-        _probe.Probe(Entries.Select(entry => entry.Endpoint));
+        Reselect();
+        _probe.Probe(Entries.Where(entry => !entry.RelayOnly).Select(entry => entry.Endpoint));
         _probe.DiscoverLan();
         StartInternet();
+        NotifyChanged();
     }
 
     public void Select(ServerEndpoint endpoint)
@@ -111,7 +103,7 @@ public class ServerBrowserController : IDisposable
         if (!_open || Selected is not ServerEntry entry) { return; }
         if (entry.Status == ServerStatus.ONLINE)
         {
-            JoinRequested?.Invoke(new(entry.Endpoint.Address, entry.Endpoint.Port, entry.SteamAccountId));
+            JoinRequested?.Invoke(new(entry.Endpoint.Address, entry.Endpoint.Port, entry.SteamAccountId, entry.RelayOnly));
             return;
         }
         Notice = entry.Status == ServerStatus.INCOMPATIBLE
@@ -125,6 +117,7 @@ public class ServerBrowserController : IDisposable
         if (_list.ToggleFavorite(entry))
         {
             _saveFavorites(_list.Favorites);
+            Reselect();
         }
         else
         {
@@ -184,30 +177,28 @@ public class ServerBrowserController : IDisposable
 
     private void StartInternet()
     {
-        _internetResults = 0;
+        InternetResults = 0;
         _internetEndpoints.Clear();
-        InternetState = _internet.Available ? InternetDiscoveryState.SEARCHING : InternetDiscoveryState.UNAVAILABLE;
-        if (_internet.Available)
+        if (!_internet.Available)
         {
-            long generation = _generation;
-            _internetDeadline = _clock() + INTERNET_TIMEOUT_MS;
-            try
-            {
-                IDisposable request = _internet.Request(
-                    server => InternetFound(generation, server), result => InternetCompleted(generation, result));
-                if (_generation == generation && InternetState == InternetDiscoveryState.SEARCHING)
-                {
-                    _request = request;
-                }
-                else { request.Dispose(); }
-            }
-            catch
-            {
-                CancelInternet();
-                InternetState = InternetDiscoveryState.FAILED;
-            }
+            InternetState = InternetDiscoveryState.UNAVAILABLE;
+            _list.MarkUnlisted();
+            return;
         }
-        NotifyChanged();
+        InternetState = InternetDiscoveryState.SEARCHING;
+        _internetDeadline = _clock() + INTERNET_TIMEOUT_MS;
+        long generation = _generation;
+        try
+        {
+            IDisposable request = _internet.Request(
+                server => InternetFound(generation, server), result => InternetCompleted(generation, result));
+            if (generation == _generation) { _request = request; }
+            else { request.Dispose(); }
+        }
+        catch
+        {
+            EndInternet(InternetDiscoveryState.FAILED);
+        }
     }
 
     public void Advance()
@@ -224,45 +215,42 @@ public class ServerBrowserController : IDisposable
     {
         if (!_open) { return; }
         if (!_internet.Available && InternetState != InternetDiscoveryState.UNAVAILABLE)
-        {
-            CancelInternet();
-            InternetState = InternetDiscoveryState.UNAVAILABLE;
-            _changedPending = true;
-        }
+            EndInternet(InternetDiscoveryState.UNAVAILABLE);
         else if (_internet.Available && InternetState == InternetDiscoveryState.UNAVAILABLE)
-        {
             InternetState = InternetDiscoveryState.READY;
-            _changedPending = true;
-        }
-        if (InternetState == InternetDiscoveryState.SEARCHING && _clock() >= _internetDeadline)
-        {
-            CancelInternet();
-            InternetState = InternetDiscoveryState.TIMED_OUT;
-            _changedPending = true;
-        }
+        else if (InternetState == InternetDiscoveryState.SEARCHING && _clock() >= _internetDeadline)
+            EndInternet(InternetDiscoveryState.TIMED_OUT);
+        else
+            return;
+        _changedPending = true;
     }
 
     private void InternetFound(long generation, InternetServer server)
     {
         CheckInternetState();
-        if (!_open || generation != _generation || InternetState != InternetDiscoveryState.SEARCHING ||
+        if (generation != _generation ||
             _internetEndpoints.Count >= ServerProbeCoordinator.MAX_TRANSIENT_RESULTS ||
-            !_internetEndpoints.Add(server.Endpoint)) { return; }
-        ServerEntry? entry = _list.ApplyInternet(server);
-        if (entry == null) { return; }
-        _internetResults++;
-        _probe.Probe(entry.Endpoint);
+            !_internetEndpoints.Add(server.Endpoint) ||
+            _list.ApplyInternet(server) is not ServerEntry entry) { return; }
+        InternetResults++;
+        if (!entry.RelayOnly) { _probe.Probe(entry.Endpoint); }
         _changedPending = true;
     }
 
     private void InternetCompleted(long generation, InternetDiscoveryResult result)
     {
         CheckInternetState();
-        if (!_open || generation != _generation || InternetState != InternetDiscoveryState.SEARCHING) { return; }
-        CancelInternet();
-        InternetState = result == InternetDiscoveryResult.COMPLETE
-            ? InternetDiscoveryState.COMPLETE : InternetDiscoveryState.FAILED;
+        if (generation != _generation) { return; }
+        EndInternet(result == InternetDiscoveryResult.COMPLETE
+            ? InternetDiscoveryState.COMPLETE : InternetDiscoveryState.FAILED);
         _changedPending = true;
+    }
+
+    private void EndInternet(InternetDiscoveryState state)
+    {
+        CancelInternet();
+        InternetState = state;
+        _list.MarkUnlisted();
     }
 
     private void CancelInternet()
@@ -273,10 +261,16 @@ public class ServerBrowserController : IDisposable
         request?.Dispose();
     }
 
+    /// <summary>Entries get merged or dropped, so the selection follows its endpoint.</summary>
+    private void Reselect()
+    {
+        if (Selected != null) { Selected = _list.Find(Selected.Endpoint); }
+    }
+
     private void OnLanDiscovered(ServerProbeReply reply)
     {
         if (!_open) { return; }
-        _list.AddDiscovered(reply.Endpoint, ServerSource.LAN);
+        _list.AddDiscovered(reply.Endpoint);
         OnReplied(reply);
     }
 
@@ -285,7 +279,7 @@ public class ServerBrowserController : IDisposable
         if (!_open) { return; }
         _list.ConfirmResolved(reply.Endpoint, reply.ResolvedAddress);
         _list.ApplyReply(reply.Endpoint, reply.Info, reply.PingMs);
-        if (Selected != null) { Selected = _list.Find(Selected.Endpoint); }
+        Reselect();
         _changedPending = true;
         if (reply.Endpoint == DirectTarget)
         {

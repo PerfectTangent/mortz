@@ -8,7 +8,11 @@ using Mortz.Protocol.Net;
 using Mortz.Server.Admission;
 using Mortz.Server.Diagnostics;
 using Mortz.Server.Discovery;
+using Mortz.Server.Platform;
 using Serilog;
+#if MORTZ_STEAM
+using Mortz.Server.Platform.Steam;
+#endif
 
 namespace Mortz.Server.Hosting;
 
@@ -16,6 +20,9 @@ namespace Mortz.Server.Hosting;
 public sealed partial class ServerProcess : IDisposable
 {
     private const string DEFAULT_MAP = "castlewars";
+
+    /// <summary>How long READY waits for the Steam login, so the host joins its own server verified.</summary>
+    private const ulong LOGIN_WAIT_MS = 3_000;
 
     private readonly ILogger _log = ServerLog.For("server");
     private readonly CommandLine _args;
@@ -26,7 +33,10 @@ public sealed partial class ServerProcess : IDisposable
     private GnsServerTransport? _transport;
     private ServerAdmission? _admission;
     private GameServer? _server;
+    private ServerRuntime? _runtime;
+    private ServerCapabilities _reportedCapabilities;
     private Task? _startupReport;
+    private (int GamePort, int QueryPort, ulong Deadline)? _pendingReady;
     private bool _startupFailed;
     private readonly double _timescale = 1;
     private readonly bool _loopbackOnly;
@@ -109,16 +119,55 @@ public sealed partial class ServerProcess : IDisposable
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion;
         GameServer server = new(boot, transport, load.Maps, _log, control, version, diagnostics);
         _server = server;
-        _admission = new ServerAdmission(transport);
+        IAdmissionVerifier verifier = new GuestAdmissionVerifier();
+        IServerPlatform? platform = null;
+#if MORTZ_STEAM
+        SteamServerPlatform steam = new(() => server.PublicationPlayers, () => NowMs, ServerLog.For("steam"));
+        platform = steam;
+        verifier = steam.Verification;
+#endif
+        _admission = new ServerAdmission(verifier, transport, () => NowMs);
         _admission.Admitted += server.Connect;
         _admission.Departed += server.Disconnect;
         transport.Attach(_admission, server);
 
-        int boundQueryPort = _query.Start(queryPort, server.Describe, _loopbackOnly) ? queryPort : -1;
-        _startupReport = _owner?.ReportAsync(new HostControlMessage(HostControlKind.READY, "", "127.0.0.1",
-            gamePort, boundQueryPort));
-        NotifyE2EListening(gamePort, boundQueryPort);
+        _runtime = new ServerRuntime(platform,
+            port => _query.Start(port, server.Describe, _loopbackOnly), _query.Stop);
+        _runtime.Start(server.Describe(), queryPort, boot.SteamPublic);
+#if MORTZ_STEAM
+        ListenRelay(transport, steam);
+#endif
+        ReportCapabilities();
+        int boundQueryPort = _runtime.Capabilities.Query ? queryPort : -1;
+        _pendingReady = (gamePort, boundQueryPort, NowMs + LOGIN_WAIT_MS);
+        ReportReadyWhenLoggedOn();
     }
+
+    private void ReportReadyWhenLoggedOn()
+    {
+        if (_pendingReady is not { } ready || (_runtime?.LoginPending == true && NowMs < ready.Deadline))
+            return;
+        _pendingReady = null;
+        _startupReport = _owner?.ReportAsync(new HostControlMessage(HostControlKind.READY, "", "127.0.0.1",
+            ready.GamePort, ready.QueryPort));
+        NotifyE2EListening(ready.GamePort, ready.QueryPort);
+    }
+
+#if MORTZ_STEAM
+    private void ListenRelay(GnsServerTransport transport, SteamServerPlatform steam)
+    {
+        if (steam.Networking is not GnsLibrary relay)
+            return;
+        try
+        {
+            transport.ListenRelay(relay);
+        }
+        catch (GnsException e)
+        {
+            _log.Warning("Steam relay connections unavailable: {Reason}", e.Message);
+        }
+    }
+#endif
 
     private GnsServerTransport? Listen(int port)
     {
@@ -162,22 +211,38 @@ public sealed partial class ServerProcess : IDisposable
             return 0;
         if (_server != null)
         {
-            ulong now = NowMs;
-            _admission?.Advance(now);
-            _query.Poll(now);
+            _admission?.Advance(NowMs);
+            // Steam callbacks can admit or revoke, so check admission again.
+            _runtime?.Advance(_server.Describe());
+            _admission?.Advance(NowMs);
+            _query.Poll(NowMs);
+            ReportCapabilities();
+            ReportReadyWhenLoggedOn();
         }
         int? exitCode = null;
         DrainE2E(ref exitCode);
         return exitCode;
     }
 
+    private void ReportCapabilities()
+    {
+        if (_runtime == null || _runtime.Capabilities == _reportedCapabilities)
+            return;
+        ServerCapabilities capabilities = _reportedCapabilities = _runtime.Capabilities;
+        _log.Information(
+            "query={Query} authentication={Authentication} publication={Publication}: {Status}",
+            capabilities.Query, capabilities.Authentication, capabilities.Publication, capabilities.Status);
+    }
+
     public void Dispose()
     {
         _transport?.Detach();
+        // Steam sessions and relay connections must close before the runtime shuts Steam down.
         _admission?.Dispose();
         _server?.Dispose();
-        _query.Dispose();
         _transport?.Dispose();
+        _runtime?.Dispose();
+        _query.Dispose();
         _owner?.Dispose();
     }
 }

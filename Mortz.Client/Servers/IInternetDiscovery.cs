@@ -2,7 +2,8 @@ using Mortz.Protocol.Net.Query;
 
 namespace Mortz.Client.Servers;
 
-public readonly record struct InternetServer(ServerEndpoint Endpoint, ulong AccountId);
+/// <summary>A server from Steam's list, with the info Steam already queried.</summary>
+public readonly record struct InternetServer(ServerEndpoint Endpoint, ulong AccountId, ServerInfo Info, int PingMs);
 public enum InternetDiscoveryResult { COMPLETE, FAILED }
 public enum InternetDiscoveryState { UNAVAILABLE, READY, SEARCHING, COMPLETE, FAILED, TIMED_OUT }
 

@@ -69,14 +69,18 @@ public class ClientSettingsTests
         {
             ClientSettings settings = new(directory);
             settings.SetIdentity("Alice", 4);
-            settings.SetFavorites([new FavoriteServer("arena.example", 42069, "Arena")]);
+            FavoriteServer[] favorites =
+            [
+                new("arena.example", 42069, "Arena"),
+                new("169.254.10.1", 40000, "Friday", ServerId: "00112233445566ff"),
+            ];
+            settings.SetFavorites(favorites);
 
             ClientSettings loaded = ClientSettings.Load(directory);
 
             Assert.Equal("Alice", loaded.PlayerName);
             Assert.Equal(4, loaded.SelectedSkin);
-            FavoriteServer favorite = Assert.Single(loaded.Favorites);
-            Assert.Equal(new FavoriteServer("arena.example", 42069, "Arena"), favorite);
+            Assert.Equal(favorites, loaded.Favorites);
             string text = File.ReadAllText(Path.Combine(directory, "profile.toml"));
             Assert.Contains("player_name = \"Alice\"", text);
             Assert.Contains("[[favorites]]", text);

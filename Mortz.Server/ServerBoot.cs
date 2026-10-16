@@ -16,6 +16,10 @@ public sealed record ServerBoot
     public required string Name { get; init; }
     public required int GamePort { get; init; }
     public required int QueryPort { get; init; }
+    public bool SteamPublic { get; init; }
+
+    /// <summary>Published to Steam so favorites survive a new FakeIP. Empty when not public.</summary>
+    public string ServerId { get; init; } = "";
 
     /// <summary>The root of all server randomness. Chance enters the process once, at load.</summary>
     public required int Seed { get; init; }

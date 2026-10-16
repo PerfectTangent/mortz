@@ -40,9 +40,15 @@
     <ProjectReference Include="Mortz.Content\Mortz.Content.csproj" />
     <!-- Tells the binding which native library a publish (Godot export) targets. -->
     <ProjectReference Include="Mortz.Net.Gns\Mortz.Net.Gns.csproj" AdditionalProperties="GnsRuntime=$(RuntimeIdentifier)" />
-    <!-- Build order only: the editor launches this Debug build for player-hosted games. -->
+    <!-- Build order only: the editor launches this Debug build for player-hosted games, in the
+         client's flavor so a Steam client hosts a Steam server. -->
     <ProjectReference Include="Mortz.Server\Mortz.Server.csproj" ReferenceOutputAssembly="false"
-                      Condition="'$(Configuration)' == 'Debug'" />
+                      Condition="'$(Configuration)' == 'Debug' and '$(MortzFlavor)' != 'Steam'" />
+    <!-- Only Steam passes the flavor: an extra global property would make Standalone a second,
+         racing build of the same project in solution builds. -->
+    <ProjectReference Include="Mortz.Server\Mortz.Server.csproj" ReferenceOutputAssembly="false"
+                      AdditionalProperties="MortzFlavor=Steam"
+                      Condition="'$(Configuration)' == 'Debug' and '$(MortzFlavor)' == 'Steam'" />
     <!-- Debug only: TOOLS gates the E2E code, so exports must not get this reference. -->
     <ProjectReference Include="Mortz.E2E.Protocol\Mortz.E2E.Protocol.csproj"
                       Condition="'$(Configuration)' == 'Debug'" />

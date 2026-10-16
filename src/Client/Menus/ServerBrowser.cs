@@ -130,9 +130,23 @@ public partial class ServerBrowser : Control
             BrowserNotice.PINNED => "The playtest server stays in your list.",
             _ => "",
         };
-        _status.Text = Browser.DiscoveryStatus + (notice.Length == 0 ? "" : "\n" + notice);
+        _status.Text = DiscoveryStatus() + (notice.Length == 0 ? "" : "\n" + notice);
         _status.ThemeTypeVariation = Browser.Notice is
             BrowserNotice.INCOMPATIBLE or BrowserNotice.NO_RESPONSE ? "WarningLabel" : "NoteLabel";
         _directPanel.Render(Browser.DirectState, Browser.AddressError, Browser.DirectTarget);
+    }
+
+    private string DiscoveryStatus()
+    {
+        const string FALLBACK = " LAN, favorites and direct joining are available.";
+        return Browser.InternetState switch
+        {
+            InternetDiscoveryState.SEARCHING => "Searching Steam servers..." + FALLBACK,
+            InternetDiscoveryState.COMPLETE => $"Steam search complete ({Browser.InternetResults} found)." + FALLBACK,
+            InternetDiscoveryState.TIMED_OUT => "Steam search timed out." + FALLBACK,
+            InternetDiscoveryState.FAILED => "Steam search failed." + FALLBACK,
+            InternetDiscoveryState.READY => "Steam discovery is ready. Refresh to search.",
+            _ => "Steam discovery is unavailable." + FALLBACK,
+        };
     }
 }

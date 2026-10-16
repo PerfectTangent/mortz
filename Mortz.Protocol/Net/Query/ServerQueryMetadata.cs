@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using Mortz.Protocol.Net.Names;
 
 namespace Mortz.Protocol.Net.Query;
@@ -16,6 +17,53 @@ public static class ServerQueryMetadata
         ["mortz_join"] = info.AllowJoinInProgress ? "1" : "0",
         ["mortz_players"] = info.Players.ToString(CultureInfo.InvariantCulture)
     };
+
+    /// <summary>Steam's game tags hold 127 bytes, comma separated.</summary>
+    public const int MAX_TAG_BYTES = 127;
+
+    // One-letter keys, so even the longest values fit.
+    private static readonly (string Rule, char Tag)[] _tagKeys =
+    [
+        ("mortz_query", 'q'), ("mortz_app", 'a'), ("mortz_protocol", 'p'), ("mortz_schema", 's'),
+        ("mortz_lobby", 'l'), ("mortz_join", 'j'), ("mortz_players", 'n'), ("mortz_mode", 'm'),
+    ];
+
+    private const char SERVER_ID_TAG = 'i';
+    public const int SERVER_ID_LENGTH = 16;
+
+    /// <summary>A Steam server's FakeIP and SteamID change with every logon, so a favorite
+    /// finds it again by this ID: 16 lowercase hex digits, sent as an extra tag.</summary>
+    public static bool IsServerId(string id) => id.Length == SERVER_ID_LENGTH && id.All(char.IsAsciiHexDigitLower);
+
+    /// <summary>The rules packed into Steam game tags.</summary>
+    public static string ToTags(ServerInfo info)
+    {
+        Dictionary<string, string> rules = ToRules(info);
+        StringBuilder tags = new();
+        foreach ((string rule, char tag) in _tagKeys)
+        {
+            if (tags.Length > 0)
+                tags.Append(',');
+            tags.Append(tag).Append(rules[rule]);
+        }
+        if (IsServerId(info.ServerId))
+            tags.Append(',').Append(SERVER_ID_TAG).Append(info.ServerId);
+        return tags.ToString();
+    }
+
+    public static ServerInfo ApplyTags(ServerInfo info, string tags)
+    {
+        Dictionary<string, string> rules = new(StringComparer.Ordinal);
+        string serverId = "";
+        foreach (string tag in tags.Split(','))
+        {
+            if (tag.Length > 0 && tag[0] == SERVER_ID_TAG && IsServerId(tag[1..]))
+                serverId = tag[1..];
+            else if (tag.Length > 0 && Array.FindIndex(_tagKeys, key => key.Tag == tag[0]) is int index and >= 0)
+                rules[_tagKeys[index].Rule] = tag[1..];
+        }
+        return ApplyRules(info, rules) with { ServerId = serverId };
+    }
 
     public static ServerInfo ApplyRules(ServerInfo info, IReadOnlyDictionary<string, string> rules)
     {

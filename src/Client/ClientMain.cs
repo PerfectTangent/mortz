@@ -54,6 +54,7 @@ public partial class ClientMain : Node,
         _steam.Start();
         _tickets = _steam.Tickets;
         _discovery = _steam.Discovery;
+        Network.Relay = _steam.Relay;
         _settings = ClientSettings.Load(MortzUserData.Resolve(), _steam.PersonaName);
         GetTree().ProcessFrame += _steam.Advance;
 #else

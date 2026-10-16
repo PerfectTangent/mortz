@@ -43,6 +43,17 @@ public partial class NetworkManager : Node, INetwork, IClientSender, IClientAdmi
     /// <summary>0 means no session.</summary>
     public int LocalPeerId { get; private set; }
 
+    /// <summary>Steam's client networking when Steam runs, for joins over Steam Datagram Relay.</summary>
+    public GnsLibrary? Relay { get; set; }
+
+    /// <summary>Whether the latest <see cref="StartClient"/> went through Steam's relays.</summary>
+    public bool ViaRelay { get; private set; }
+
+    private bool RelayReady => Relay is { AuthenticationReady: true, RelayNetworkReady: true };
+
+    /// <summary>Steam runs but its relays aren't usable yet.</summary>
+    public bool RelayStarting => Relay != null && !RelayReady;
+
     /// <summary>Ping and per-second traffic, null without a connection.</summary>
     public GnsRealTimeStatus? Status => _client?.Status(_client.Connection);
 
@@ -50,8 +61,30 @@ public partial class NetworkManager : Node, INetwork, IClientSender, IClientAdmi
 
     public override void _Process(double delta) => _client?.Pump(this);
 
-    public Error StartClient(string address, int port)
+    /// <summary>Goes through Steam's relays when <paramref name="relaySteamId"/> names the
+    /// server and the relays are ready, otherwise straight to the address.</summary>
+    public Error StartClient(string address, int port, ulong relaySteamId = 0, bool relayOnly = false)
     {
+        ViaRelay = relaySteamId != 0 && RelayReady;
+        if (relayOnly && !ViaRelay)
+        {
+            _log.Warning("Steam relay isn't ready, can't reach {SteamId}", relaySteamId);
+            return Error.CantConnect;
+        }
+        if (ViaRelay)
+        {
+            try
+            {
+                _client = GnsClient.ConnectP2P(Relay!, relaySteamId, 0);
+                _log.Information("connecting to {SteamId} through Steam relay", relaySteamId);
+                return Error.Ok;
+            }
+            catch (GnsException e)
+            {
+                _log.Warning("could not start a relay connection: {Reason}", e.Message);
+                return Error.CantConnect;
+            }
+        }
         if (GnsRuntime.Load() is not { } lib)
             return Error.CantCreate;
         try

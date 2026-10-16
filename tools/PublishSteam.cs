@@ -37,8 +37,8 @@ public static class PublishSteam
         {
             outputName = "output-server";
             // The Tool gets these files from Steam's Dedicated Server Redistributables.
-            windowsExclusions = RedistributableExclusions(root, "windows", "win64");
-            linuxExclusions = RedistributableExclusions(root, "linux", "linux64");
+            windowsExclusions = RedistributableExclusions(root, "windows", "win-x64");
+            linuxExclusions = RedistributableExclusions(root, "linux", "linux-x64");
         }
         string outputDirectory = Path.Combine(steamDirectory, outputName);
         Directory.CreateDirectory(outputDirectory);
@@ -82,8 +82,11 @@ public static class PublishSteam
 
     private static string RedistributableExclusions(string root, string platform, string runtimeDirectory)
     {
-        string source = Path.Combine(root, "addons", "godotsteam_server", "redistributables", runtimeDirectory);
+        // Steam's redistributables Tool provides everything but the API library itself.
+        string source = Path.Combine(root, "native", "steam", runtimeDirectory);
         return string.Join("\n", Directory.EnumerateFiles(source).Order()
+            .Where(file => !Path.GetFileName(file).StartsWith("libsteam_api") &&
+                           !Path.GetFileName(file).StartsWith("steam_api"))
             .Select(file => $"\"FileExclusion\" \"steam/{platform}/server/{Path.GetFileName(file)}\""));
     }
 

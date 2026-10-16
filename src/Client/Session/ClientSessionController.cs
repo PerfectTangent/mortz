@@ -39,6 +39,7 @@ public partial class ClientSessionController : Node, ISessionExit,
     private static readonly ILogger _log = MortzLog.For("client");
 
     private const int CONNECT_RETRIES = 5;
+    private const ulong RELAY_WAIT_MS = 8_000;
 
     [Export] private PackedScene _gameViewScene = null!;
     [Export] private PackedScene _lobbyScene = null!;
@@ -51,6 +52,10 @@ public partial class ClientSessionController : Node, ISessionExit,
     [Dependency] private IClientTicketProvider Tickets => this.DependOn<IClientTicketProvider>();
     [Dependency] private IInternetDiscovery Discovery => this.DependOn<IInternetDiscovery>();
     private ulong _knownRecipient;
+    private bool _relayFailed;
+    private bool _relayOnly;
+    private ulong _relayDeadline;
+    private int _joinGeneration;
     private ClientAdmission? _admission;
     private ServerBrowserController? _browser;
     private PendingMatchEntry? _pendingMatch;
@@ -99,8 +104,10 @@ public partial class ClientSessionController : Node, ISessionExit,
             _log.Error("invalid --skin {Skin}, using 0", skin);
             skin = 0;
         }
+
+        ulong steamId = ulong.TryParse(CmdArgs.GetValue("--steam-id"), out ulong id) ? id : 0;
         StartConnecting(autoConnect, CmdArgs.GetInt("--port", NetConfig.DEFAULT_PORT),
-            playerName, skin);
+            playerName, skin, steamId);
     }
 
     public void OnExitTree()
@@ -172,7 +179,8 @@ public partial class ClientSessionController : Node, ISessionExit,
             return;
         StopLocalServer();
         _pendingLocalAdminPassword = null;
-        StartConnecting(request.Address, request.Port, Settings.PlayerName, Settings.Skin, request.KnownSteamAccountId);
+        StartConnecting(request.Address, request.Port, Settings.PlayerName, Settings.Skin, request.KnownSteamAccountId,
+            request.RelayOnly);
     }
 
     private void AdvanceLocalServer()
@@ -267,11 +275,16 @@ public partial class ClientSessionController : Node, ISessionExit,
         _subscribed = false;
     }
 
-    private void StartConnecting(string address, int port, string playerName, int skin, ulong knownRecipient = 0)
+    private void StartConnecting(string address, int port, string playerName, int skin, ulong knownRecipient = 0,
+        bool relayOnly = false)
     {
         if (!_session.TryBeginConnecting())
             return;
         _knownRecipient = knownRecipient;
+        _relayOnly = relayOnly && knownRecipient != 0;
+        _relayFailed = false;
+        _relayDeadline = Time.GetTicksMsec() + RELAY_WAIT_MS;
+        _joinGeneration++;
         _browser?.Close();
         _connection.Start(address, port, playerName, skin);
         _pendingMatch = null;
@@ -282,14 +295,34 @@ public partial class ClientSessionController : Node, ISessionExit,
 
     private void TryConnect()
     {
+        if (!_relayFailed && _knownRecipient != 0 && Network.RelayStarting && Time.GetTicksMsec() < _relayDeadline)
+        {
+            int generation = _joinGeneration;
+            GetTree().CreateTimer(0.25).Timeout += () =>
+            {
+                if (generation == _joinGeneration && _session.Stage == ClientSessionStage.CONNECTING)
+                    TryConnect();
+            };
+            return;
+        }
         Network.ResetPeer();
-        Error error = Network.StartClient(_connection.Address, _connection.Port);
+        Error error = Network.StartClient(_connection.Address, _connection.Port,
+            _relayFailed ? 0 : _knownRecipient, _relayOnly);
         if (error != Error.Ok)
             OnConnectionFailed();
     }
 
     private void OnConnectionFailed()
     {
+        // A FakeIP isn't a real address, so a relay-only join just retries the relay.
+        if (Network.ViaRelay && !_relayFailed && !_relayOnly)
+        {
+            _relayFailed = true;
+            _log.Information("Steam relay connection failed, trying {Address}:{Port} directly",
+                _connection.Address, _connection.Port);
+            TryConnect();
+            return;
+        }
         ConnectionFailure failure = _connection.Failed();
         if (failure.Action == ConnectionFailureAction.IGNORE)
             return;

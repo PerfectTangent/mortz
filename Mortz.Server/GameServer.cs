@@ -74,7 +74,7 @@ public sealed class GameServer : IDisposable, IHandle<Player, PhaseReadyMsg>
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         _link.BeginLoading(admitted.PeerId, _phases.Generation, _clock.Ms);
-        Player player = _roster.Join(admitted.PeerId, admitted.Name, admitted.Skin);
+        Player player = _roster.Join(admitted.PeerId, admitted.Name, admitted.Skin, admitted.Account);
         _scope.Raise<IObservePlayers>(feature => feature.PlayerJoined(player));
         _phases.Load(player);
     }
@@ -123,6 +123,8 @@ public sealed class GameServer : IDisposable, IHandle<Player, PhaseReadyMsg>
         _phases.ApplyPendingTransition();
     }
 
+    public IEnumerable<Player> PublicationPlayers => _roster;
+
     public ServerInfo Describe() => new(
         _boot.Name,
         _settings.ModeId,
@@ -135,7 +137,8 @@ public sealed class GameServer : IDisposable, IHandle<Player, PhaseReadyMsg>
         NetConfig.PROTOCOL_VERSION,
         NetRegistry.SCHEMA_HASH,
         NetConfig.GAME_APP_ID,
-        _applicationVersion);
+        _applicationVersion,
+        ServerId: _boot.ServerId);
 
     public void Dispose()
     {

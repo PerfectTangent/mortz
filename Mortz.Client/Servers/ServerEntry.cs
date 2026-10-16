@@ -6,10 +6,15 @@ namespace Mortz.Client.Servers;
 /// the last probe said.</summary>
 public sealed class ServerEntry(ServerEndpoint endpoint, ServerSource source, string label = "")
 {
-    public ServerEndpoint Endpoint { get; } = endpoint;
-    public bool SeenOnLan { get; set; } = source == ServerSource.LAN;
-    public bool SeenOnSteam { get; set; } = source == ServerSource.STEAM;
+    /// <summary>Moves for a saved Steam server when it comes back under a new FakeIP.</summary>
+    public ServerEndpoint Endpoint { get; set; } = endpoint;
+    public bool SeenOnLan { get; set; }
+    public bool SeenOnSteam { get; set; }
     public ulong SteamAccountId { get; set; }
+    /// <summary>Listed under a Steam FakeIP, so reachable only through the relay.</summary>
+    public bool RelayOnly { get; set; }
+    /// <summary>The server's own ID from its Steam tags, how a Steam favorite finds it again.</summary>
+    public string ServerId { get; set; } = "";
     public HashSet<string> ResolvedAddresses { get; } = [];
     public ServerSource Source { get; set; } = source;
 
@@ -23,7 +28,8 @@ public sealed class ServerEntry(ServerEndpoint endpoint, ServerSource source, st
 
     public bool IsFavorite => Source is ServerSource.PINNED or ServerSource.FAVORITE;
 
-    public bool CanToggleFavorite => Source != ServerSource.PINNED;
+    /// <summary>A relay-only server can only be found again by its ID, older servers don't send one.</summary>
+    public bool CanToggleFavorite => Source != ServerSource.PINNED && (!RelayOnly || ServerId.Length > 0);
 
     /// <summary>Not the enum's numeric value, so reordering ServerSource
     /// cannot reorder the browser.</summary>

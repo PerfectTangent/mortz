@@ -27,6 +27,19 @@ public sealed unsafe class GnsClient : GnsEndpoint
         return new GnsClient(lib, conn);
     }
 
+    /// <summary>Connects through Steam's relays. Call once <see cref="GnsLibrary.AuthenticationReady"/>.</summary>
+    public static GnsClient ConnectP2P(GnsLibrary lib, ulong steamId, int virtualPort)
+    {
+        if (lib.Flavor != GnsFlavor.STEAM_CLIENT)
+            throw new GnsException("relay connections need Steam's client networking");
+        byte* identity = stackalloc byte[GnsIdentity.SIZE];
+        GnsIdentity.WriteSteamId(identity, steamId);
+        uint conn = lib.ConnectP2P(lib.Sockets, identity, virtualPort, 0, null);
+        if (conn == 0)
+            throw new GnsException($"could not start a relay connection to {steamId}");
+        return new GnsClient(lib, conn);
+    }
+
     public GnsResult Send(ReadOnlySpan<byte> data, GnsSend flags) =>
         _closed ? GnsResult.NO_CONNECTION : Send(Connection, data, flags);
 

@@ -1,8 +1,10 @@
 #if MORTZ_STEAM
+using System.Runtime.InteropServices;
 using Godot;
 using Mortz.Client.Logging;
 using Mortz.Client.Servers;
 using Mortz.Client.Session;
+using Mortz.Net.Gns;
 using SteamApi = GDExtension.Wrappers.Steam;
 
 namespace Mortz.Platform.Steam;
@@ -19,6 +21,9 @@ public class SteamClientRuntime : IDisposable
     public string? PersonaName => Available ? _api!.GetPersonaName() : null;
     public bool Available => _initialized && _api!.LoggedOn();
     public string Status { get; private set; } = "Steam unavailable, guest play still works.";
+
+    /// <summary>Steam's client networking, for joining servers over Steam Datagram Relay.</summary>
+    public GnsLibrary? Relay { get; private set; }
 
     public void Start()
     {
@@ -40,6 +45,7 @@ public class SteamClientRuntime : IDisposable
                 _discovery = new SteamInternetDiscovery(_api, () => Available);
                 _tickets = new SteamClientTickets(_api, () => Available);
                 _api.GetAuthSessionTicketResponseSignal += _tickets.Ready;
+                Relay = StartRelay();
             }
             Status = _initialized ? "Steam ready." : "Steam unavailable, guest play still works.";
         }
@@ -85,6 +91,25 @@ public class SteamClientRuntime : IDisposable
         }
         // The addon owns its singleton and attached wrapper.
         _api = null;
+    }
+
+    private static GnsLibrary? StartRelay()
+    {
+        string name = OperatingSystem.IsWindows() ? "steam_api64.dll" : "libsteam_api.so";
+        try
+        {
+            // By name, this returns the copy GodotSteam already loaded.
+            GnsLibrary relay = GnsLibrary.Steam(NativeLibrary.Load(name), GnsFlavor.STEAM_CLIENT);
+            relay.InitAuthentication();
+            relay.InitRelayNetworkAccess();
+            return relay;
+        }
+        catch (Exception exception) when (exception is GnsException or DllNotFoundException
+                                              or EntryPointNotFoundException)
+        {
+            MortzLog.For("steam").Warning("Steam relay networking unavailable: {Reason}", exception.Message);
+            return null;
+        }
     }
 
     private void ReleaseTickets()

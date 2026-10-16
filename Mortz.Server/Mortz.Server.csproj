@@ -7,6 +7,9 @@
     <AssemblyName>MortzServer</AssemblyName>
     <RootNamespace>Mortz.Server</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <PublishTrimmed>true</PublishTrimmed>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <MortzFlavor Condition="'$(MortzFlavor)' == ''">Standalone</MortzFlavor>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <NoWarn>$(NoWarn);EnableGenerateDocumentationFile</NoWarn>
   </PropertyGroup>
@@ -14,6 +17,20 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <DefineConstants>$(DefineConstants);MORTZ_E2E</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(MortzFlavor)' == 'Steam'">
+    <DefineConstants>$(DefineConstants);MORTZ_STEAM</DefineConstants>
+    <SteamNativeRuntime Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</SteamNativeRuntime>
+    <SteamNativeRuntime Condition="'$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">win-x64</SteamNativeRuntime>
+    <SteamNativeRuntime Condition="'$(SteamNativeRuntime)' == ''">linux-x64</SteamNativeRuntime>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(MortzFlavor)' == 'Steam'">
+    <None Include="../native/steam/$(SteamNativeRuntime)/*" CopyToOutputDirectory="PreserveNewest"
+          Visible="false" LinkBase="." />
+  </ItemGroup>
+  <Target Name="ValidateMortzFlavor" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(MortzFlavor)' != 'Standalone' and '$(MortzFlavor)' != 'Steam'"
+           Text="MortzFlavor must be Standalone or Steam." />
+  </Target>
   <ItemGroup>
     <ProjectReference Include="../Mortz.Protocol/Mortz.Protocol.csproj" />
     <ProjectReference Include="../Mortz.Core/Mortz.Core.csproj" />

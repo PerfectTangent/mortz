@@ -43,7 +43,7 @@ public static class Export
         foreach (string platform in platforms)
         {
             // A client always carries a complete, independently runnable server.
-            ExportRole(root, godot, flavor, platform, "server", debug);
+            PublishServer(root, flavor, platform, debug);
             if (selection == "server")
                 continue;
 
@@ -61,10 +61,53 @@ public static class Export
     public static string PackageDirectory(string root, string flavor, string platform, string role) =>
         Path.Combine(root, "build", flavor, platform, role);
 
+    private static void PublishServer(string root, string flavor, string platform, bool debug)
+    {
+        string outDir = PackageDirectory(root, flavor, platform, "server");
+        CleanBuildDir(outDir);
+        string runtime = platform == "linux" ? "linux-x64" : "win-x64";
+        Console.WriteLine($"==> publishing {flavor}/{platform}/server");
+        // GnsRuntime picks the GNS binary for the target, not for the machine building it.
+        RunProcess("dotnet", ["publish", Path.Combine(root, "Mortz.Server", "Mortz.Server.csproj"),
+            "-c", debug ? "Debug" : "Release", "-r", runtime, "--self-contained",
+            $"-p:MortzFlavor={(flavor == "steam" ? "Steam" : "Standalone")}", $"-p:GnsRuntime={runtime}",
+            "-o", outDir], root);
+        string exePath = Path.Combine(outDir, platform == "windows" ? "MortzServer.exe" : "MortzServer");
+        if (!File.Exists(exePath))
+            throw new Exception($"publish did not produce {exePath}");
+        MirrorContent(Path.Combine(root, "content"), Path.Combine(outDir, "content"));
+        if (flavor == "steam")
+        {
+            File.WriteAllText(Path.Combine(outDir, "steam_appid.txt"), "5016960\n");
+            if (platform == "linux")
+                WriteSteamLauncher(outDir);
+        }
+        if (flavor == "standalone")
+            AssertStandalone(outDir);
+        else if (!File.Exists(Path.Combine(outDir, platform == "linux" ? "libsteam_api.so" : "steam_api64.dll")))
+            throw new Exception($"Steam server package has no Steam API library: {outDir}");
+    }
+
+    /// <summary>Writes a launcher that puts the package on LD_LIBRARY_PATH, so libsteam_api finds
+    /// the bundled steamclient.so.</summary>
+    private static void WriteSteamLauncher(string outDir)
+    {
+        string launcher = Path.Combine(outDir, "mortz-server.sh");
+        File.WriteAllText(launcher, """
+            #!/bin/sh
+            cd "$(dirname "$0")" || exit 1
+            LD_LIBRARY_PATH="$PWD${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" exec ./MortzServer "$@"
+
+            """);
+        if (!OperatingSystem.IsWindows())
+            File.SetUnixFileMode(launcher, File.GetUnixFileMode(launcher) |
+                                           UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
+    }
+
     private static void ExportRole(string root, string godot, string flavor, string platform, string role, bool debug)
     {
         string stage = Path.Combine(root, "build", ".staging", flavor, platform, role);
-        ExportStage.Synchronize(root, stage, relative => IncludeInStage(relative, flavor, role));
+        ExportStage.Synchronize(root, stage, relative => IncludeInStage(relative, flavor));
         string props = $"""
             <Project>
               <PropertyGroup>
@@ -83,9 +126,8 @@ public static class Export
 
         string outDir = PackageDirectory(root, flavor, platform, role);
         CleanBuildDir(outDir);
-        string exe = role == "server" ? "MortzServer" : "Mortz";
-        string exePath = Path.Combine(outDir, exe + (platform == "windows" ? ".exe" : ".x86_64"));
-        string preset = $"Mortz {(role == "server" ? "Server" : "Client")}{(platform == "linux" ? " Linux" : "")}";
+        string exePath = Path.Combine(outDir, "Mortz" + (platform == "windows" ? ".exe" : ".x86_64"));
+        string preset = $"Mortz Client{(platform == "linux" ? " Linux" : "")}";
         Console.WriteLine($"==> exporting {flavor}/{platform}/{role}");
         RunProcess(godot, ["--headless", "--path", stage, "--editor", "--import"], stage);
         RunProcess(godot, ["--headless", "--path", stage, debug ? "--export-debug" : "--export-release", preset, exePath], stage);
@@ -94,27 +136,18 @@ public static class Export
         // Godot can emit an executable and exit 0 after its .NET publish failed.
         if (!Directory.EnumerateFiles(outDir, "Mortz.dll", SearchOption.AllDirectories).Any())
             throw new Exception($"export has no Mortz.dll managed payload: {outDir}; check Godot's MSBuild log");
-        if (platform == "windows" && role == "server")
-            MakeConsoleApp(exePath);
         if (platform == "linux" && !OperatingSystem.IsWindows())
             File.SetUnixFileMode(exePath, File.GetUnixFileMode(exePath) |
                                          UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
 
         MirrorContent(Path.Combine(root, "content"), Path.Combine(outDir, "content"));
-        if (flavor == "steam" && role == "server")
-        {
-            string redistributables = Path.Combine(root, "addons", "godotsteam_server", "redistributables",
-                platform == "linux" ? "linux64" : "win64");
-            CopyTree(redistributables, outDir);
-            File.WriteAllText(Path.Combine(outDir, "steam_appid.txt"), "5016960\n");
-        }
         if (flavor == "standalone")
             AssertStandalone(outDir);
         else
-            AssertSteamRole(outDir, role);
+            AssertSteamClient(outDir);
     }
 
-    private static bool IncludeInStage(string relative, string flavor, string role)
+    private static bool IncludeInStage(string relative, string flavor)
     {
         string path = relative.Replace('\\', '/');
         string[] parts = path.Split('/');
@@ -129,6 +162,9 @@ public static class Export
             return false;
         if (flavor == "standalone" && (path == "src/Platform/Steam" || path.StartsWith("src/Platform/Steam/")))
             return false;
+        // The server's Steam libraries, the client gets its own through GodotSteam.
+        if (path == "native/steam" || path.StartsWith("native/steam/"))
+            return false;
         if (parts[0] != "addons" || parts.Length < 2)
             return true;
 
@@ -139,9 +175,7 @@ public static class Export
                 return false;
             if (addon == "godotsteam_csharpbindings")
                 return true;
-            return role == "server"
-                ? addon == "godotsteam_server" && !parts.Contains("redistributables")
-                : addon == "godotsteam";
+            return addon == "godotsteam";
         }
         return addon != "STEAM.md";
     }
@@ -224,15 +258,13 @@ public static class Export
         }
     }
 
-    private static void AssertSteamRole(string directory, string role)
+    private static void AssertSteamClient(string directory)
     {
-        string[] nativeAddons = Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
-            .Where(file => Path.GetFileName(file).StartsWith("libgodotsteam") &&
-                           Path.GetExtension(file) is ".dll" or ".so")
-            .ToArray();
-        if (nativeAddons.Length != 1 ||
-            Path.GetFileName(nativeAddons[0]).StartsWith("libgodotsteam_server.") != (role == "server"))
-            throw new Exception($"expected exactly one {role} Steam addon in {directory}");
+        int nativeAddons = Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
+            .Count(file => Path.GetFileName(file).StartsWith("libgodotsteam") &&
+                           Path.GetExtension(file) is ".dll" or ".so");
+        if (nativeAddons != 1)
+            throw new Exception($"expected exactly one GodotSteam client addon in {directory}");
     }
 
     // A mismatched editor rewrites Mortz.csproj and exits 0.
@@ -277,22 +309,6 @@ public static class Export
             parts.Add("0");
         }
         return string.Join('.', parts);
-    }
-
-    // Dedicated servers need the console subsystem for Ctrl+C.
-    private static void MakeConsoleApp(string exePath)
-    {
-        const ushort IMAGE_SUBSYSTEM_WINDOWS_CUI = 3;
-        using FileStream fs = new FileStream(exePath, FileMode.Open, FileAccess.ReadWrite);
-        using BinaryReader r = new BinaryReader(fs);
-        fs.Position = 0x3C;
-        int peHeader = r.ReadInt32();
-        fs.Position = peHeader;
-        if (r.ReadUInt32() != 0x00004550) // "PE\0\0"
-            throw new Exception($"{exePath} is not a PE image");
-        // Subsystem is 68 bytes into the PE32 and PE32+ optional header.
-        fs.Position = peHeader + 4 + 20 + 68;
-        new BinaryWriter(fs).Write(IMAGE_SUBSYSTEM_WINDOWS_CUI);
     }
 
     // The game reads raw content files, not Godot's .import metadata.

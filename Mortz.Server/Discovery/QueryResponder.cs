@@ -69,36 +69,28 @@ public sealed class QueryResponder(ILogger log) : IDisposable
             {
                 continue;
             }
-            if (length > MAX_PACKET_BYTES)
+            byte[] packet = _buffer[..length];
+            if (length > MAX_PACKET_BYTES || !ServerQueryProtocol.TryDecodeRequest(packet, out _, out _))
                 continue;
             IPEndPoint source = (IPEndPoint)from;
-            string address = Unmapped(source.Address).ToString();
-            byte[] packet = _buffer[..length];
-            if (!ServerQueryProtocol.TryDecodeRequest(packet, out _, out _))
-                continue;
-            foreach (byte[] response in _responder.Respond(packet, address, source.Port, nowMs, _describe()))
+            foreach (byte[] response in _responder.Respond(packet, source.Address.ToString(), source.Port, nowMs, _describe()))
             {
-                Send(socket, response, source.Address, source.Port);
+                Send(socket, response, source);
             }
         }
     }
 
-    private static void Send(Socket socket, byte[] data, IPAddress address, int port)
+    private static void Send(Socket socket, byte[] data, IPEndPoint target)
     {
-        if (socket.AddressFamily == AddressFamily.InterNetworkV6 && address.AddressFamily == AddressFamily.InterNetwork)
-            address = address.MapToIPv6();
         try
         {
-            socket.SendTo(data, new IPEndPoint(address, port));
+            socket.SendTo(data, target);
         }
         catch (SocketException)
         {
             // A full send buffer or an unreachable querier: the querier retries.
         }
     }
-
-    private static IPAddress Unmapped(IPAddress address) =>
-        address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address;
 
     /// <summary>Without this, an ICMP "port unreachable" from a querier that went away makes the
     /// next receive on Windows throw.</summary>

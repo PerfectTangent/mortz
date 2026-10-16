@@ -3,6 +3,7 @@ using System.Net;
 using Godot;
 using Mortz.Client.Servers;
 using Mortz.Protocol.Net;
+using Mortz.Protocol.Net.Names;
 using Mortz.Protocol.Net.Query;
 using SteamApi = GDExtension.Wrappers.Steam;
 
@@ -10,15 +11,15 @@ namespace Mortz.Platform.Steam;
 
 public class SteamInternetDiscovery(SteamApi api, Func<bool> available) : IInternetDiscovery, IDisposable
 {
-    private RequestOwner? _request;
+    private Request? _request;
     private bool _disposed;
     public bool Available => !_disposed && available();
 
-    public IDisposable Request(Action<InternetServer> found, Action<InternetDiscoveryResult> completed)
+    IDisposable IInternetDiscovery.Request(Action<InternetServer> found, Action<InternetDiscoveryResult> completed)
     {
         if (!Available) { throw new InvalidOperationException("Steam discovery is unavailable."); }
         _request?.Dispose();
-        RequestOwner request = new(api, found, completed);
+        Request request = new(api, found, completed);
         _request = request;
         request.Start();
         return request;
@@ -35,13 +36,12 @@ public class SteamInternetDiscovery(SteamApi api, Func<bool> available) : IInter
         _request = null;
     }
 
-    public class RequestOwner(SteamApi api, Action<InternetServer> found,
+    private sealed class Request(SteamApi api, Action<InternetServer> found,
         Action<InternetDiscoveryResult> completed) : IDisposable
     {
         private long _handle;
         private bool _disposed;
-        private bool _respondedSubscribed;
-        private bool _completedSubscribed;
+        private bool _subscribed;
         private int _received;
         private readonly Queue<InternetServer> _results = new();
         private InternetDiscoveryResult? _completion;
@@ -51,9 +51,8 @@ public class SteamInternetDiscovery(SteamApi api, Func<bool> available) : IInter
             try
             {
                 api.RequestServerListServerRespondedSignal += Responded;
-                _respondedSubscribed = true;
                 api.RequestServerListRefreshCompleteSignal += Completed;
-                _completedSubscribed = true;
+                _subscribed = true;
                 using Godot.Collections.Array gameDirectory = ["gamedir", "mortz"];
                 using Godot.Collections.Array filters = [gameDirectory];
                 _handle = api.RequestInternetServerList(NetConfig.GAME_APP_ID, filters);
@@ -101,15 +100,11 @@ public class SteamInternetDiscovery(SteamApi api, Func<bool> available) : IInter
         {
             if (_disposed) { return; }
             _disposed = true;
-            if (_respondedSubscribed)
+            // Removing a handler that was never added disconnects the Godot signal, which errors.
+            if (_subscribed)
             {
                 api.RequestServerListServerRespondedSignal -= Responded;
-                _respondedSubscribed = false;
-            }
-            if (_completedSubscribed)
-            {
                 api.RequestServerListRefreshCompleteSignal -= Completed;
-                _completedSubscribed = false;
             }
             long handle = _handle;
             _handle = 0;
@@ -122,7 +117,7 @@ public class SteamInternetDiscovery(SteamApi api, Func<bool> available) : IInter
         }
     }
 
-    public static bool TryRead(Godot.Collections.Dictionary details, out InternetServer server)
+    private static bool TryRead(Godot.Collections.Dictionary details, out InternetServer server)
     {
         server = default;
         if (!details.TryGetValue("app_id", out Variant app) || app.AsInt64() != NetConfig.GAME_APP_ID ||
@@ -133,12 +128,26 @@ public class SteamInternetDiscovery(SteamApi api, Func<bool> available) : IInter
             !game.Address.Equals(probe.Address)) { return false; }
         try
         {
-            ServerEndpoint endpoint = new(game.Address.ToString(), game.Port, probe.Port);
+            // FakeIP entries share one port and are never queried, so the default query port is fine.
+            ServerEndpoint endpoint = probe.Port == game.Port
+                ? new(game.Address.ToString(), game.Port)
+                : new(game.Address.ToString(), game.Port, probe.Port);
             ulong account = details.TryGetValue("steam_id", out Variant id) ? unchecked((ulong)id.AsInt64()) : 0;
-            server = new InternetServer(endpoint, account);
+            ServerInfo info = new(Text(details, "name"), "", Text(details, "map"), 0, Number(details, "max_players"),
+                false, false, game.Port, 0, 0, NetConfig.GAME_APP_ID, MetadataValid: false);
+            server = new InternetServer(endpoint, account,
+                ServerQueryMetadata.ApplyTags(info, Text(details, "game_tags", ServerQueryMetadata.MAX_TAG_BYTES)),
+                Number(details, "ping"));
             return true;
         }
         catch (ArgumentException) { return false; }
     }
+
+    private static string Text(Godot.Collections.Dictionary details, string key,
+        int maxLength = ServerQueryProtocol.MAX_TEXT_LENGTH) =>
+        details.TryGetValue(key, out Variant value) ? SafeName.Sanitize(value.AsString(), maxLength) : "";
+
+    private static int Number(Godot.Collections.Dictionary details, string key) =>
+        details.TryGetValue(key, out Variant value) ? Math.Max(0, value.AsInt32()) : 0;
 }
 #endif

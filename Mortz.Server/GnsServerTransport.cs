@@ -11,19 +11,21 @@ using Serilog;
 namespace Mortz.Server;
 
 /// <summary>Single-threaded: <see cref="Pump"/> and every send run on the tick thread.</summary>
-public sealed class GnsServerTransport : IServerTransport, IServerAdmissionTransport, IGnsHandler, IDisposable
+public sealed class GnsServerTransport : IServerTransport, IServerAdmissionTransport, IDisposable
 {
     private const GnsSend RELIABLE = GnsSend.RELIABLE | GnsSend.NO_NAGLE;
     private const GnsSend UNRELIABLE = GnsSend.UNRELIABLE | GnsSend.NO_NAGLE;
 
     private readonly GnsServer _server;
+    private readonly List<Listener> _listeners = [];
     private readonly Func<ulong> _clock;
     private readonly ILogger _log;
     private readonly PeerGate _gate;
 
     // Our own peer ids: never 0 (no session) or SERVER_PEER_ID, never reused while the server runs.
-    private readonly Dictionary<uint, int> _peerByConnection = [];
-    private readonly Dictionary<int, uint> _connectionByPeer = [];
+    // Handles are only unique per listener's library, so they key together with it.
+    private readonly Dictionary<(GnsServer, uint), int> _peerByConnection = [];
+    private readonly Dictionary<int, (GnsServer Server, uint Connection)> _connectionByPeer = [];
     private int _nextPeerId = NetConfig.SERVER_PEER_ID + 1;
     private ulong _lastWireStatsMs;
     private bool _warnedLargeSnapshot;
@@ -36,6 +38,7 @@ public sealed class GnsServerTransport : IServerTransport, IServerAdmissionTrans
     private GnsServerTransport(GnsServer server, Func<ulong> clock, ILogger log, double rateScale)
     {
         _server = server;
+        _listeners.Add(new Listener(this, server));
         _clock = clock;
         _log = log;
         _gate = new PeerGate(rateScale);
@@ -46,8 +49,16 @@ public sealed class GnsServerTransport : IServerTransport, IServerAdmissionTrans
     /// limits in <see cref="PeerGate"/>.</summary>
     public static GnsServerTransport Listen(GnsLibrary lib, IPAddress bind, int port, Func<ulong> clock,
         ILogger log, double rateScale = 1) =>
-        new(GnsServer.Listen(lib, bind, port, NetConfig.MAX_PLAYERS,
-            new GnsServerOptions { RecvMaxMessageBytes = WireFrame.MAX_FRAME_BYTES }), clock, log, rateScale);
+        new(GnsServer.Listen(lib, bind, port, NetConfig.MAX_PLAYERS, Options), clock, log, rateScale);
+
+    private static GnsServerOptions Options => new() { RecvMaxMessageBytes = WireFrame.MAX_FRAME_BYTES };
+
+    /// <summary>Also accepts relay connections through Steam's game-server sockets.</summary>
+    public void ListenRelay(GnsLibrary steam)
+    {
+        _listeners.Add(new Listener(this, GnsServer.ListenP2P(steam, 0, NetConfig.MAX_PLAYERS, Options)));
+        _log.Information("accepting Steam relay connections");
+    }
 
     /// <summary>Both are built on this transport, so they attach afterwards. Nothing is delivered
     /// until then.</summary>
@@ -63,32 +74,57 @@ public sealed class GnsServerTransport : IServerTransport, IServerAdmissionTrans
         _game = null;
     }
 
-    public void Pump() => _server.Pump(this);
+    public void Pump()
+    {
+        foreach (Listener listener in _listeners)
+        {
+            listener.Server.Pump(listener);
+        }
+    }
 
-    public void Dispose() => _server.Dispose();
+    public void Dispose()
+    {
+        foreach (Listener listener in _listeners)
+        {
+            listener.Server.Dispose();
+        }
+    }
 
-    void IGnsHandler.OnConnected(uint connection)
+    /// <summary>Tells the transport which listener a GNS event came from.</summary>
+    private sealed class Listener(GnsServerTransport transport, GnsServer server) : IGnsHandler
+    {
+        public GnsServer Server { get; } = server;
+
+        public void OnConnected(uint connection) => transport.OnConnected(Server, connection);
+
+        public void OnDisconnected(uint connection, bool wasConnected, int reason, string debug) =>
+            transport.OnDisconnected(Server, connection, reason, debug);
+
+        public void OnMessage(uint connection, ReadOnlySpan<byte> data) => transport.OnMessage(Server, connection, data);
+    }
+
+    private void OnConnected(GnsServer server, uint connection)
     {
         int peerId = _nextPeerId++;
-        _peerByConnection[connection] = peerId;
-        _connectionByPeer[peerId] = connection;
-        _server.Send(connection, AdmissionWire.Encode(new PeerAssigned(peerId)), RELIABLE);
+        _peerByConnection[(server, connection)] = peerId;
+        _connectionByPeer[peerId] = (server, connection);
+        server.Send(connection, AdmissionWire.Encode(new PeerAssigned(peerId)), RELIABLE);
         _gate.Connected(peerId);
-        _log.Information("peer {PeerId} connected", peerId);
+        _log.Information("peer {PeerId} connected{Relay}", peerId, server == _server ? "" : " through Steam relay");
         _admission?.Connected(peerId, _clock());
     }
 
-    void IGnsHandler.OnDisconnected(uint connection, bool wasConnected, int reason, string debug)
+    private void OnDisconnected(GnsServer server, uint connection, int reason, string debug)
     {
-        if (!Forget(connection, out int peerId))
+        if (!Forget(server, connection, out int peerId))
             return;
         _log.Information("peer {PeerId} disconnected ({Reason} {Debug})", peerId, reason, debug);
         _admission?.Disconnected(peerId);
     }
 
-    void IGnsHandler.OnMessage(uint connection, ReadOnlySpan<byte> frame)
+    private void OnMessage(GnsServer server, uint connection, ReadOnlySpan<byte> frame)
     {
-        if (!_peerByConnection.TryGetValue(connection, out int sender))
+        if (!_peerByConnection.TryGetValue((server, connection), out int sender))
             return;
         ulong now = _clock();
         switch (WireFrame.KindOf(frame))
@@ -100,8 +136,8 @@ public sealed class GnsServerTransport : IServerTransport, IServerAdmissionTrans
                     case AdmissionHello hello:
                         _admission?.Hello(sender, hello, now);
                         break;
-                    case SteamProof:
-                        _admission?.Proof(sender);
+                    case SteamProof proof:
+                        _admission?.Proof(sender, proof, now);
                         break;
                 }
                 break;
@@ -219,24 +255,24 @@ public sealed class GnsServerTransport : IServerTransport, IServerAdmissionTrans
 
     private void SendTo(int peerId, byte[] frame, GnsSend flags)
     {
-        if (_connectionByPeer.TryGetValue(peerId, out uint connection))
-            _server.Send(connection, frame, flags);
+        if (_connectionByPeer.TryGetValue(peerId, out (GnsServer Server, uint Connection) peer))
+            peer.Server.Send(peer.Connection, frame, flags);
     }
 
     private GnsRealTimeStatus? Status(int peerId) =>
-        _connectionByPeer.TryGetValue(peerId, out uint connection) ? _server.Status(connection) : null;
+        _connectionByPeer.TryGetValue(peerId, out (GnsServer Server, uint Connection) peer) ? peer.Server.Status(peer.Connection) : null;
 
     private void Close(int peerId, string reason)
     {
-        if (!_connectionByPeer.TryGetValue(peerId, out uint connection))
+        if (!_connectionByPeer.TryGetValue(peerId, out (GnsServer Server, uint Connection) peer))
             return;
-        Forget(connection, out _);
-        _server.Kick(connection, GnsEndReason.APP_KICKED, reason, linger: true);
+        Forget(peer.Server, peer.Connection, out _);
+        peer.Server.Kick(peer.Connection, GnsEndReason.APP_KICKED, reason, linger: true);
     }
 
-    private bool Forget(uint connection, out int peerId)
+    private bool Forget(GnsServer server, uint connection, out int peerId)
     {
-        if (!_peerByConnection.Remove(connection, out peerId))
+        if (!_peerByConnection.Remove((server, connection), out peerId))
             return false;
         _connectionByPeer.Remove(peerId);
         _gate.Remove(peerId);

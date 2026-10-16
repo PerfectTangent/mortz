@@ -12,6 +12,7 @@ public readonly record struct ServerBootLoad(ServerBoot Boot, IMapSource Maps);
 public static class ServerBootLoader
 {
     private const string DEFAULT_MODE_ID = "deathmatch";
+    private const string SERVER_ID_FILE = "data/server-id";
 
     public static ServerBootLoad? TryLoad(CommandLine args, string contentRoot, string defaultMapId,
         ILogger log, ILogger contentLog)
@@ -54,6 +55,7 @@ public static class ServerBootLoader
             log.Error("--port and --query-port take a UDP port number");
             return null;
         }
+        bool steamPublic = serverConfig.SteamPublic || args.HasFlag("--steam-public");
         bool allowJoinInProgress = serverConfig.AllowJoinInProgress;
         if (args.HasFlag("--allow-jip"))
             allowJoinInProgress = true;
@@ -71,6 +73,8 @@ public static class ServerBootLoader
             Seed = Random.Shared.Next(),
             NetStats = args.HasFlag("--net-stats"),
             AllowJoinInProgress = allowJoinInProgress,
+            SteamPublic = steamPublic,
+            ServerId = steamPublic ? ServerIdentity.Load(SERVER_ID_FILE, log) : "",
         };
         return new ServerBootLoad(boot, maps);
     }

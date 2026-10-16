@@ -11,11 +11,13 @@ public sealed class ServerConfigTests
     {
         ContentReadResult<ServerConfig> result = TomlModel.Read<ServerConfig>("""
             name = "Coffee box"
+            steam_public = true
             unknown = true
             """, "server.toml");
 
         Assert.NotNull(result.Value);
         Assert.Equal("Coffee box", result.Value.Name);
+        Assert.True(result.Value.SteamPublic);
         Assert.Equal("", result.Value.AdminPassword);
         Assert.True(result.Value.AllowJoinInProgress);
         Assert.Contains(result.Diagnostics, x => x.Message == "unknown key 'unknown'");

@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -6,7 +8,16 @@ using System.Text;
 
 namespace Mortz.Net.Gns;
 
-/// <summary>Loaded once per process and never torn down: GNS keeps a service thread and global state.</summary>
+/// <summary>Which GNS build a library binds. Use Steam's only for relays.</summary>
+public enum GnsFlavor
+{
+    OPEN_SOURCE,
+    STEAM_CLIENT,
+    STEAM_GAME_SERVER,
+}
+
+/// <summary>Loaded once per process and flavor and never torn down: GNS keeps a service thread
+/// and global state.</summary>
 /// <remarks>
 /// Call everything except <see cref="SetGlobalFakeNetwork"/> from the pump thread. Status
 /// callbacks fire inside <c>RunCallbacks</c> on the calling thread.
@@ -16,8 +27,13 @@ public sealed unsafe class GnsLibrary
     public const string LINUX_FILE = "libGameNetworkingSockets.so";
     public const string WINDOWS_FILE = "GameNetworkingSockets.dll";
 
+    /// <summary>k_ESteamNetworkingAvailability_Current.</summary>
+    private const int AVAILABILITY_CURRENT = 100;
+
     private static readonly Lock _loadLock = new();
     private static GnsLibrary? _instance;
+    // Steam's client and game-server sockets share one utils interface, so one status callback.
+    private static readonly List<GnsLibrary> _steamInstances = [];
 
     /// <summary>Native warnings and errors. Can fire on GNS's own threads, not just the pump thread.</summary>
     public static Action<GnsLogLevel, string>? Log { get; set; }
@@ -42,21 +58,43 @@ public sealed unsafe class GnsLibrary
     internal readonly delegate* unmanaged<nint, void> RunCallbacks;
     internal readonly delegate* unmanaged<nint, int, int, nint, int, void*, byte> SetConfigValue;
     internal readonly delegate* unmanaged<nint, void> ReleaseMessage;
+    internal readonly delegate* unmanaged<nint, int, int, GnsConfigValue*, uint> CreateListenSocketP2P;
+    internal readonly delegate* unmanaged<nint, byte*, int, int, GnsConfigValue*, uint> ConnectP2P;
+    private readonly delegate* unmanaged<nint, int> _initAuthentication;
+    private readonly delegate* unmanaged<nint, byte*, int> _getAuthenticationStatus;
+    private readonly delegate* unmanaged<nint, void> _initRelayNetworkAccess;
+    private readonly delegate* unmanaged<nint, byte*, int> _getRelayNetworkStatus;
+    private readonly delegate* unmanaged<nint, int, byte> _beginAsyncRequestFakeIp;
+    private readonly delegate* unmanaged<nint, int, byte*, void> _getFakeIp;
+
+    public GnsFlavor Flavor { get; }
 
     // Listen socket or connection handle -> endpoint, for the global status callback. Pump thread only.
     private readonly Dictionary<uint, GnsEndpoint> _owners = new();
 
-    private GnsLibrary(nint lib)
+    private GnsLibrary(nint lib, GnsFlavor flavor)
     {
         nint Fn(string name) => NativeLibrary.GetExport(lib, name);
 
-        var init = (delegate* unmanaged<void*, byte*, byte>)Fn("GameNetworkingSockets_Init");
-        byte* err = stackalloc byte[1024];
-        if (init(null, err) == 0)
-            throw new GnsException($"GameNetworkingSockets_Init failed: {Utf8(err)}");
+        Flavor = flavor;
+        if (flavor == GnsFlavor.OPEN_SOURCE)
+        {
+            var init = (delegate* unmanaged<void*, byte*, byte>)Fn("GameNetworkingSockets_Init");
+            byte* err = stackalloc byte[1024];
+            if (init(null, err) == 0)
+                throw new GnsException($"GameNetworkingSockets_Init failed: {Utf8(err)}");
+        }
 
-        Sockets = ((delegate* unmanaged<nint>)Fn("SteamAPI_SteamNetworkingSockets_v009"))();
-        Utils = ((delegate* unmanaged<nint>)Fn("SteamAPI_SteamNetworkingUtils_v003"))();
+        (string sockets, string utils) = flavor switch
+        {
+            GnsFlavor.OPEN_SOURCE => ("SteamAPI_SteamNetworkingSockets_v009", "SteamAPI_SteamNetworkingUtils_v003"),
+            GnsFlavor.STEAM_CLIENT => ("SteamAPI_SteamNetworkingSockets_SteamAPI_v012", "SteamAPI_SteamNetworkingUtils_SteamAPI_v004"),
+            _ => ("SteamAPI_SteamGameServerNetworkingSockets_SteamAPI_v012", "SteamAPI_SteamNetworkingUtils_SteamAPI_v004"),
+        };
+        Sockets = ((delegate* unmanaged<nint>)Fn(sockets))();
+        Utils = ((delegate* unmanaged<nint>)Fn(utils))();
+        if (Sockets == 0 || Utils == 0)
+            throw new GnsException($"{flavor} networking interfaces are unavailable");
 
         const string PREFIX = "SteamAPI_ISteamNetworkingSockets_";
         CreateListenSocketIp = (delegate* unmanaged<nint, byte*, int, GnsConfigValue*, uint>)Fn(PREFIX + "CreateListenSocketIP");
@@ -75,14 +113,103 @@ public sealed unsafe class GnsLibrary
         RunCallbacks = (delegate* unmanaged<nint, void>)Fn(PREFIX + "RunCallbacks");
         SetConfigValue = (delegate* unmanaged<nint, int, int, nint, int, void*, byte>)Fn("SteamAPI_ISteamNetworkingUtils_SetConfigValue");
         ReleaseMessage = (delegate* unmanaged<nint, void>)Fn("SteamAPI_SteamNetworkingMessage_t_Release");
+        if (flavor != GnsFlavor.OPEN_SOURCE)
+        {
+            CreateListenSocketP2P = (delegate* unmanaged<nint, int, int, GnsConfigValue*, uint>)Fn(PREFIX + "CreateListenSocketP2P");
+            ConnectP2P = (delegate* unmanaged<nint, byte*, int, int, GnsConfigValue*, uint>)Fn(PREFIX + "ConnectP2P");
+            _initAuthentication = (delegate* unmanaged<nint, int>)Fn(PREFIX + "InitAuthentication");
+            _getAuthenticationStatus = (delegate* unmanaged<nint, byte*, int>)Fn(PREFIX + "GetAuthenticationStatus");
+            _initRelayNetworkAccess = (delegate* unmanaged<nint, void>)Fn("SteamAPI_ISteamNetworkingUtils_InitRelayNetworkAccess");
+            _getRelayNetworkStatus = (delegate* unmanaged<nint, byte*, int>)Fn("SteamAPI_ISteamNetworkingUtils_GetRelayNetworkStatus");
+            _beginAsyncRequestFakeIp = (delegate* unmanaged<nint, int, byte>)Fn(PREFIX + "BeginAsyncRequestFakeIP");
+            _getFakeIp = (delegate* unmanaged<nint, int, byte*, void>)Fn(PREFIX + "GetFakeIP");
+        }
 
         var setDebug = (delegate* unmanaged<nint, int, delegate* unmanaged<int, byte*, void>, void>)
             Fn("SteamAPI_ISteamNetworkingUtils_SetDebugOutputFunction");
         setDebug(Utils, (int)GnsLogLevel.WARNING, &OnDebugOutput);
         var setCallback = (delegate* unmanaged<nint, delegate* unmanaged<nint, void>, byte>)
             Fn("SteamAPI_ISteamNetworkingUtils_SetGlobalCallback_SteamNetConnectionStatusChanged");
-        if (setCallback(Utils, &OnStatusChanged) == 0)
+        if (setCallback(Utils, flavor == GnsFlavor.OPEN_SOURCE ? &OnStatusChanged : &OnSteamStatusChanged) == 0)
             throw new GnsException("could not install the connection status callback");
+    }
+
+    /// <summary>Steam's own GNS inside a loaded <c>libsteam_api</c>. Start the game server or
+    /// <c>SteamAPI_Init</c> first, and pump Steam's callbacks.</summary>
+    public static GnsLibrary Steam(nint steamApi, GnsFlavor flavor)
+    {
+        if (flavor == GnsFlavor.OPEN_SOURCE)
+            throw new ArgumentOutOfRangeException(nameof(flavor));
+        lock (_loadLock)
+        {
+            if (_steamInstances.Find(lib => lib.Flavor == flavor) is { } existing)
+                return existing;
+            GnsLibrary lib = new(steamApi, flavor);
+            _steamInstances.Add(lib);
+            return lib;
+        }
+    }
+
+    /// <summary>Starts pinging relays.</summary>
+    public void InitRelayNetworkAccess()
+    {
+        RequireSteam();
+        _initRelayNetworkAccess(Utils);
+    }
+
+    public bool RelayNetworkReady
+    {
+        get
+        {
+            RequireSteam();
+            // SteamRelayNetworkStatus_t: availability first, 272 bytes in all.
+            byte* status = stackalloc byte[272];
+            return _getRelayNetworkStatus(Utils, status) == AVAILABILITY_CURRENT;
+        }
+    }
+
+    /// <summary>Fetches the cert relay connections need. Connect only once
+    /// <see cref="AuthenticationReady"/>.</summary>
+    public void InitAuthentication()
+    {
+        RequireSteam();
+        _initAuthentication(Sockets);
+    }
+
+    public bool AuthenticationReady
+    {
+        get
+        {
+            RequireSteam();
+            byte* status = stackalloc byte[272];
+            return _getAuthenticationStatus(Sockets, status) == AVAILABILITY_CURRENT;
+        }
+    }
+
+    /// <summary>Asks Steam for a FakeIP, which the server browser lists instead of the public IP.
+    /// A game server must call this before it logs on.</summary>
+    public bool RequestFakeIp()
+    {
+        RequireSteam();
+        return _beginAsyncRequestFakeIp(Sockets, 1) != 0;
+    }
+
+    /// <summary>The FakeIP Steam granted, or null.</summary>
+    public IPEndPoint? FakeIp
+    {
+        get
+        {
+            RequireSteam();
+            // SteamNetworkingFakeIPResult_t: EResult, an identity aligned like a callback, then IP and ports.
+            byte* result = stackalloc byte[200];
+            _getFakeIp(Sockets, 0, result);
+            if (*(int*)result != (int)GnsResult.OK)
+                return null;
+            byte* address = result + (OperatingSystem.IsWindows() ? 8 : 4) + GnsIdentity.SIZE;
+            Span<byte> ip = stackalloc byte[4];
+            BinaryPrimitives.WriteUInt32BigEndian(ip, *(uint*)address);
+            return new IPEndPoint(new IPAddress(ip), *(ushort*)(address + 4));
+        }
     }
 
     /// <summary>Looks in <paramref name="searchDirs"/>, next to the assemblies, next to the
@@ -95,7 +222,7 @@ public sealed unsafe class GnsLibrary
                 return _instance;
             string path = Locate(searchDirs)
                 ?? throw new GnsException($"{FileName} not found (searched {string.Join(", ", Candidates(searchDirs))})");
-            _instance = new GnsLibrary(NativeLibrary.Load(path));
+            _instance = new GnsLibrary(NativeLibrary.Load(path), GnsFlavor.OPEN_SOURCE);
             return _instance;
         }
     }
@@ -126,6 +253,12 @@ public sealed unsafe class GnsLibrary
                 yield break;
             }
         }
+    }
+
+    private void RequireSteam()
+    {
+        if (Flavor == GnsFlavor.OPEN_SOURCE)
+            throw new GnsException("relays need Steam's networking");
     }
 
     /// <summary>Simulated lag and loss on every connection in the process. GNS only offers them globally.</summary>
@@ -159,20 +292,35 @@ public sealed unsafe class GnsLibrary
     [UnmanagedCallersOnly]
     private static void OnStatusChanged(nint info)
     {
-        GnsLibrary? lib = _instance;
-        if (lib == null)
-            return;
+        if (_instance is { } lib)
+            lib.Route(GnsStatusChange.Read((byte*)info));
+    }
+
+    [UnmanagedCallersOnly]
+    private static void OnSteamStatusChanged(nint info)
+    {
         var change = GnsStatusChange.Read((byte*)info);
+        GnsLibrary? owner = _steamInstances.Find(lib => lib.Owns(change));
+        // An unowned change goes to the game server's sockets, which then free the handle.
+        (owner ?? _steamInstances.Find(lib => lib.Flavor == GnsFlavor.STEAM_GAME_SERVER) ?? _steamInstances.FirstOrDefault())
+            ?.Route(change);
+    }
+
+    private bool Owns(GnsStatusChange change) =>
+        _owners.ContainsKey(change.Connection) || (change.ListenSocket != 0 && _owners.ContainsKey(change.ListenSocket));
+
+    private void Route(GnsStatusChange change)
+    {
         // Accepted connections arrive under their listen socket, our own connects under the handle.
-        if (lib._owners.TryGetValue(change.Connection, out GnsEndpoint? owner) ||
-            (change.ListenSocket != 0 && lib._owners.TryGetValue(change.ListenSocket, out owner)))
+        if (_owners.TryGetValue(change.Connection, out GnsEndpoint? owner) ||
+            (change.ListenSocket != 0 && _owners.TryGetValue(change.ListenSocket, out owner)))
         {
             owner.Enqueue(change);
             return;
         }
         // Its endpoint is gone, so free the handle.
         if (change.State is GnsState.CONNECTING or GnsState.CLOSED_BY_PEER or GnsState.PROBLEM_DETECTED_LOCALLY)
-            lib.CloseConnection(lib.Sockets, change.Connection, 0, null, 0);
+            CloseConnection(Sockets, change.Connection, 0, null, 0);
     }
 
     [UnmanagedCallersOnly]

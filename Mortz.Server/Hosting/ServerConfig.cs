@@ -22,6 +22,9 @@ public sealed class ServerConfig
 
     public bool AllowJoinInProgress { get; set; } = true;
 
+    /// <summary>List the server on Steam. Only the Steam build can.</summary>
+    public bool SteamPublic { get; set; }
+
     /// <summary>Blank or all-invisible names fall back to the default.</summary>
     public static string SanitizeName(string? value)
     {

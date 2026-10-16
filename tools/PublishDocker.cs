@@ -39,18 +39,9 @@ public static class PublishDocker
             throw new ArgumentException("Docker flavor must be steam or standalone.", nameof(flavor));
         }
         string linuxDirectory = Export.PackageDirectory(root, flavor, "linux", "server");
-        List<string> requiredFiles =
-        [
-            "MortzServer.x86_64", "data_Mortz_linuxbsd_x86_64/Mortz.dll"
-        ];
+        List<string> requiredFiles = ["MortzServer", "MortzServer.dll", "libGameNetworkingSockets.so"];
         if (flavor == "steam")
-        {
-            requiredFiles.AddRange(
-            [
-                "steam_appid.txt", "libgodotsteam_server.linux.template_release.x86_64.so",
-                "libsteam_api.so", "steamclient.so", "libsteamwebrtc.so"
-            ]);
-        }
+            requiredFiles.AddRange(["steam_appid.txt", "libsteam_api.so", "steamclient.so", "libsteamwebrtc.so"]);
         foreach (string file in requiredFiles)
         {
             if (!File.Exists(Path.Combine(linuxDirectory, file)))

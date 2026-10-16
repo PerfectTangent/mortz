@@ -20,6 +20,15 @@ public static class ServerLauncher
             ? Path.Combine(directory, "Mortz.Server", "bin", "Debug", "net10.0", executableName)
             : Path.Combine(directory, executableName);
         ProcessStartInfo start = new(executable) { WorkingDirectory = directory, UseShellExecute = false };
+        if (OS.HasFeature("linux"))
+        {
+            // A Steam server finds the steamclient.so shipped next to it only through this.
+            string serverDirectory = Path.GetDirectoryName(executable)!;
+            string? inherited = start.Environment.TryGetValue("LD_LIBRARY_PATH", out string? value) ? value : null;
+            start.Environment["LD_LIBRARY_PATH"] = string.IsNullOrEmpty(inherited)
+                ? serverDirectory
+                : $"{serverDirectory}:{inherited}";
+        }
         List<string> args =
         [
             "--port", port.ToString(),

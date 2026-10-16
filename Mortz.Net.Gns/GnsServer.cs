@@ -73,6 +73,20 @@ public sealed unsafe class GnsServer : GnsEndpoint
         throw new GnsException($"could not listen on {bind}:{port}");
     }
 
+    /// <summary>Listens for relay connections to this server's SteamID.</summary>
+    public static GnsServer ListenP2P(GnsLibrary lib, int virtualPort, int maxConnections, GnsServerOptions? options = null)
+    {
+        if (lib.Flavor == GnsFlavor.OPEN_SOURCE)
+            throw new GnsException("relay connections need Steam's networking");
+        GnsConfigValue[] config = (options ?? new GnsServerOptions()).ToConfig();
+        uint listen;
+        fixed (GnsConfigValue* opts = config)
+            listen = lib.CreateListenSocketP2P(lib.Sockets, virtualPort, config.Length, opts);
+        if (listen == 0)
+            throw new GnsException($"could not listen for relay connections on virtual port {virtualPort}");
+        return new GnsServer(lib, listen, maxConnections);
+    }
+
     private static uint CreateListenSocket(GnsLibrary lib, IPAddress bind, ushort port, GnsConfigValue[] config)
     {
         byte* addr = stackalloc byte[GnsAddress.SIZE];

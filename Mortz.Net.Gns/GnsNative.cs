@@ -139,6 +139,21 @@ internal static class GnsAddress
     public static unsafe ushort Port(byte* src) => *(ushort*)(src + 16);
 }
 
+/// <summary>SteamNetworkingIdentity, as a SteamID.</summary>
+internal static class GnsIdentity
+{
+    public const int SIZE = 136;
+    private const int TYPE_STEAM_ID = 16;
+
+    public static unsafe void WriteSteamId(byte* dst, ulong steamId)
+    {
+        new Span<byte>(dst, SIZE).Clear();
+        *(int*)dst = TYPE_STEAM_ID;
+        *(int*)(dst + 4) = sizeof(ulong);
+        *(ulong*)(dst + 8) = steamId;
+    }
+}
+
 /// <summary>SteamNetworkingMessage_t field offsets (same on every platform).</summary>
 internal static class GnsMessage
 {

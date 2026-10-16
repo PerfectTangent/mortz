@@ -15,4 +15,5 @@ public record ServerInfo(
     ulong SchemaHash,
     uint AppId = 0,
     string Version = "",
-    bool MetadataValid = true);
+    bool MetadataValid = true,
+    string ServerId = "");

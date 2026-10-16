@@ -1,3 +1,4 @@
+using System.Text;
 using Mortz.Protocol.Net.Query;
 using Xunit;
 
@@ -106,6 +107,63 @@ public class ServerQueryTests
             rules.Remove(key);
             Assert.False(ServerQueryMetadata.ApplyRules(Sample(), rules).MetadataValid);
         }
+    }
+
+    [Fact]
+    public void Tags_RoundTripTheRulesWithinSteamsLimit()
+    {
+        ServerInfo original = Sample();
+        ServerInfo stripped = original with
+        {
+            Mode = "",
+            Players = 0,
+            InLobby = false,
+            AllowJoinInProgress = false,
+            ProtocolVersion = 0,
+            SchemaHash = 0,
+            MetadataValid = false
+        };
+
+        string tags = ServerQueryMetadata.ToTags(original);
+
+        Assert.True(Encoding.UTF8.GetByteCount(tags) <= ServerQueryMetadata.MAX_TAG_BYTES);
+        Assert.Equal(original, ServerQueryMetadata.ApplyTags(stripped, tags));
+    }
+
+    [Fact]
+    public void Tags_FitEvenWithTheLongestValues()
+    {
+        ServerInfo longest = Sample() with
+        {
+            Mode = new string('m', ServerQueryProtocol.MAX_TEXT_LENGTH),
+            Players = 999,
+            MaxPlayers = 999,
+            ProtocolVersion = int.MaxValue,
+            SchemaHash = ulong.MaxValue,
+            AppId = uint.MaxValue,
+            ServerId = new string('f', ServerQueryMetadata.SERVER_ID_LENGTH),
+        };
+
+        string tags = ServerQueryMetadata.ToTags(longest);
+
+        Assert.True(Encoding.UTF8.GetByteCount(tags) <= ServerQueryMetadata.MAX_TAG_BYTES);
+        Assert.Equal(longest, ServerQueryMetadata.ApplyTags(longest with { MetadataValid = false }, tags));
+    }
+
+    [Fact]
+    public void Tags_DropAServerIdThatIsNotOne()
+    {
+        string tags = ServerQueryMetadata.ToTags(Sample() with { ServerId = "not-a-server-id" });
+
+        Assert.Equal("", ServerQueryMetadata.ApplyTags(Sample(), tags).ServerId);
+        Assert.Equal("", ServerQueryMetadata.ApplyTags(Sample(), tags + ",iXYZ").ServerId);
+    }
+
+    [Fact]
+    public void Tags_FromAnotherGameOrAnOlderServerAreUnknown()
+    {
+        Assert.False(ServerQueryMetadata.ApplyTags(Sample(), "").MetadataValid);
+        Assert.False(ServerQueryMetadata.ApplyTags(Sample(), "coop,pvp,hardcore").MetadataValid);
     }
 
     [Fact]
