@@ -22,7 +22,7 @@ public class ModifierReplicationTests
         Player player = roster.Join(1, "player");
         FeatureScope scope = new("match");
         MapSnapshot map = TestServer.Map("arena", "Arena");
-        using MatchRuntime runtime = new(map.BuildMask(), new MatchConfig(), 10, scope, 3);
+        MatchRuntime runtime = new(map.BuildMask(), new MatchConfig(), 10, scope, 3);
         runtime.Seat(player);
         RecordingTransport wire = new();
         ReadyLink link = new(wire);

@@ -1,3 +1,4 @@
+#if MORTZ_E2E
 using Mortz.Core.Match.Objectives;
 using Mortz.Core.Sim;
 
@@ -45,3 +46,4 @@ public readonly record struct E2EWorldPlayer(
     Vec2 Velocity,
     int Health,
     int RespawnTicks);
+#endif

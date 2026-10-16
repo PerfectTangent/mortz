@@ -2,6 +2,7 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
+using Mortz.Client.Logging;
 using Mortz.Client.Match;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
@@ -10,15 +11,13 @@ using Mortz.Core.Sim;
 using Mortz.Extensions;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Match;
-using Mortz.Shared.Logging;
 using Serilog;
 
 namespace Mortz.Client.E2E;
 
 /// <summary>
-/// Hands the live match to whatever bridge the client root provides, and keeps
-/// the plain-text heartbeat and score echoes that make an artifact log
-/// readable. Log text is diagnostics only; assertions ride the protocol.
+/// Hands the live match to the client root's bridge and logs a heartbeat and
+/// score echoes for artifact logs. Tests assert on the protocol, not this text.
 /// </summary>
 [Meta(typeof(IAutoNode))]
 public partial class E2EMatchProbe : Node,
@@ -67,8 +66,6 @@ public partial class E2EMatchProbe : Node,
         Bridge.DetachMatch();
     }
 
-    /// <summary>Score echoes for the artifact log; peer ids, not names, this
-    /// side stays dumb.</summary>
     public void Handle(in EliminationMsg m)
     {
         bool suicide = m.Flags.HasFlag(EliminationFlags.SUICIDE);

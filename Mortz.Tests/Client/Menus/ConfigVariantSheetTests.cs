@@ -13,7 +13,7 @@ public class ConfigVariantSheetTests
     public void LobbySceneBindsAllThreeFamiliesAndOnlyTheirActiveSettings()
     {
         LobbySettingsPanel panel = ResourceLoader.Load<PackedScene>(
-            "res://src/Shared/UI/Menus/LobbySettingsPanel.tscn").Instantiate<LobbySettingsPanel>();
+            "res://src/Client/Menus/LobbySettingsPanel.tscn").Instantiate<LobbySettingsPanel>();
         try
         {
             panel.OnReady();
@@ -35,7 +35,7 @@ public class ConfigVariantSheetTests
     public void SelectingAVariantReplacesItsSettingsAndRebindingUsesTheTypedModel()
     {
         ConfigVariantSheet sheet = ResourceLoader.Load<PackedScene>(
-            "res://src/Shared/UI/Controls/ConfigVariantSheet.tscn").Instantiate<ConfigVariantSheet>();
+            "res://src/Client/Ui/ConfigVariantSheet.tscn").Instantiate<ConfigVariantSheet>();
         try
         {
             sheet._Ready();

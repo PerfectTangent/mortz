@@ -19,7 +19,7 @@ public class ServerBrowserCompositionTests
         List<FavoriteServer> saved = [];
         using ServerBrowserController controller = new(probe.Object, () => saved,
             favorites => saved = favorites.ToList());
-        ServerBrowser browser = Instantiate<ServerBrowser>("res://src/Shared/UI/Menus/ServerBrowser.tscn");
+        ServerBrowser browser = Instantiate<ServerBrowser>("res://src/Client/Menus/ServerBrowser.tscn");
         browser.FakeDependency(controller);
         ((SceneTree)Engine.GetMainLoop()).Root.AddChild(browser);
         try
@@ -62,7 +62,7 @@ public class ServerBrowserCompositionTests
     [Fact]
     public void RowShowsName_Population_AndPing_WhenOnline()
     {
-        ServerRow row = Instantiate<ServerRow>("res://src/Shared/UI/Menus/ServerRow.tscn");
+        ServerRow row = Instantiate<ServerRow>("res://src/Client/Menus/ServerRow.tscn");
         ServerEntry entry = new(new ServerEndpoint("10.0.0.7", 7777), ServerSource.FAVORITE);
         entry.Info = new ServerInfo("Basement Box", "Kills", "castlewars", Players: 3,
             MaxPlayers: 8, InLobby: false, AllowJoinInProgress: false, GamePort: 7777,
@@ -84,7 +84,7 @@ public class ServerBrowserCompositionTests
     [Fact]
     public void OfflineRowDropsThePingAndSaysSo()
     {
-        ServerRow row = Instantiate<ServerRow>("res://src/Shared/UI/Menus/ServerRow.tscn");
+        ServerRow row = Instantiate<ServerRow>("res://src/Client/Menus/ServerRow.tscn");
         ServerEntry entry = new(new ServerEndpoint("10.0.0.7", 7777), ServerSource.DIRECT)
         {
             Status = ServerStatus.OFFLINE,
@@ -104,7 +104,7 @@ public class ServerBrowserCompositionTests
     [Fact]
     public void PinnedRowCannotBeUnstarred()
     {
-        ServerRow row = Instantiate<ServerRow>("res://src/Shared/UI/Menus/ServerRow.tscn");
+        ServerRow row = Instantiate<ServerRow>("res://src/Client/Menus/ServerRow.tscn");
 
         row.Bind(new ServerEntry(ServerList.PinnedEndpoint, ServerSource.PINNED, "Mortz Playtest"));
 

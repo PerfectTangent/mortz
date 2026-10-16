@@ -2,14 +2,14 @@ using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Audio;
+using Mortz.Client.Logging;
+using Mortz.Client.Net;
 using Mortz.Client.Replay;
 using Mortz.Client.Replication;
 using Mortz.Client.Views;
 using Mortz.Core.Features;
 using Mortz.Core.Sim;
 using Mortz.Extensions;
-using Mortz.Net;
-using Mortz.Shared.Logging;
 using Serilog;
 
 namespace Mortz.Client.Match;

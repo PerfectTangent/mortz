@@ -1,7 +1,7 @@
 using Godot;
+using Mortz.Client.Content;
 using Mortz.Client.Menus;
 using Mortz.Core.Sim.Modifiers;
-using Mortz.Shared;
 using Xunit;
 
 namespace Mortz.Tests.Client.Menus;

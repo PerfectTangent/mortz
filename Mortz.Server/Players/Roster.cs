@@ -1,5 +1,4 @@
 using System.Collections;
-using Mortz.Core.Identity;
 using Mortz.Core.Sim;
 using Mortz.Protocol.Net.Names;
 
@@ -20,19 +19,17 @@ public sealed class Roster : IReadOnlyCollection<Player>
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    public Player Join(int peerId, string requestedName, int requestedSkin = 0, VerifiedAccount? account = null)
+    public Player Join(int peerId, string requestedName, int requestedSkin = 0)
     {
         if (requestedSkin is < 0 or >= SimConfig.SKIN_COUNT)
             throw new ArgumentOutOfRangeException(nameof(requestedSkin));
         string sanitized = PlayerNameSanitizer.Sanitize(requestedName);
         string name = sanitized.Length > 0 ? sanitized : $"Player {peerId}";
-        Player player = new(peerId, name, (byte)requestedSkin, account);
+        Player player = new(peerId, name, (byte)requestedSkin);
         _players[peerId] = player;
         return player;
     }
 
-    public Player? Leave(int peerId)
-    {
-        return !_players.Remove(peerId, out Player? player) ? null : player;
-    }
+    public Player? Leave(int peerId) =>
+        _players.Remove(peerId, out Player? player) ? player : null;
 }

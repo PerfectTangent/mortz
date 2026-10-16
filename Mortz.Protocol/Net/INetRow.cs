@@ -1,6 +1,6 @@
 namespace Mortz.Protocol.Net;
 
-/// <summary>Mortz.Net.Gen writes this for every [NetRow] type, never implement it by hand.</summary>
+/// <summary>Mortz.Generators writes this for every [NetRow] type, never implement it by hand.</summary>
 public interface INetRow<T>
     where T : struct, INetRow<T>
 {

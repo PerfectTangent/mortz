@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://cyk2qq5f6u8p"]
+
+[ext_resource type="Script" uid="uid://cxtt5lj4yonvo" path="res://src/Client/Announcements/AnnouncementLine.cs" id="1_1h1h0"]
+[ext_resource type="PackedScene" path="res://src/Client/Announcements/AnnouncementTitle.tscn" id="2_h7ss0"]
+[ext_resource type="PackedScene" path="res://src/Client/Announcements/OwnedAnnouncementTitle.tscn" id="3_1h1h0"]
+
+[node name="AnnouncementLine" type="VBoxContainer" unique_id=464018717 node_paths=PackedStringArray("_title", "_detail", "_owned")]
+custom_minimum_size = Vector2(400, 0)
+offset_right = 400.0
+offset_bottom = 64.0
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_type_variation = &"AnnouncementRow"
+script = ExtResource("1_1h1h0")
+_title = NodePath("Title")
+_detail = NodePath("Detail")
+_owned = NodePath("Owned")
+
+[node name="Title" parent="." unique_id=308509381 instance=ExtResource("2_h7ss0")]
+layout_mode = 2
+
+[node name="Owned" parent="." unique_id=148862491 instance=ExtResource("3_1h1h0")]
+visible = false
+layout_mode = 2
+
+[node name="Detail" type="RichTextLabel" parent="." unique_id=36582922]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"AnnouncementDetail"
+bbcode_enabled = true
+text = "[center]Player 1[/center]"
+fit_content = true
+scroll_active = false

@@ -74,7 +74,7 @@ public sealed class GameServer : IDisposable, IHandle<Player, PhaseReadyMsg>
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         _link.BeginLoading(admitted.PeerId, _phases.Generation, _clock.Ms);
-        Player player = _roster.Join(admitted.PeerId, admitted.Name, admitted.Skin, admitted.Account);
+        Player player = _roster.Join(admitted.PeerId, admitted.Name, admitted.Skin);
         _scope.Raise<IObservePlayers>(feature => feature.PlayerJoined(player));
         _phases.Load(player);
     }
@@ -83,7 +83,7 @@ public sealed class GameServer : IDisposable, IHandle<Player, PhaseReadyMsg>
     {
         if (_disposed)
             return;
-        // Leave the roster first; tables stay readable until Forget below.
+        // Leave the roster first. Tables stay readable until Forget below.
         if (_roster.Leave(peerId) is not Player player)
             return;
         _link.Remove(peerId);
@@ -122,8 +122,6 @@ public sealed class GameServer : IDisposable, IHandle<Player, PhaseReadyMsg>
         _phases.CloseMatchLoads();
         _phases.ApplyPendingTransition();
     }
-
-    public IEnumerable<Player> PublicationPlayers => _roster;
 
     public ServerInfo Describe() => new(
         _boot.Name,

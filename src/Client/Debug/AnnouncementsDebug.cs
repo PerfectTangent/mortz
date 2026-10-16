@@ -4,12 +4,12 @@ using Godot;
 using Mortz.Client.Admin;
 using Mortz.Client.Audio;
 using Mortz.Client.Chat;
+using Mortz.Client.Net;
 using Mortz.Client.Players;
 using Mortz.Client.Session;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Events;
 using Mortz.Core.Match.Scoring;
-using Mortz.Net;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Match;
 

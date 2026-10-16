@@ -2,10 +2,10 @@ using Chickensoft.AutoInject;
 using Godot;
 using Mortz.Client.Audio;
 using Mortz.Client.Match;
+using Mortz.Client.Net;
 using Mortz.Client.Players;
 using Mortz.Client.Views;
 using Mortz.Core.Match.Configuration;
-using Mortz.Net;
 using Mortz.Protocol.Net.Lobby;
 using Mortz.Protocol.Net.Roster;
 using Mortz.Runtime.Tests.Net;
@@ -52,7 +52,7 @@ public class PlayerViewRosterTests : NodeServiceTest
     private static PlayerViewManager TakeManagerFromGameViewScene()
     {
         GameView shell = ResourceLoader.Load<PackedScene>(
-            "res://src/Shared/Scenes/Match/GameView.tscn").Instantiate<GameView>();
+            "res://src/Client/Match/GameView.tscn").Instantiate<GameView>();
         PlayerViewManager manager = shell.GetNode<PlayerViewManager>("Players");
         shell.RemoveChild(manager);
         shell.Free();

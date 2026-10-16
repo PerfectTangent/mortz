@@ -1,5 +1,5 @@
+using Mortz.Client.Logging;
 using Mortz.Client.Session;
-using Mortz.Shared.Logging;
 using Serilog;
 
 namespace Mortz.Client.Debug;

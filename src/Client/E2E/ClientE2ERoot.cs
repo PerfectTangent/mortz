@@ -1,17 +1,14 @@
 #if TOOLS
 using Godot;
 using Mortz.Client.Match;
-using Mortz.Net;
-using Mortz.Shared.E2E;
+using Mortz.Client.Net;
 
 namespace Mortz.Client.E2E;
 
 /// <summary>
-/// Builds the client's E2E nodes in code, and the in-match probe. A .tscn
-/// cannot be preprocessed, so a scene that declared these would still
-/// reference scripts that #if TOOLS compiles out of an export, and an
-/// unresolvable script in the root scene stops the game booting. Do not move
-/// these back into ClientMain.tscn or GameView.tscn.
+/// Builds the E2E nodes in code. A .tscn can't be preprocessed, so a scene declaring
+/// them would reference scripts #if TOOLS strips from exports, and the game wouldn't
+/// boot. Keep them out of ClientMain.tscn and GameView.tscn.
 /// </summary>
 public static class ClientE2ERoot
 {

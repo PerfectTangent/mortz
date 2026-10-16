@@ -12,7 +12,7 @@
     <ProjectReference Include="../Mortz.Protocol/Mortz.Protocol.csproj" />
     <PackageReference Include="DotNetEnv" Version="3.2.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
-    <!-- Win32_Process command lines for the stale sweep; Windows-only, guarded. -->
+    <!-- Win32_Process command lines for the stale sweep, Windows only. -->
     <PackageReference Include="System.Management" Version="9.0.0" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
@@ -22,7 +22,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Mortz.E2E.Protocol\Mortz.E2E.Protocol.csproj" />
-    <!-- Build order only: the scenarios run the game binary, they never link it. -->
+    <!-- Build order only: the scenarios run these binaries, they never link them. -->
     <ProjectReference Include="..\Mortz.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Mortz.Server\Mortz.Server.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>

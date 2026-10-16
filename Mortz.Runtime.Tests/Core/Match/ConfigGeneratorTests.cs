@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Mortz.Net.Gen;
+using Mortz.Generators;
 using Xunit;
 
 namespace Mortz.Runtime.Tests.Core.Match;

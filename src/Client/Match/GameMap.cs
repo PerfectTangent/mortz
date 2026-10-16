@@ -1,11 +1,11 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
+using Mortz.Client.Content;
+using Mortz.Client.Logging;
 using Mortz.Core.Terrain;
 using Mortz.Extensions;
 using Mortz.Protocol.Net.Match;
-using Mortz.Shared;
-using Mortz.Shared.Logging;
 using Serilog;
 
 namespace Mortz.Client.Match;
@@ -33,13 +33,13 @@ public partial class GameMap : Node2D
     /// <summary>An explosion went off, carve or not. Solid rock explodes too,
     /// it just doesn't break.</summary>
     public event Action<ImpactIdentity, Vector2, int>? Exploded;
-    /// <summary>A carve removed ground; the pixels and their colors, for debris.</summary>
+    /// <summary>The pixels a carve removed and their colors, for debris.</summary>
     public event Action<ImpactIdentity, Vector2, List<(Vector2 Position, Color Color)>>? GroundRemoved;
 
     public ClientTerrain Terrain { get; private set; } = null!;
     private ZoneOverlay? _zoneOverlay;
 
-    // Predicted carves use the match's radius; authoritative ones carry theirs.
+    // Predicted carves use the match's radius, authoritative ones carry theirs.
     private int _carveRadius;
 
     // Working copy of the destructible layer, punched transparent by carves.
@@ -128,7 +128,7 @@ public partial class GameMap : Node2D
         _destructibleTexture.Update(_destructibleImage);
     }
 
-    /// <summary>Visually rebuild the pixels the winning blast removed; mask and
+    /// <summary>Visually rebuild the pixels the winning blast removed. Mask and
     /// image stay carved, only the overlay shows the pre-impact floor.</summary>
     public void BeginReplayTerrain(FinalKillMsg final)
     {

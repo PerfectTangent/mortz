@@ -28,17 +28,6 @@ public class ScoringStep(
 
     public IReadOnlyList<SeatedScore> Rows() => _scores.Rows();
 
-    public IReadOnlyList<ScoredKill> Apply(MatchContext match, IReadOnlyList<Death> deaths)
-    {
-        List<ScoredKill> eliminations = [];
-        foreach (Death death in deaths)
-        {
-            if (ScoreDeath(match, death) is ScoredKill elimination)
-                eliminations.Add(elimination);
-        }
-        return eliminations;
-    }
-
     public ScoredKill? ScoreDeath(MatchContext match, Death death)
     {
         if (match.Stage != MatchStage.PLAYING)

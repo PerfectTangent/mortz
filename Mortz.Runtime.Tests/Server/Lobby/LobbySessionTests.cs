@@ -109,7 +109,7 @@ public class LobbySessionTests
     public void PlayersJumpOnlyToTeamsWithAFreeSlot()
     {
         LobbySession lobby = Lobby(teams: true, 1, 2, 3);
-        // Teams start blue/red/blue; capacity is 2 per side.
+        // Teams start blue/red/blue, capacity is 2 per side.
 
         Assert.NotNull(lobby.TrySetTeam(Player(1), Team.RED));  // red had a free slot
         Assert.Null(lobby.TrySetTeam(Player(3), Team.RED)); // now it is full
@@ -244,7 +244,7 @@ public class LobbySessionTests
         lobby.SetReady(Player(1), true);
 
         Assert.False(joined.Snapshot.Members[0].Ready);
-        Assert.False(joined.CanStart);
+        Assert.False(joined.Snapshot.CanStart);
         Assert.True(lobby.Snapshot.Members[0].Ready);
     }
 

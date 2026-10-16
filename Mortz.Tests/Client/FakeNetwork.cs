@@ -1,4 +1,4 @@
-using Mortz.Net;
+using Mortz.Client.Net;
 using Mortz.Protocol.Net;
 
 namespace Mortz.Tests.Client;

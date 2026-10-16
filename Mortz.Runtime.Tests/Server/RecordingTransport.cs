@@ -32,13 +32,8 @@ internal sealed class RecordingTransport : IServerTransport
 
     public void Disconnect(int peerId, string reason) => Disconnected.Add(peerId);
 
-    public int BroadcastSnapshot(Func<int, byte[]> dataFor, Func<int, int> ackFor) => 0;
-
-    public int SendSnapshot(int peerId, byte[] data, int ack)
-    {
+    public void SendSnapshot(int peerId, byte[] data, int ack) =>
         Snapshots.Add(new SentSnapshot(peerId, data, ack));
-        return data.Length + sizeof(int);
-    }
 
     public PeerPing[] PeerPings() => [];
 

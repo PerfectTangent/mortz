@@ -1,7 +1,6 @@
 #if TOOLS
 using Chickensoft.AutoInject;
 using Mortz.Client.E2E;
-using Mortz.Shared.E2E;
 
 namespace Mortz.Client;
 

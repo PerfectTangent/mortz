@@ -2,6 +2,7 @@
 using Chickensoft.AutoInject;
 using Godot;
 using Mortz.Client.Match;
+using Mortz.Client.Net;
 using Mortz.Client.Players;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Objectives;
@@ -10,17 +11,14 @@ using Mortz.Core.Replication;
 using Mortz.Core.Sim;
 using Mortz.E2E.Protocol;
 using Mortz.Extensions;
-using Mortz.Net;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Lobby;
 using Mortz.Protocol.Net.Match;
-using Mortz.Shared.E2E;
 
 namespace Mortz.Client.E2E;
 
-/// <summary>The client end of the control protocol. Readiness goes out as the
-/// real SetReadyMsg; input plans ride the real prediction path, this node
-/// scripts the player, never bypasses it.</summary>
+/// <summary>Readiness and input plans go through the real SetReadyMsg and prediction
+/// path, never around them.</summary>
 public partial class ClientE2EHandler : Node, IE2EHandler, IE2EClientBridge,
     IHandle<LobbyStateMsg>,
     IHandle<EliminationMsg>,
@@ -73,8 +71,6 @@ public partial class ClientE2EHandler : Node, IE2EHandler, IE2EClientBridge,
         _network.Router.Remove(this);
     }
 
-    // ---- IE2EClientBridge ----
-
     public void AttachMatch(GameView view, LocalPlayerController player)
     {
         _view = view;
@@ -93,8 +89,6 @@ public partial class ClientE2EHandler : Node, IE2EHandler, IE2EClientBridge,
         _player = null;
         _lastSnapshot = null;
     }
-
-    // ---- IE2EHandler ----
 
     public void Handle(E2ERequest request, IE2EResponder responder)
     {
@@ -158,8 +152,6 @@ public partial class ClientE2EHandler : Node, IE2EHandler, IE2EClientBridge,
         });
     }
 
-    // ---- scripted input ----
-
     /// <summary>Called once per physics tick. Keeps the plan aligned with the
     /// sequence numbers it was installed against.</summary>
     private InputButtons Filter(int sequence, InputButtons sampled)
@@ -185,8 +177,6 @@ public partial class ClientE2EHandler : Node, IE2EHandler, IE2EClientBridge,
         player.ButtonFilter = null;
         player.AimProvider = null;
     }
-
-    // ---- observation ----
 
     private void OnConnected() => _responder?.Emit(new ConnectedEvent(_network.LocalPeerId));
 

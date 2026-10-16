@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://pbne52ymu80j"]
+
+[ext_resource type="Script" uid="uid://1h5x1b16t6s" path="res://src/Client/Ui/UiPropertySheet.cs" id="1"]
+[ext_resource type="PackedScene" uid="uid://cvkiettp7gns3" path="res://src/Client/Ui/BoolPropertyControl.tscn" id="2"]
+[ext_resource type="PackedScene" uid="uid://bj6r04o17t0xc" path="res://src/Client/Ui/IntPropertyControl.tscn" id="3"]
+[ext_resource type="PackedScene" uid="uid://0yfe6odmt0rn" path="res://src/Client/Ui/FloatPropertyControl.tscn" id="4"]
+[ext_resource type="PackedScene" uid="uid://dto5p1v723pmd" path="res://src/Client/Ui/EnumPropertyControl.tscn" id="5"]
+
+[node name="UiPropertySheet" type="VBoxContainer" unique_id=217371672]
+theme_override_constants/separation = 12
+script = ExtResource("1")
+_boolControl = ExtResource("2")
+_intControl = ExtResource("3")
+_floatControl = ExtResource("4")
+_enumControl = ExtResource("5")

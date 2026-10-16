@@ -1,6 +1,7 @@
 using Mortz.Core.Features;
 using Mortz.Core.Match.Teams;
 using Mortz.Protocol.Net;
+using Mortz.Protocol.Net.Lobby;
 using Mortz.Server.Admin;
 using Mortz.Server.Chat;
 using Mortz.Server.Hooks;
@@ -15,7 +16,6 @@ namespace Mortz.Server.Phases;
 public sealed class LobbyPhase : ServerPhase, IBeginPhase, IObservePlayers, ILoadPhase
 {
     private readonly LobbySession _session;
-    private readonly LobbyReplication _replication;
     private readonly IServerLink _link;
     private readonly Roster _roster;
     private readonly ILogger _log;
@@ -25,7 +25,6 @@ public sealed class LobbyPhase : ServerPhase, IBeginPhase, IObservePlayers, ILoa
         IPhaseTransitionRequests transitions)
     {
         _session = new LobbySession(settings.Config.Rules.Teams);
-        _replication = new LobbyReplication(link);
         _link = link;
         _roster = roster;
         _log = log;
@@ -63,8 +62,9 @@ public sealed class LobbyPhase : ServerPhase, IBeginPhase, IObservePlayers, ILoa
             return;
 
         Log(update.Change);
-        _replication.Publish(update);
-        if (update.CanStart)
+        LobbySnapshot snapshot = update.Snapshot;
+        _link.Broadcast(new LobbyStateMsg(snapshot.Members.ToArray(), snapshot.Offers.ToArray()));
+        if (snapshot.CanStart)
             _transitions.RequestStartMatch();
     }
 

@@ -2,7 +2,6 @@ using Mortz.Core.Features;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Match.Teams;
-using Mortz.Server.Match.Scoring.SuicidePenalties;
 using Mortz.Server.Players;
 
 namespace Mortz.Server.Match.Scoring;
@@ -13,7 +12,6 @@ public sealed class MatchScores(
     IReadOnlyDictionary<int, Player> seated)
 {
     private readonly PlayerTable<Player, ScoreState> _scores = scope.Table<Player, ScoreState>();
-    private readonly SuicidePenaltyStrategy _suicidePenalty = SuicidePenaltyStrategy.Create(config.SuicidePenalty);
     private TeamKills _teamKills;
 
     public TeamKills TeamKills => _teamKills;
@@ -28,10 +26,8 @@ public sealed class MatchScores(
         _scores[player].Team = team;
     }
 
-    /// <summary>Applies one death to the individual and team tallies.
-    /// A death pit or the victim's own shell is a suicide: a death, never a
-    /// kill, then whatever SuicidePenalty says. A killer who already left
-    /// credits nobody; a teamkill awards nothing.</summary>
+    /// <summary>A death pit or the victim's own shell is a suicide: a death, never a kill,
+    /// then whatever SuicidePenalty says. A killer who already left or a teamkill credits nobody.</summary>
     public DeathScore ScoreDeath(int killerId, Player victim, Player? killer,
         Player? nearestEnemy)
     {
@@ -42,15 +38,10 @@ public sealed class MatchScores(
 
         DeathKind kind;
         KillReward? reward = null;
-        if (killerId == 0)
+        if (killerId == 0 || killerId == victim.PeerId)
         {
-            kind = DeathKind.FALL;
-            reward = _suicidePenalty.Apply(victim, nearestEnemy, this);
-        }
-        else if (killerId == victim.PeerId)
-        {
-            kind = DeathKind.SUICIDE;
-            reward = _suicidePenalty.Apply(victim, nearestEnemy, this);
+            kind = killerId == 0 ? DeathKind.FALL : DeathKind.SUICIDE;
+            reward = ApplySuicidePenalty(victim, nearestEnemy);
         }
         else if (killer == null)
         {
@@ -85,6 +76,27 @@ public sealed class MatchScores(
         return row.Kills;
     }
 
+    private KillReward? ApplySuicidePenalty(Player victim, Player? nearestEnemy)
+    {
+        switch (config.SuicidePenalty)
+        {
+            case SuicidePenalty.NONE:
+                return null;
+            case SuicidePenalty.KILL_NO_NEGATIVE:
+                if (Of(victim).Kills > 0)
+                    AddKills(victim, -1);
+                return null;
+            case SuicidePenalty.KILL:
+                AddKills(victim, -1);
+                return null;
+            case SuicidePenalty.REWARD_CLOSEST_ENEMY:
+                return nearestEnemy == null ? null : new KillReward(nearestEnemy.PeerId, AddKills(nearestEnemy, +1));
+            default:
+                throw new ArgumentOutOfRangeException(nameof(config), config.SuicidePenalty,
+                    "Unsupported suicide penalty.");
+        }
+    }
+
     /// <summary>Snapshot of every seated player's row, in ascending peer id.</summary>
     public IReadOnlyList<SeatedScore> Rows()
     {
@@ -95,5 +107,4 @@ public sealed class MatchScores(
         }
         return rows;
     }
-
 }

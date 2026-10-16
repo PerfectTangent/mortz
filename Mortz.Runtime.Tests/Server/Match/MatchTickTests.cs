@@ -14,7 +14,7 @@ public class MatchTickTests
     [Fact]
     public void CompletionFreezesOutputs()
     {
-        using MatchRuntime runtime = NewRuntime();
+        MatchRuntime runtime = NewRuntime();
         runtime.World.QueueDamage(1, byte.MaxValue);
         MatchUpdate update = runtime.Advance(new ServerTime(100, 0.5));
         Death expected = Assert.Single(update.Deaths);

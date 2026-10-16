@@ -9,10 +9,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
+    <PackageReference Include="StbImageSharp" Version="2.30.16" />
     <PackageReference Include="Tomlyn" Version="0.19.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Mortz.Core\Mortz.Core.csproj" />
-    <ProjectReference Include="..\Mortz.Net.Gen\Mortz.Net.Gen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Mortz.Generators\Mortz.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>

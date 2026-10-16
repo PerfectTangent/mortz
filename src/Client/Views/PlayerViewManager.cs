@@ -3,10 +3,10 @@ using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Audio;
 using Mortz.Client.Chat;
+using Mortz.Client.Net;
 using Mortz.Client.Players;
 using Mortz.Core.Features;
 using Mortz.Extensions;
-using Mortz.Net;
 
 namespace Mortz.Client.Views;
 
@@ -71,9 +71,7 @@ public partial class PlayerViewManager : Node2D
 
     public void BeginFrame() => _placed.Clear();
 
-    /// <summary>
-    /// Ran every rendering tick for every player
-    /// </summary>
+    /// <summary>Called every render tick for every player.</summary>
     public void Place(
         int peerId,
         PlayerViewState state,

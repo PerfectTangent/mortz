@@ -1,12 +1,11 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
+using Mortz.Client.Logging;
 using Mortz.Client.Match;
+using Mortz.Client.Net;
 using Mortz.Core.Sim;
-using Mortz.Net;
 using Mortz.Net.Gns;
-using Mortz.Shared;
-using Mortz.Shared.Logging;
 using Serilog;
 
 namespace Mortz.Client.Diagnostics;

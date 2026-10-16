@@ -13,9 +13,8 @@ public readonly record struct MatchSetup(
 
 /// <summary>
 /// One scenario: a real dedicated server, real headless clients, the real
-/// lobby. StartAsync ends with every client joined and confirmed in the lobby,
-/// which is where a scenario changes server rules; ReadyAllAsync is the
-/// separate, explicit step that starts the match.
+/// lobby. StartAsync ends with every client in the lobby, where a scenario
+/// changes server rules. ReadyAllAsync starts the match.
 /// </summary>
 public sealed class MortzScenario : IAsyncDisposable
 {
@@ -45,7 +44,7 @@ public sealed class MortzScenario : IAsyncDisposable
 
     public IReadOnlyList<ClientDriver> Clients => _clients;
 
-    /// <summary>Unique per scenario; names the artifact directory, the run lock
+    /// <summary>Unique per scenario. Names the artifact directory, the run lock
     /// and the --e2e-run marker every child carries.</summary>
     public string RunId { get; }
 
@@ -87,7 +86,7 @@ public sealed class MortzScenario : IAsyncDisposable
     public ClientDriver Client(string name) =>
         _clients.SingleOrDefault(client => client.Name == name)
         ?? throw new E2EProcessException(
-            $"No client named '{name}'; the scenario has " +
+            $"No client named '{name}', the scenario has " +
             $"[{string.Join(", ", _clients.Select(client => client.Name))}].");
 
     /// <summary>Server up, every client joined, everyone sitting in the lobby.</summary>
@@ -101,6 +100,7 @@ public sealed class MortzScenario : IAsyncDisposable
 
         string runId = Guid.NewGuid().ToString("N")[..12];
         string godot = GodotExecutable.Resolve();
+        string serverExecutable = ServerExecutable.Resolve();
         // Nobody is watching an unattended run, so it never pays for windows.
         bool wanted = options.Windowed || WatchRequested();
         bool windowed = wanted && !CiEnvironment.Detected;
@@ -108,7 +108,7 @@ public sealed class MortzScenario : IAsyncDisposable
             E2EBudget.EnvironmentScale * (windowed ? WINDOWED_SLACK : 1));
         RunLock runLock = RunLock.Acquire(runId);
         ScenarioArtifacts artifacts = ScenarioArtifacts.Create(runId, options.Name);
-        IReadOnlyList<string> sweepActions = await SweepOnceAsync(runId, godot);
+        IReadOnlyList<string> sweepActions = await SweepOnceAsync(runId, [godot, serverExecutable]);
         foreach (string action in sweepActions)
         {
             artifacts.Harness($"[sweep] {action}");
@@ -118,8 +118,7 @@ public sealed class MortzScenario : IAsyncDisposable
         E2EProcess server;
         try
         {
-            server = StartProcess("server", godot, ServerArguments(runId, options), artifacts,
-                reaper);
+            server = StartServer(serverExecutable, ServerArguments(runId, options), artifacts, reaper);
         }
         catch
         {
@@ -385,8 +384,8 @@ public sealed class MortzScenario : IAsyncDisposable
     {
         List<string> arguments =
         [
-            "--path", RepoRoot.Path, "--headless", "++",
-            "--server", "--e2e", "--e2e-run", runId,
+            "--e2e", "--e2e-run", runId,
+            "--content-root", Path.Combine(RepoRoot.Path, "content"),
             "--port", "0",
             "--map", options.MapId,
             "--timescale", Timescale(options),
@@ -404,6 +403,16 @@ public sealed class MortzScenario : IAsyncDisposable
         return arguments;
     }
 
+    private static E2EProcess StartServer(string executable, IReadOnlyList<string> arguments,
+        ScenarioArtifacts artifacts, ProcessReaper reaper) =>
+        E2EProcess.Start(new E2EProcessStart("server", executable, RepoRoot.Path, arguments, artifacts,
+            reaper, IsolatedEnvironment(artifacts, "server")));
+
+    private static Dictionary<string, string> IsolatedEnvironment(ScenarioArtifacts artifacts, string name) => new()
+    {
+        ["MORTZ_USER_DATA"] = artifacts.UserDataPath(name),
+    };
+
     private static E2EProcess StartProcess(string name, string godot,
         IReadOnlyList<string> arguments, ScenarioArtifacts artifacts, ProcessReaper reaper)
     {
@@ -413,12 +422,8 @@ public sealed class MortzScenario : IAsyncDisposable
             throw new InvalidOperationException("Godot E2E arguments need the ++ separator.");
         isolatedArguments.InsertRange(separator,
             ["--log-file", artifacts.GodotLogPath(name)]);
-        Dictionary<string, string> environment = new()
-        {
-            ["MORTZ_USER_DATA"] = artifacts.UserDataPath(name),
-        };
         return E2EProcess.Start(new E2EProcessStart(name, godot, RepoRoot.Path,
-            isolatedArguments, artifacts, reaper, environment));
+            isolatedArguments, artifacts, reaper, IsolatedEnvironment(artifacts, name)));
     }
 
     private IReadOnlyList<string> ClientArguments(string name, int index)
@@ -468,7 +473,7 @@ public sealed class MortzScenario : IAsyncDisposable
     private static string Timescale(ScenarioOptions options) =>
         options.Timescale.ToString(CultureInfo.InvariantCulture);
 
-    private static async Task<IReadOnlyList<string>> SweepOnceAsync(string runId, string godot)
+    private static async Task<IReadOnlyList<string>> SweepOnceAsync(string runId, string[] executables)
     {
         await _sweepOnce.WaitAsync();
         try
@@ -476,7 +481,7 @@ public sealed class MortzScenario : IAsyncDisposable
             if (_swept)
                 return [];
             _swept = true;
-            return StaleProcessSweep.Run(runId, godot);
+            return StaleProcessSweep.Run(runId, executables);
         }
         finally
         {

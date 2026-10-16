@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
-using Mortz.Net.Gen;
+using Mortz.Generators;
 using Mortz.Protocol.Net;
 
 namespace Mortz.Runtime.Tests.Core.Net;
@@ -15,7 +15,7 @@ internal readonly record struct NetGenResult(
     Assembly? Assembly);
 
 /// <summary>
-/// Compiles a source string with Mortz.Net.Gen attached and loads the result, so
+/// Compiles a source string with Mortz.Generators attached and loads the result, so
 /// the generator can be tested on shapes production does not have yet. Attaching
 /// the generator to this assembly instead would emit a second NetRegistry in
 /// Mortz.Protocol.Net and shadow the real one.

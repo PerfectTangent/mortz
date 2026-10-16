@@ -210,10 +210,10 @@ public sealed class HarnessTests
     public void TheAdminPasswordNeverReachesAnArtifact()
     {
         IReadOnlyList<string> redacted = CommandLineRedaction.Redact(
-            ["--server", "--admin-password", "correct horse", "--port", "0"]);
+            ["--admin-password", "correct horse", "--port", "0"]);
 
         Assert.Equal(
-            ["--server", "--admin-password", CommandLineRedaction.PLACEHOLDER, "--port", "0"],
+            ["--admin-password", CommandLineRedaction.PLACEHOLDER, "--port", "0"],
             redacted);
     }
 
@@ -282,8 +282,8 @@ public sealed class HarnessTests
     public void TheSweepReadsTheRunIdOutOfACommandLine()
     {
         Assert.Equal("abc123", StaleProcessSweep.RunIdOf(
-            "\"C:\\godot.exe\" --headless ++ --server --e2e --e2e-run abc123 --port 0"));
-        Assert.Null(StaleProcessSweep.RunIdOf("godot.exe --headless ++ --server"));
+            "\"C:\\MortzServer.exe\" --e2e --e2e-run abc123 --port 0"));
+        Assert.Null(StaleProcessSweep.RunIdOf("MortzServer.exe --port 0"));
         Assert.Null(StaleProcessSweep.RunIdOf("godot.exe --e2e-run"));
     }
 

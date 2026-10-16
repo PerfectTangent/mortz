@@ -1,13 +1,11 @@
+using Mortz.Content;
 using Mortz.Core.Sim;
 using Mortz.Core.Sim.Modifiers;
 using Mortz.Core.Terrain;
 
 namespace Mortz.Server.Content;
 
-/// <summary>
-/// Everything the server needs from a map, and nothing else: the decoded PNG
-/// layers stay on the client side of the engine seam.
-/// </summary>
+/// <summary>A map minus its PNG layers, which are dropped once the terrain mask is built.</summary>
 public sealed record MapSnapshot
 {
     public required string MapId { get; init; }
@@ -20,4 +18,16 @@ public sealed record MapSnapshot
     public required TerrainMask InitialTerrain { get; init; }
 
     public TerrainMask BuildMask() => InitialTerrain.Copy();
+
+    public static MapSnapshot From(DecodedMap map) => new()
+    {
+        MapId = map.MapId,
+        DisplayName = map.DisplayName,
+        Hash = map.Hash,
+        Width = map.Width,
+        Height = map.Height,
+        SpawnPoints = map.SpawnPoints,
+        Zones = map.Zones,
+        InitialTerrain = map.InitialTerrain,
+    };
 }

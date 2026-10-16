@@ -6,12 +6,6 @@ using Serilog;
 
 namespace Mortz.Server.Phases;
 
-public enum PhaseLoadPurpose
-{
-    TRANSITION_COHORT,
-    JOIN_IN_PROGRESS,
-}
-
 /// <summary>How features ask for a phase change. Applied at the end of the server tick.</summary>
 public interface IPhaseTransitionRequests
 {
@@ -32,6 +26,12 @@ public sealed class PhaseHost(
     Func<FeatureScope, IReadOnlyList<SeatAssignment>, int, MatchPhase> openMatch)
     : IPhaseTransitionRequests
 {
+    private enum PhaseLoadPurpose
+    {
+        TRANSITION_COHORT,
+        JOIN_IN_PROGRESS,
+    }
+
     private enum Request
     {
         NONE,

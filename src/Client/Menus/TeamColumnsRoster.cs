@@ -1,6 +1,7 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
+using Mortz.Client.Net;
 using Mortz.Client.Players;
 using Mortz.Client.Setup;
 using Mortz.Client.Stats;
@@ -8,7 +9,6 @@ using Mortz.Client.Ui;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Teams;
 using Mortz.Extensions;
-using Mortz.Net;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Lobby;
 using Mortz.Protocol.Net.Roster;
@@ -94,8 +94,8 @@ public partial class TeamColumnsRoster : ScrollContainer
         AddEmptySlots(_team2Slots, Team.RED, capacity, localTeam);
     }
 
-    /// <summary>Offer, cancel, or accept a trade with this opponent; one
-    /// message covers all three (mutual offers execute the swap).</summary>
+    /// <summary>Offer, cancel, or accept a trade with this opponent, all with one
+    /// message (mutual offers execute the swap).</summary>
     private Button SwapButton(int peerId, int localId)
     {
         bool outgoing = Setup.SwapOffers.Contains(new SwapOffer(localId, peerId));

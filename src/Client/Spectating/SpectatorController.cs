@@ -3,6 +3,7 @@ using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Chat;
 using Mortz.Client.Match;
+using Mortz.Client.Net;
 using Mortz.Client.Players;
 using Mortz.Client.Replication;
 using Mortz.Core.Features;
@@ -10,7 +11,6 @@ using Mortz.Core.Match.Participation;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Sim;
 using Mortz.Extensions;
-using Mortz.Net;
 
 namespace Mortz.Client.Spectating;
 
@@ -62,8 +62,8 @@ public partial class SpectatorController : Node
         ApplyPresentation();
     }
 
-    /// <summary>Once the match ends nobody respawns; the winner banner owns
-    /// the screen and the respawn countdown would be a lie.</summary>
+    /// <summary>Once the match ends nobody respawns, so the winner banner takes
+    /// over from the respawn countdown.</summary>
     private void OnWinnerChanged(Victor? winner)
     {
         if (winner == null)

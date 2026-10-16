@@ -1,5 +1,5 @@
 using Godot;
-using Mortz.Shared.Logging;
+using Mortz.Client.Logging;
 using Serilog;
 
 namespace Mortz.Client.Menus.MainMenuAmbient;

@@ -1,8 +1,8 @@
 #if MORTZ_STEAM
 using Godot;
-using Mortz.Client.Session;
+using Mortz.Client.Logging;
 using Mortz.Client.Servers;
-using Mortz.Shared.Logging;
+using Mortz.Client.Session;
 using SteamApi = GDExtension.Wrappers.Steam;
 
 namespace Mortz.Platform.Steam;
@@ -18,7 +18,7 @@ public class SteamClientRuntime : IDisposable
     public IClientTicketProvider Tickets => _tickets ?? (IClientTicketProvider)new GuestTicketProvider();
     public string? PersonaName => Available ? _api!.GetPersonaName() : null;
     public bool Available => _initialized && _api!.LoggedOn();
-    public string Status { get; private set; } = "Steam unavailable; guest play is ready.";
+    public string Status { get; private set; } = "Steam unavailable, guest play still works.";
 
     public void Start()
     {
@@ -41,7 +41,7 @@ public class SteamClientRuntime : IDisposable
                 _tickets = new SteamClientTickets(_api, () => Available);
                 _api.GetAuthSessionTicketResponseSignal += _tickets.Ready;
             }
-            Status = _initialized ? "Steam ready." : "Steam unavailable; guest play is ready.";
+            Status = _initialized ? "Steam ready." : "Steam unavailable, guest play still works.";
         }
         catch (Exception exception)
         {
@@ -49,7 +49,7 @@ public class SteamClientRuntime : IDisposable
             _discovery?.Dispose();
             _discovery = null;
             ReleaseTickets();
-            Status = "Steam initialization failed; guest play is ready.";
+            Status = "Steam failed to start, guest play still works.";
             MortzLog.For("steam").Warning("Steam client initialization failed: {Reason}", exception.Message);
         }
         if (!_initialized)

@@ -2,10 +2,10 @@ using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Audio;
+using Mortz.Client.Net;
 using Mortz.Core.Features;
 using Mortz.Core.Match.Events;
 using Mortz.Extensions;
-using Mortz.Net;
 
 namespace Mortz.Client.Announcements;
 
@@ -139,7 +139,7 @@ public partial class GameAnnouncer : Node
             _ => Cue.PSYCHO,
         };
 
-    /// <summary>1..n variants per cue; most have one for now.</summary>
+    /// <summary>1..n variants per cue.</summary>
     private SoundEffect?[] Sounds(Cue cue) => cue switch
     {
         Cue.FIRST_BLOOD => [Sfx.Sounds.FirstBlood],

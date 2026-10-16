@@ -55,7 +55,7 @@ public class ObjectiveLifecycleTests
     [Fact]
     public void NoObjectiveHasNoWinnerAndNeverChanges()
     {
-        using MatchRuntime runtime = new(new TerrainMask(8, 8, (_, _) => false, (_, _) => false),
+        MatchRuntime runtime = new(new TerrainMask(8, 8, (_, _) => false, (_, _) => false),
             new MatchConfig(), 0, new FeatureScope("match"), 1);
         runtime.Advance(default);
         runtime.Advance(default);

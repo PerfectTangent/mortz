@@ -4,25 +4,24 @@ using Godot;
 using Mortz.Client.Admin;
 using Mortz.Client.Hooks;
 using Mortz.Client.Hosting;
+using Mortz.Client.Logging;
 using Mortz.Client.Match;
 using Mortz.Client.Menus;
+using Mortz.Client.Net;
 using Mortz.Client.Servers;
 using Mortz.Client.Settings;
 using Mortz.Core.Terrain;
-using Mortz.Net;
 using Mortz.Protocol.Hosting;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Admission;
 using Mortz.Protocol.Net.Lobby;
 using Mortz.Protocol.Net.Sim;
 using Mortz.Protocol.Terrain;
-using Mortz.Shared;
-using Mortz.Shared.Logging;
 using Serilog;
 using CryptoRandom = System.Security.Cryptography.RandomNumberGenerator;
 
 #if TOOLS
-using Mortz.Shared.E2E;
+using Mortz.Client.E2E;
 #endif
 
 namespace Mortz.Client.Session;
@@ -621,9 +620,8 @@ public partial class ClientSessionController : Node, ISessionExit,
     }
 
     // QueueFree alone defers the exit to end of frame, so a dying screen's
-    // handlers would stay routed alongside the next screen's. Detach first so
-    // router membership changes with the transition; QueueFree still frees
-    // the node safely at frame end.
+    // handlers would stay routed alongside the next screen's. Detaching first
+    // unroutes them right away.
     private static void Detach(Node? node)
     {
         if (node == null)

@@ -87,7 +87,7 @@ public sealed class LobbySession(bool teamsEnabled = false)
         return Updated(new LobbyChange.TeamChanged(player.PeerId, team));
     }
 
-    /// <summary>One outstanding offer per player. Repeating one cancels it; a reciprocal offer swaps.</summary>
+    /// <summary>One outstanding offer per player. Repeating one cancels it, a reciprocal offer swaps.</summary>
     public LobbyUpdate? RequestSwap(Player from, int targetPeerId)
     {
         if (!_participants.TryGetValue(from.PeerId, out LobbyParticipant? source) ||
@@ -165,11 +165,7 @@ public sealed class LobbySession(bool teamsEnabled = false)
     private Team SmallestTeam() =>
         Teams.Smallest(_participants.Values.Select(participant => participant.Team));
 
-    private LobbyUpdate Updated(LobbyChange change)
-    {
-        LobbySnapshot snapshot = Freeze();
-        return new LobbyUpdate(snapshot, change, snapshot.CanStart);
-    }
+    private LobbyUpdate Updated(LobbyChange change) => new(Freeze(), change);
 
     private LobbySnapshot Freeze() => new(
         [.. _participants.Values.Select(participant => new LobbyMember(
@@ -198,10 +194,7 @@ public sealed record LobbySnapshot(
     ImmutableArray<SwapOffer> Offers,
     bool CanStart);
 
-public sealed record LobbyUpdate(
-    LobbySnapshot Snapshot,
-    LobbyChange Change,
-    bool CanStart);
+public sealed record LobbyUpdate(LobbySnapshot Snapshot, LobbyChange Change);
 
 public abstract record LobbyChange
 {

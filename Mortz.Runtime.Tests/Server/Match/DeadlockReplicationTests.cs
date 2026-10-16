@@ -38,7 +38,7 @@ public class DeadlockReplicationTests
         Roster roster = new();
         RecordingTransport wire = new();
         ReadyLink link = new(wire);
-        using MatchRuntime runtime = new(map.BuildMask(), config, 2, scope, 3, zones: map.Zones);
+        MatchRuntime runtime = new(map.BuildMask(), config, 2, scope, 3, zones: map.Zones);
         for (int id = 1; id <= 3; id++)
         {
             Player player = roster.Join(id, $"P{id}");
@@ -93,7 +93,7 @@ public class DeadlockReplicationTests
         Roster roster = new();
         RecordingTransport wire = new();
         ReadyLink link = new(wire);
-        using MatchRuntime runtime = new(map.BuildMask(), config, 2, scope, 3, zones: map.Zones);
+        MatchRuntime runtime = new(map.BuildMask(), config, 2, scope, 3, zones: map.Zones);
         Player blue = roster.Join(1, "Blue");
         Player spectator = roster.Join(2, "Spectator");
         foreach (Player player in roster)

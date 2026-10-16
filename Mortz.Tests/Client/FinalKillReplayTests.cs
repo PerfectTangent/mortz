@@ -2,8 +2,10 @@ using System.Reflection;
 using Chickensoft.AutoInject;
 using Godot;
 using Mortz.Client.Audio;
+using Mortz.Client.Content;
 using Mortz.Client.Effects;
 using Mortz.Client.Match;
+using Mortz.Client.Net;
 using Mortz.Client.Players;
 using Mortz.Client.Replay;
 using Mortz.Client.Views;
@@ -13,12 +15,10 @@ using Mortz.Core.Match.Participation;
 using Mortz.Core.Sim;
 using Mortz.Core.Sim.Modifiers;
 using Mortz.Core.Terrain;
-using Mortz.Net;
 using Mortz.Protocol.Net.Match;
 using Mortz.Protocol.Net.Roster;
 using Mortz.Protocol.Replication;
 using Mortz.Runtime.Tests.Net;
-using Mortz.Shared;
 using Xunit;
 
 namespace Mortz.Tests.Client;
@@ -35,7 +35,7 @@ public class FinalKillReplayTests : NodeServiceTest
     public void InsufficientHistoryPlaysFallbackWithoutEnteringReplayMode()
     {
         GameView shell = ResourceLoader.Load<PackedScene>(
-            "res://src/Shared/Scenes/Match/GameView.tscn").Instantiate<GameView>();
+            "res://src/Client/Match/GameView.tscn").Instantiate<GameView>();
         GameMap map = CreateMap();
         try
         {
@@ -179,7 +179,7 @@ public class FinalKillReplayTests : NodeServiceTest
     private SuccessfulReplay CreateSuccessfulReplay()
     {
         GameView shell = ResourceLoader.Load<PackedScene>(
-            "res://src/Shared/Scenes/Match/GameView.tscn").Instantiate<GameView>();
+            "res://src/Client/Match/GameView.tscn").Instantiate<GameView>();
         GameMap map = CreateMap(withDestructibleTerrain: true);
         FakeNetwork network = new() { LocalPeerId = LOCAL_ID };
         RecordingSfx sfx = new();
@@ -306,7 +306,7 @@ public class FinalKillReplayTests : NodeServiceTest
     {
         const int SIZE = 32;
         GameMap map = ResourceLoader.Load<PackedScene>(
-            "res://src/Shared/Scenes/Match/GameMap.tscn").Instantiate<GameMap>();
+            "res://src/Client/Match/GameMap.tscn").Instantiate<GameMap>();
         Image destructible = Image.CreateEmpty(SIZE, SIZE, false, Image.Format.Rgba8);
         if (withDestructibleTerrain)
             destructible.Fill(Colors.White);

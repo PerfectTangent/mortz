@@ -54,7 +54,7 @@ public class MatchReplication(
         link.Send(jipPlayer.PeerId, new MatchParticipationMsg(participation.Seat,
             participation.Activity, participation.Reason, participation.ReturnTick));
         SendCurrentState(jipPlayer);
-        // Admission creates the player after bootstrap; send its authoritative spawn now.
+        // Admission creates the player after bootstrap, so send its spawn now.
         link.SendSnapshot(jipPlayer.PeerId, CaptureSnapshot().SerializeFor(jipPlayer.PeerId, _objectiveWire), -1);
     }
 
@@ -65,9 +65,9 @@ public class MatchReplication(
             SendCurrentState(player);
     }
 
-    private void SendCurrentState(Player jipPlayer)
+    private void SendCurrentState(Player player)
     {
-        int peerId = jipPlayer.PeerId;
+        int peerId = player.PeerId;
         SendScores(peerId);
         SendLiveMortars(peerId);
         if (runtime.Winner is Victor winner)
@@ -108,7 +108,7 @@ public class MatchReplication(
 
     public void MatchUpdated(in MatchUpdate update)
     {
-        // Tick is frozen during VictoryLap; skip periodic snapshot/correction broadcasts.
+        // The tick is frozen during the victory lap, so skip the periodic broadcasts.
         if (runtime.Stage == MatchStage.VICTORY_LAP && update.MatchEnded == null)
             return;
 
@@ -272,9 +272,9 @@ public class MatchReplication(
         _ => throw new ArgumentOutOfRangeException(nameof(victor)),
     };
 
-    private void SendWelcome(Player jipPlayer, int generation, bool initialPhase)
+    private void SendWelcome(Player player, int generation, bool initialPhase)
     {
-        int peerId = jipPlayer.PeerId;
+        int peerId = player.PeerId;
         TerrainSyncPayload terrain = terrainHistory.Build(runtime.World.Terrain);
         if (terrain.Data.Length > NetConfig.MAX_TERRAIN_SYNC_BYTES)
             throw new InvalidDataException($"Terrain sync is too large: {terrain.Data.Length} bytes.");
@@ -282,11 +282,11 @@ public class MatchReplication(
             (terrain.Data.Length + NetConfig.TERRAIN_CHUNK_BYTES - 1) / NetConfig.TERRAIN_CHUNK_BYTES);
         int transferId = ++_nextTerrainTransferId;
         MatchParticipation participation = initialPhase
-            ? runtime.ParticipationOf(jipPlayer)
+            ? runtime.ParticipationOf(player)
             : allowJoinInProgress ? MatchParticipation.Active : MatchParticipation.JipSpectator;
         MatchSnapshot initialSnapshot = CaptureSnapshot();
-        int ack = runtime.World.Players.TryGetValue(peerId, out PlayerState player)
-            ? player.LastInputSeq
+        int ack = runtime.World.Players.TryGetValue(peerId, out PlayerState state)
+            ? state.LastInputSeq
             : -1;
         // The readiness gate holds the roster, so bootstrap must carry full peer IDs.
         link.Send(peerId, new MatchLoadMsg(map.MapId, map.Hash, runtime.Config.ToBytes(),

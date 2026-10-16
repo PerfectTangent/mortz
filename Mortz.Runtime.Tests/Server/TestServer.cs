@@ -73,7 +73,7 @@ internal sealed class TestServer : IDisposable
 
     public void Connect(int peerId, string name)
     {
-        Server.Connect(new(peerId, name, 0, null));
+        Server.Connect(new(peerId, name, 0));
         Ready(peerId);
     }
 

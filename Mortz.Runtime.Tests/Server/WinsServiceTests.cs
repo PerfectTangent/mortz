@@ -73,7 +73,7 @@ public class WinsServiceTests
     {
         Player winner = _roster.Join(1, "winner");
         Player victim = _roster.Join(2, "victim");
-        using MatchRuntime runtime = new(
+        MatchRuntime runtime = new(
             new TerrainMask(128, 128, (_, _) => false, (_, _) => false),
             new MatchConfig
             {

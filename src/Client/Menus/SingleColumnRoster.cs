@@ -1,11 +1,11 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
+using Mortz.Client.Net;
 using Mortz.Client.Players;
 using Mortz.Client.Stats;
 using Mortz.Core.Features;
 using Mortz.Extensions;
-using Mortz.Net;
 
 namespace Mortz.Client.Menus;
 

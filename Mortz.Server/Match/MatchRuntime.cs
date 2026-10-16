@@ -16,15 +16,15 @@ using Mortz.Server.Players;
 namespace Mortz.Server.Match;
 
 /// <summary>Owns the ordered match systems and their match-lifetime state.</summary>
-public sealed class MatchRuntime : IDisposable
+public sealed class MatchRuntime
 {
     private readonly SortedDictionary<int, Player> _seated = [];
     private readonly ScoringStep _scoring;
     private readonly GameMode _mode;
     private readonly ParticipationStep _participation;
-    private readonly GameEventsStep _gameEvents;
+    private readonly GameEventJudge _gameEvents;
     private readonly EndingStep _ending;
-    private bool _disposed;
+    private readonly MatchContext _context;
 
     public int SeatedPlayerCount => _seated.Count;
 
@@ -34,23 +34,20 @@ public sealed class MatchRuntime : IDisposable
     {
         Generation = generation;
         World = new SimWorld(terrain, config, spawnPoints, zones);
-        Context = new MatchContext(World, _seated);
+        _context = new MatchContext(World, _seated);
 
         _participation = new ParticipationStep(scope);
         _scoring = new ScoringStep(World.Config.Rules, scope, _seated);
         _mode = new GameMode(World.Config.Rules, World.Config.Rules.Objective.Create(World.Zones));
-        _gameEvents = new GameEventsStep(
-            new GameEventJudge(scope, _seated, _scoring.TeamOf));
+        _gameEvents = new GameEventJudge(scope, _seated, _scoring.TeamOf);
         _ending = new EndingStep(victoryLapTicks);
     }
 
     public int Generation { get; }
 
-    public MatchContext Context { get; }
-
     public SimWorld World { get; }
 
-    public MatchStage Stage => Context.Stage;
+    public MatchStage Stage => _context.Stage;
 
     public ObjectiveState Objective => _mode.Objective;
 
@@ -70,7 +67,6 @@ public sealed class MatchRuntime : IDisposable
     /// other rule); anyone without one (late joiners) lands on the smallest.</summary>
     public Team? Seat(Player player, Team? lobbyTeam = null)
     {
-        EnsureOpen();
         EnsurePlaying();
         Team? team = null;
         if (Config.Rules.Teams)
@@ -88,7 +84,6 @@ public sealed class MatchRuntime : IDisposable
 
     public void AddJipSpectator(Player player)
     {
-        EnsureOpen();
         EnsurePlaying();
         _participation.AddJipSpectator(player);
     }
@@ -110,7 +105,6 @@ public sealed class MatchRuntime : IDisposable
 
     public void Remove(Player player)
     {
-        EnsureOpen();
         World.RemovePlayer(player.PeerId);
         _seated.Remove(player.PeerId);
         _gameEvents.PlayerLeft(player);
@@ -118,7 +112,6 @@ public sealed class MatchRuntime : IDisposable
 
     public void EnqueueInput(Player player, int seq, PlayerInput input)
     {
-        EnsureOpen();
         if (Stage == MatchStage.PLAYING)
         {
             World.EnqueueInput(player.PeerId, seq, input);
@@ -127,23 +120,22 @@ public sealed class MatchRuntime : IDisposable
 
     public MatchUpdate Advance(ServerTime time)
     {
-        EnsureOpen();
         if (Stage == MatchStage.VICTORY_LAP)
         {
             return new MatchUpdate
             {
                 Tick = World.Tick,
                 Time = time,
-                ReturnToLobby = _ending.AdvanceVictoryLap(Context),
+                ReturnToLobby = _ending.AdvanceVictoryLap(_context),
             };
         }
 
         World.Step();
-        GameModeUpdate mode = _mode.Advance(Context, _scoring, World.Deaths);
+        GameModeUpdate mode = _mode.Advance(_context, _scoring, World.Deaths);
         IReadOnlyList<MatchParticipationChange> participation =
-            _participation.Apply(Context, World.Deaths);
-        IReadOnlyList<Judgment> judgments = _gameEvents.Judge(mode.Eliminations, World.Tick);
-        EndingOutput ending = _ending.Apply(Context, mode.Outcome);
+            _participation.Apply(_context, World.Deaths);
+        IReadOnlyList<Judgment> judgments = _gameEvents.JudgeFrame(mode.Eliminations, World.Tick);
+        _ending.Apply(_context, mode.Outcome);
         return new MatchUpdate
         {
             Tick = World.Tick,
@@ -156,9 +148,9 @@ public sealed class MatchRuntime : IDisposable
             MatchPoint = mode.MatchPoint,
             GameEvents = [.. judgments],
             ParticipationChanges = [.. participation],
-            MatchEnded = ending.Winner,
-            Winners = ending.Winner is Victor victor ? [.. Winners(victor)] : [],
-            FinalKill = ending.FinalKill,
+            MatchEnded = mode.Outcome?.Winner,
+            Winners = mode.Outcome?.Winner is Victor victor ? [.. Winners(victor)] : [],
+            FinalKill = mode.Outcome?.FinalKill,
             ReturnToLobby = _ending.ReturnToLobby,
             ModifierChanges = [.. World.DrainModifierChanges()],
         };
@@ -179,26 +171,11 @@ public sealed class MatchRuntime : IDisposable
         _ => throw new ArgumentOutOfRangeException(nameof(victor)),
     };
 
-    public void Dispose()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        _disposed = true;
-    }
-
     private void EnsurePlaying()
     {
         if (Stage != MatchStage.PLAYING)
         {
             throw new InvalidOperationException("The completed match is closed to new participants.");
         }
-    }
-
-    private void EnsureOpen()
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

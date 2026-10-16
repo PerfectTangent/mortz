@@ -15,19 +15,13 @@ public class EndingStep(int victoryLapTicks)
 
     public FinalKillEvent? FinalKill { get; private set; }
 
-    public EndingOutput Apply(MatchContext match, MatchOutcome? outcome)
+    public void Apply(MatchContext match, MatchOutcome? outcome)
     {
         if (outcome == null)
-            return default;
-        BeginVictoryLap(match, outcome.Winner);
-        FinalKill = outcome.FinalKill;
-        return new EndingOutput(outcome.Winner, outcome.FinalKill);
-    }
-
-    public void BeginVictoryLap(MatchContext match, Victor winner)
-    {
+            return;
         match.Stage = MatchStage.VICTORY_LAP;
-        Winner = winner;
+        Winner = outcome.Winner;
+        FinalKill = outcome.FinalKill;
         _ticksUntilLobby = _victoryLapTicks;
     }
 
@@ -39,5 +33,3 @@ public class EndingStep(int victoryLapTicks)
         return --_ticksUntilLobby <= 0;
     }
 }
-
-public readonly record struct EndingOutput(Victor? Winner, FinalKillEvent? FinalKill);

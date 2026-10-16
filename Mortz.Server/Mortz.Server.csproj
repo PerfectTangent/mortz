@@ -1,20 +1,31 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>MortzServer</AssemblyName>
     <RootNamespace>Mortz.Server</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <NoWarn>$(NoWarn);EnableGenerateDocumentationFile</NoWarn>
   </PropertyGroup>
+  <!-- MORTZ_E2E gates the E2E code, so it never ships in Release. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DefineConstants>$(DefineConstants);MORTZ_E2E</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Mortz.Protocol/Mortz.Protocol.csproj" />
+    <ProjectReference Include="../Mortz.Core/Mortz.Core.csproj" />
+    <ProjectReference Include="../Mortz.Content/Mortz.Content.csproj" />
     <ProjectReference Include="../Mortz.Net.Gns/Mortz.Net.Gns.csproj" />
-    <PackageReference Include="Serilog" Version="4.4.0" />
+    <ProjectReference Include="../Mortz.Generators/Mortz.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Mortz.E2E.Protocol/Mortz.E2E.Protocol.csproj"
+                      Condition="'$(Configuration)' == 'Debug'" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Mortz.Core\Mortz.Core.csproj" />
-    <ProjectReference Include="..\Mortz.Content\Mortz.Content.csproj" />
-    <ProjectReference Include="..\Mortz.Net.Gen\Mortz.Net.Gen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="Serilog" Version="4.4.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 </Project>

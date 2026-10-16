@@ -1,0 +1,119 @@
+[gd_scene format=3 uid="uid://dd6fbi60r5yiv"]
+
+[ext_resource type="Script" uid="uid://oqlp4dycn1yy" path="res://src/Client/Menus/ServerBrowser.cs" id="1_5oah7"]
+[ext_resource type="PackedScene" uid="uid://bfovuxg8rq0rd" path="res://src/Client/Menus/ServerRow.tscn" id="2_xfrap"]
+[ext_resource type="FontFile" uid="uid://d0beohx8ly6m8" path="res://Assets/Fonts/Barlow_Condensed/BarlowCondensed-Black.ttf" id="3_ujx05"]
+[ext_resource type="PackedScene" uid="uid://i48m8fxwjjq1" path="res://src/Client/Menus/DirectConnectPanel.tscn" id="4_0rl6n"]
+
+[node name="ServerBrowser" type="Control" unique_id=381885011 node_paths=PackedStringArray("_rows", "_status", "_joinButton", "_favoriteButton", "_directPanel")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_5oah7")
+_rowScene = ExtResource("2_xfrap")
+_rows = NodePath("Margin/Column/Scroll/Rows")
+_status = NodePath("Margin/Column/Status")
+_joinButton = NodePath("Margin/Column/Actions/Join")
+_favoriteButton = NodePath("Margin/Column/Actions/Favorite")
+_directPanel = NodePath("Margin/Column/DirectPanel")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1369589383]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.026, 0.032, 0.044, 0.88)
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=77234110]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 60
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 60
+theme_override_constants/margin_bottom = 40
+
+[node name="Column" type="VBoxContainer" parent="Margin" unique_id=431768430]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Margin/Column" unique_id=573345082]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_ujx05")
+theme_override_font_sizes/font_size = 42
+text = "SERVERS"
+
+[node name="Hint" type="Label" parent="Margin/Column" unique_id=830434181]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.62, 0.65, 1)
+text = "Refresh searches Steam, your network and saved servers. Star a server to keep it."
+autowrap_mode = 3
+
+[node name="Scroll" type="ScrollContainer" parent="Margin/Column" unique_id=1810200636]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Rows" type="VBoxContainer" parent="Margin/Column/Scroll" unique_id=1148172333]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="Status" type="Label" parent="Margin/Column" unique_id=1049170998]
+layout_mode = 2
+theme_type_variation = &"NoteLabel"
+text = "Steam discovery is unavailable. LAN, favorites and direct joining are available."
+autowrap_mode = 3
+
+[node name="DirectPanel" parent="Margin/Column" unique_id=1520044977 instance=ExtResource("4_0rl6n")]
+layout_mode = 2
+
+[node name="Actions" type="HBoxContainer" parent="Margin/Column" unique_id=769042075]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Join" type="Button" parent="Margin/Column/Actions" unique_id=1566062296]
+custom_minimum_size = Vector2(160, 44)
+layout_mode = 2
+disabled = true
+text = "Join server"
+
+[node name="Favorite" type="Button" parent="Margin/Column/Actions" unique_id=2108871841]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+disabled = true
+text = "Favorite"
+
+[node name="Refresh" type="Button" parent="Margin/Column/Actions" unique_id=1644783965]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Refresh"
+
+[node name="Direct" type="Button" parent="Margin/Column/Actions" unique_id=884688381]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Direct connect"
+
+[node name="Spacer" type="Control" parent="Margin/Column/Actions" unique_id=998128964]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Back" type="Button" parent="Margin/Column/Actions" unique_id=1137446003]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Back"
+
+[connection signal="pressed" from="Margin/Column/Actions/Join" to="." method="OnJoinPressed"]
+[connection signal="pressed" from="Margin/Column/Actions/Favorite" to="." method="OnFavoritePressed"]
+[connection signal="pressed" from="Margin/Column/Actions/Refresh" to="." method="OnRefreshPressed"]
+[connection signal="pressed" from="Margin/Column/Actions/Direct" to="." method="OnDirectConnectPressed"]
+[connection signal="pressed" from="Margin/Column/Actions/Back" to="." method="OnBackPressed"]

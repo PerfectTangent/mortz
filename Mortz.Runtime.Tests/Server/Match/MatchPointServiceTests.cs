@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Mortz.Runtime.Tests.Server.Match;
 
-public class MatchPointServiceTests : IDisposable
+public class MatchPointServiceTests
 {
     private const int GENERATION = 2;
 
@@ -56,8 +56,6 @@ public class MatchPointServiceTests : IDisposable
         _runtime.Seat(_secondVictim);
         _matchPoint = new MatchPointService(new ReadyLink(_transport), Logger.None);
     }
-
-    public void Dispose() => _runtime.Dispose();
 
     [Fact]
     public void PublishesOnlyEntryAndLapseTransitions()

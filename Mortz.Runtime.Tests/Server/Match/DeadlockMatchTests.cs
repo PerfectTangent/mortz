@@ -38,7 +38,7 @@ public class DeadlockMatchTests
     [Fact]
     public void SeparateZonesShareOneBarAndOverlapsOrExtraPlayersDoNotAccelerateIt()
     {
-        using Fixture f = new();
+        Fixture f = new();
         f.Runtime.World.Teleport(1, new Vec2(50, 250));
         f.Runtime.World.Teleport(2, new Vec2(310, 250));
         f.Runtime.Seat(f.Open(3), Team.BLUE);
@@ -61,7 +61,7 @@ public class DeadlockMatchTests
     {
         MatchConfig config = Config();
         config.Rules.SpawnImmunity = 1;
-        using Fixture f = new(config);
+        Fixture f = new(config);
         f.Runtime.World.Teleport(1, new Vec2(50, 250));
         f.Runtime.World.Teleport(2, new Vec2(200, 250));
         f.Step();
@@ -83,7 +83,7 @@ public class DeadlockMatchTests
         MatchConfig config = Config();
         ((DeadlockObjectiveRules)config.Rules.Objective).AbsenceDelay = 2f / SimConfig.TICK_RATE;
         config.Rules.Respawn = new NoRespawnRules();
-        using Fixture f = new(config);
+        Fixture f = new(config);
         f.Runtime.World.Teleport(1, new Vec2(50, 250));
         f.Runtime.World.Teleport(2, new Vec2(200, 250));
         f.Step(3);
@@ -113,7 +113,7 @@ public class DeadlockMatchTests
     [Fact]
     public void ADefenderKilledOnTheCaptureTickCannotContestAndKillsDoNotDecideTheWinner()
     {
-        using Fixture f = new();
+        Fixture f = new();
         f.Runtime.World.Teleport(2, new Vec2(200, 250));
         for (int death = 0; death < 3; death++)
         {
@@ -144,7 +144,7 @@ public class DeadlockMatchTests
     {
         MatchConfig config = Config();
         config.Rules.EndCondition = new TimeLimitRules { Seconds = 1 };
-        using Fixture f = new(config);
+        Fixture f = new(config);
         f.Runtime.World.QueueDamage(1, byte.MaxValue);
         f.Step();
         Assert.Equal(1, f.Runtime.TeamKills.Red);
@@ -179,11 +179,11 @@ public class DeadlockMatchTests
         MapZones untagged = new([new MapZone("control", ["deadlock"], ZoneShape.Rect(0, 0, 400, 300), null)]);
         Assert.Contains("control", Assert.Throws<ArgumentException>(() =>
             new MatchRuntime(TestWorlds.Flat(), Config(), 0, new FeatureScope("match"), 1, zones: untagged)).Message);
-        using MatchRuntime deathmatch = new(TestWorlds.Flat(), new MatchConfig(), 0, new FeatureScope("match"), 1);
+        MatchRuntime deathmatch = new(TestWorlds.Flat(), new MatchConfig(), 0, new FeatureScope("match"), 1);
         Assert.IsType<NoObjectiveState>(deathmatch.Objective);
     }
 
-    private class Fixture : IDisposable
+    private class Fixture
     {
         private readonly FeatureScope _scope = new("match");
         public MatchRuntime Runtime { get; }
@@ -212,7 +212,5 @@ public class DeadlockMatchTests
                 Runtime.Advance(default);
             }
         }
-
-        public void Dispose() => Runtime.Dispose();
     }
 }

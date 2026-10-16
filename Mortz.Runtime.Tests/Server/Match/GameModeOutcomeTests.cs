@@ -15,7 +15,7 @@ public class GameModeOutcomeTests
     [Fact]
     public void TheTimerDecidesOnTheScoresBeforeTheTickAndEveryDeathOnThatTickStillCounts()
     {
-        using Fixture fixture = new(TimedDeathRules());
+        Fixture fixture = new(TimedDeathRules());
         fixture.Runtime.World.QueueDamage(2, byte.MaxValue);
         fixture.Runtime.World.QueueDamage(3, byte.MaxValue);
         Assert.Null(fixture.Runtime.Advance(default).MatchEnded);
@@ -41,7 +41,7 @@ public class GameModeOutcomeTests
     [Fact]
     public void TheFewestDeathsWinAtTheTimeLimit()
     {
-        using Fixture fixture = new(TimedDeathRules());
+        Fixture fixture = new(TimedDeathRules());
         fixture.Runtime.World.QueueDamage(1, byte.MaxValue);
         fixture.Runtime.World.QueueDamage(2, byte.MaxValue);
         fixture.AdvanceToDeadline();
@@ -58,7 +58,7 @@ public class GameModeOutcomeTests
     public void ReachingADeathTargetEndsTheMatchForTheFewestDeathsWithoutAMatchPoint(
         string condition, int decidingVictim)
     {
-        using Fixture fixture = new(new ModeRules
+        Fixture fixture = new(new ModeRules
         {
             Score = ScoreMetric.DEATHS,
             EndCondition = condition == "score_lead" ? new ScoreLeadRules { Target = 2 } : new ScoreTargetRules { Target = 2 },
@@ -84,7 +84,7 @@ public class GameModeOutcomeTests
     {
         ModeRules rules = TimedDeathRules();
         rules.Teams = true;
-        using Fixture fixture = new(rules);
+        Fixture fixture = new(rules);
         Team losingTeam = fixture.Runtime.World.Players[1].Team!.Value;
         Team winningTeam = Teams.All.Single(team => team != losingTeam);
         fixture.Runtime.World.QueueDamage(1, byte.MaxValue);
@@ -100,7 +100,7 @@ public class GameModeOutcomeTests
     {
         ModeRules rules = TimedDeathRules();
         rules.Teams = true;
-        using Fixture fixture = new(rules);
+        Fixture fixture = new(rules);
         Team remainingTeam = fixture.Runtime.World.Players[1].Team!.Value;
         fixture.Runtime.Remove(fixture.Players[1]);
         fixture.Runtime.World.QueueDamage(1, byte.MaxValue);
@@ -115,7 +115,7 @@ public class GameModeOutcomeTests
         EndCondition = new TimeLimitRules { Seconds = 1 },
     };
 
-    private class Fixture : IDisposable
+    private class Fixture
     {
         public MatchRuntime Runtime { get; }
         public Player[] Players { get; }
@@ -142,11 +142,6 @@ public class GameModeOutcomeTests
             {
                 Assert.Null(Runtime.Advance(default).MatchEnded);
             }
-        }
-
-        public void Dispose()
-        {
-            Runtime.Dispose();
         }
     }
 }

@@ -1,0 +1,39 @@
+[gd_scene format=3 uid="uid://bkx20bfq77ejk"]
+
+[ext_resource type="Script" uid="uid://wj2mcsbosk7g" path="res://src/Client/Announcements/AnnouncementBanner.cs" id="1_banner"]
+[ext_resource type="PackedScene" path="res://src/Client/Announcements/AnnouncementLine.tscn" id="2_d3lcr"]
+
+[node name="AnnouncementBanner" type="Control" unique_id=1379281400 node_paths=PackedStringArray("_matchPoint", "_lines")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_banner")
+_matchPoint = NodePath("MatchPoint")
+_lines = NodePath("Lines")
+_lineScene = ExtResource("2_d3lcr")
+
+[node name="MatchPoint" type="RichTextLabel" parent="." unique_id=351443301]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 20.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_type_variation = &"AnnouncementMatchPoint"
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+
+[node name="Lines" type="VBoxContainer" parent="." unique_id=189780994]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 52.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_type_variation = &"AnnouncementStack"

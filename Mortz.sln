@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mortz.Tests", "Mortz.Tests\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mortz.Core", "Mortz.Core\Mortz.Core.csproj", "{F2E17BC2-4356-4C54-ACBE-C11077AA9AD8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mortz.Net.Gen", "Mortz.Net.Gen\Mortz.Net.Gen.csproj", "{FC9FEF3D-3389-43EC-8522-1911CEA0002A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mortz.Generators", "Mortz.Generators\Mortz.Generators.csproj", "{FC9FEF3D-3389-43EC-8522-1911CEA0002A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mortz.Content", "Mortz.Content\Mortz.Content.csproj", "{5EB61912-86B5-4614-A94F-74ED8D542729}"
 EndProject

@@ -4,12 +4,12 @@ using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Effects;
 using Mortz.Client.Match;
+using Mortz.Client.Net;
 using Mortz.Client.Spectating;
 using Mortz.Client.Views;
 using Mortz.Core.Features;
 using Mortz.Core.Sim;
 using Mortz.Extensions;
-using Mortz.Net;
 using Mortz.Protocol.Net.Match;
 
 namespace Mortz.Client.Replay;

@@ -2,14 +2,13 @@ using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Audio;
+using Mortz.Client.Net;
 using Mortz.Client.Servers;
 using Mortz.Client.Session;
 using Mortz.Client.Settings;
-using Mortz.Net;
 using Mortz.Protocol.Net;
 #if MORTZ_STEAM
 using Mortz.Platform.Steam;
-using Mortz.Shared;
 #endif
 
 namespace Mortz.Client;

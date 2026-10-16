@@ -1,9 +1,8 @@
 using Godot;
+using Mortz.Client.Logging;
 using Mortz.Client.Match;
 using Mortz.Client.Views;
 using Mortz.Core.Sim;
-using Mortz.Shared;
-using Mortz.Shared.Logging;
 using Serilog;
 
 namespace Mortz.Client.Diagnostics;

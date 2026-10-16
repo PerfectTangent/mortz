@@ -1,0 +1,95 @@
+[gd_scene format=3 uid="uid://ddr7u05iktete"]
+
+[ext_resource type="Script" uid="uid://ddll1rw8c4ki7" path="res://src/Client/Announcements/AnnouncementTitle.cs" id="1_idvyv"]
+[ext_resource type="Shader" uid="uid://bgqs2i1f7ot68" path="res://Assets/Ui/Announcements/blood_stamp.gdshader" id="2_cwojy"]
+[ext_resource type="Shader" uid="uid://spf5r7c07scy" path="res://Assets/Ui/Announcements/stamped_ink.gdshader" id="3_cjhph"]
+[ext_resource type="PackedScene" uid="uid://csrqlkapjygxe" path="res://src/Client/Announcements/TensionOrnament.tscn" id="5_6bkx1"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_irq4e"]
+resource_local_to_scene = true
+shader = ExtResource("2_cwojy")
+shader_parameter/seed = 12.0
+shader_parameter/blood_burst = 0.0
+shader_parameter/burst_progress = 1.0
+shader_parameter/area_size = Vector2(240, 40)
+shader_parameter/blood_dark = Color(0.23, 0.018, 0.013, 1)
+shader_parameter/blood_light = Color(0.63, 0.075, 0.035, 1)
+shader_parameter/severity = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ov5be"]
+resource_local_to_scene = true
+shader = ExtResource("3_cjhph")
+shader_parameter/seed = 12.0
+shader_parameter/blood_stain = 0.0
+shader_parameter/blood_color = Color(0.8, 0.2, 0.12, 1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_eguqi"]
+resource_local_to_scene = true
+shader = ExtResource("3_cjhph")
+shader_parameter/seed = 12.0
+shader_parameter/blood_stain = 0.0
+shader_parameter/blood_color = Color(0.8, 0.2, 0.12, 1)
+
+[node name="AnnouncementTitle" type="Control" unique_id=308509381 node_paths=PackedStringArray("_ink", "_overprint", "_smear", "_tension", "_left", "_right", "_sinew", "_highlight", "_loose", "_rightSinew", "_rightHighlight", "_rightLoose")]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 400.0
+offset_bottom = 40.0
+mouse_filter = 2
+script = ExtResource("1_idvyv")
+_ink = NodePath("Ink")
+_overprint = NodePath("Overprint")
+_smear = NodePath("BloodImpression")
+_tension = NodePath("Tension")
+_left = NodePath("Tension/Left")
+_right = NodePath("Tension/Right")
+_sinew = NodePath("Tension/Sinew")
+_highlight = NodePath("Tension/Highlight")
+_loose = NodePath("Tension/Loose")
+_rightSinew = NodePath("Tension/RightSinew")
+_rightHighlight = NodePath("Tension/RightHighlight")
+_rightLoose = NodePath("Tension/RightLoose")
+
+[node name="BloodImpression" type="ColorRect" parent="." unique_id=853619425]
+material = SubResource("ShaderMaterial_irq4e")
+layout_mode = 0
+offset_left = 70.0
+offset_top = 20.0
+offset_right = 330.0
+offset_bottom = 44.0
+mouse_filter = 2
+
+[node name="Overprint" type="Label" parent="." unique_id=1555075988]
+material = SubResource("ShaderMaterial_ov5be")
+layout_mode = 0
+offset_left = 73.0
+offset_top = 1.0
+offset_right = 331.0
+offset_bottom = 45.0
+rotation = -0.025
+pivot_offset = Vector2(129, 22)
+theme_type_variation = &"AnnouncementOverprint"
+text = "FIRST BLOOD"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true
+
+[node name="Ink" type="Label" parent="." unique_id=756636299]
+material = SubResource("ShaderMaterial_eguqi")
+layout_mode = 0
+offset_left = 71.0
+offset_top = -1.0
+offset_right = 329.0
+offset_bottom = 43.0
+rotation = -0.025
+pivot_offset = Vector2(129, 22)
+theme_type_variation = &"AnnouncementFirstBlood"
+text = "FIRST BLOOD"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true
+
+[node name="Tension" parent="." unique_id=1596689068 instance=ExtResource("5_6bkx1")]
+visible = false
+layout_mode = 0

@@ -1,7 +1,9 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
+using Mortz.Client.Content;
 using Mortz.Client.Match.PlayerHud;
+using Mortz.Client.Net;
 using Mortz.Client.Players;
 using Mortz.Client.Replay;
 using Mortz.Client.Replication;
@@ -15,8 +17,6 @@ using Mortz.Core.Match.Participation;
 using Mortz.Core.Replication;
 using Mortz.Core.Sim;
 using Mortz.Extensions;
-using Mortz.Net;
-using Mortz.Shared;
 #if TOOLS
 using Mortz.Client.E2E;
 #endif
@@ -57,7 +57,6 @@ public partial class GameView : Node2D, IProvide<FeatureScope>, IProvide<GameMap
     private LiveMatchFrameBuilder _frameBuilder = null!;
     private MatchSceneRenderer _renderer = null!;
 
-    /// <summary>The map this match is played on; set by Initialize.</summary>
     public string MapId { get; private set; } = "";
 
     public int NewestSnapshotTick => Interpolator.NewestTick;
@@ -77,8 +76,7 @@ public partial class GameView : Node2D, IProvide<FeatureScope>, IProvide<GameMap
         _gameMap.Initialize(map, runtime.Terrain);
         _gameMap.SetZonesVisible(PlayerView.DrawSimBoxes);
         AddChild(_gameMap);
-        // Terrain has to draw under the players, mortars and ropes; AddChild
-        // would leave it on top.
+        // Terrain draws under players, mortars and ropes. AddChild would leave it on top.
         MoveChild(_gameMap, 0);
         _localPlayer.Initialize(runtime);
         _spectator.Initialize(new Vector2(map.Width / 2f, map.Height / 2f));

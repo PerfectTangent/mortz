@@ -6,11 +6,8 @@ using Xunit;
 namespace Mortz.E2E.Tests;
 
 /// <summary>
-/// The E2E control channel is compiled out of exports with #if TOOLS. A clean
-/// compile doesn't prove that. This builds the export configurations for real
-/// and greps the type names out of the produced assembly bytes. A silent
-/// false pass here is the dangerous failure, so we check the bytes directly
-/// instead of just trusting the build.
+/// A clean compile doesn't prove the E2E code was stripped, so this builds the real
+/// configurations and greps the assembly bytes for the type names.
 /// </summary>
 public sealed class ExportStripTests
 {
@@ -18,12 +15,10 @@ public sealed class ExportStripTests
     private static readonly string[] _strippedTypes =
     [
         "E2EDriver",
+        "E2EDispatcher",
         "E2ELaunch",
-        "E2EStdoutWriter",
         "IE2EHandler",
         "IE2EResponder",
-        "ServerE2EHandler",
-        "ServerE2ERoot",
         "ClientE2EHandler",
         "ClientE2ERoot",
         "IE2EClientBridge",
@@ -80,7 +75,47 @@ public sealed class ExportStripTests
             $"{string.Join(", ", missing)}");
     }
 
+    /// <summary>The same check for the dedicated server, where MORTZ_E2E is Debug only.</summary>
+    private static readonly string[] _serverStrippedTypes =
+    [
+        "E2EDispatcher",
+        "ServerE2EHandler",
+        "ServerE2EEvents",
+        "E2EMatchControl",
+    ];
+
+    [Fact]
+    public void AReleaseServerContainsNoE2ECode()
+    {
+        string output = BuildServer("Release");
+        string metadata = Encoding.ASCII.GetString(File.ReadAllBytes(Path.Combine(output, "MortzServer.dll")));
+
+        Assert.DoesNotContain(_serverStrippedTypes, type => metadata.Contains(type, StringComparison.Ordinal));
+        Assert.False(File.Exists(Path.Combine(output, "Mortz.E2E.Protocol.dll")));
+    }
+
+    [Fact]
+    public void TheDebugServerStillContainsThemSoTheCheckCanFail()
+    {
+        string output = BuildServer("Debug");
+        string metadata = Encoding.ASCII.GetString(File.ReadAllBytes(Path.Combine(output, "MortzServer.dll")));
+
+        Assert.All(_serverStrippedTypes, type => Assert.Contains(type, metadata, StringComparison.Ordinal));
+    }
+
+    private static string BuildServer(string configuration)
+    {
+        Run("build", "Mortz.Server/Mortz.Server.csproj", "-c", configuration, "--nologo", "-v:quiet");
+        return Path.Combine(RepoRoot.Path, "Mortz.Server", "bin", configuration, "net10.0");
+    }
+
     private static string Build(string configuration)
+    {
+        Run("build", "Mortz.csproj", "-c", configuration, "--nologo", "-v:quiet");
+        return Path.Combine(RepoRoot.Path, ".godot", "mono", "temp", "bin", configuration);
+    }
+
+    private static void Run(params string[] arguments)
     {
         ProcessStartInfo info = new("dotnet")
         {
@@ -89,8 +124,7 @@ public sealed class ExportStripTests
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        foreach (string argument in new[]
-                 { "build", "Mortz.csproj", "-c", configuration, "--nologo", "-v:quiet" })
+        foreach (string argument in arguments)
         {
             info.ArgumentList.Add(argument);
         }
@@ -99,8 +133,6 @@ public sealed class ExportStripTests
             ?? throw new E2EProcessException("Could not start dotnet build.");
         string output = build.StandardOutput.ReadToEnd() + build.StandardError.ReadToEnd();
         build.WaitForExit();
-        Assert.True(build.ExitCode == 0, $"{configuration} build failed:{Environment.NewLine}{output}");
-
-        return Path.Combine(RepoRoot.Path, ".godot", "mono", "temp", "bin", configuration);
+        Assert.True(build.ExitCode == 0, $"{string.Join(' ', arguments)} failed:{Environment.NewLine}{output}");
     }
 }

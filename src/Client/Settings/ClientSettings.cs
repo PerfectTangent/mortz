@@ -1,9 +1,8 @@
+using Mortz.Client.Logging;
 using Mortz.Client.Servers;
 using Mortz.Content;
 using Mortz.Core.Sim;
 using Mortz.Protocol.Net.Names;
-using Mortz.Shared;
-using Mortz.Shared.Logging;
 using Serilog;
 
 namespace Mortz.Client.Settings;

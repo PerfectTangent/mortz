@@ -1,4 +1,3 @@
-using Mortz.Core.Identity;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Chat;
 using Mortz.Protocol.Net.Lobby;
@@ -19,33 +18,27 @@ public class GameServerConnectTests : IDisposable
 
     public void Dispose() => _server.Dispose();
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void AdmittedAccountSurvivesMatchEntryAndDisconnect(bool verified)
+    [Fact]
+    public void AdmittedIdentitySurvivesMatchEntryAndDisconnect()
     {
-        AccountObserver observer = new();
+        PlayerObserver observer = new();
         using TestServer server = new(observer: observer);
-        VerifiedAccount? account = verified ? new(AccountProvider.STEAM, ulong.MaxValue) : null;
 
-        server.Server.Connect(new(7, "alice", 4, account));
+        server.Server.Connect(new(7, "alice", 4));
         server.Ready(7);
         Player player = Assert.IsType<Player>(observer.Joined);
-        Assert.Equal(account, player.Account);
         Assert.Equal(4, player.Skin);
 
         server.Receive(7, new SetReadyMsg(true));
         server.Tick();
         Assert.Equal(ServerPhaseKind.MATCH, server.Server.Phase);
-        Assert.Equal(account, player.Account);
 
         server.Server.Disconnect(7);
         Assert.Same(player, observer.Left);
-        Assert.Equal(account, Assert.IsType<Player>(observer.Left).Account);
         Assert.Equal(0, server.Server.PlayerCount);
     }
 
-    private class AccountObserver : IObservePlayers
+    private class PlayerObserver : IObservePlayers
     {
         public Player? Joined;
         public Player? Left;

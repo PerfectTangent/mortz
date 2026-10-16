@@ -43,8 +43,6 @@ public sealed class SettingsService : IObservePlayers, IObservePhase
 
     public void PlayerJoined(Player player) => SendTo(player.PeerId);
 
-    public void PlayerLeft(Player player) { }
-
     public void PhaseChanged(ServerPhaseKind phase)
     {
         if (phase == ServerPhaseKind.LOBBY)
@@ -156,16 +154,11 @@ public sealed class SettingsService : IObservePlayers, IObservePhase
             _maps[Map.MapId] = new ContentOption(Map.MapId, Map.DisplayName);
     }
 
+    /// <summary>The one mode the config matches, or null when none or several do.</summary>
     private ModeOption? CurrentMode()
     {
-        ModeOption[] matches = _modes
-            .Where(mode => mode.Manifest.Matches(Config))
-            .ToArray();
-        if (matches.Length == 0)
-            return null;
-        if (matches.Length > 1)
-            return null;
-        return matches[0];
+        ModeOption[] matches = [.. _modes.Where(mode => mode.Manifest.Matches(Config)).Take(2)];
+        return matches.Length == 1 ? matches[0] : null;
     }
 
     private LobbySettings CreateState()

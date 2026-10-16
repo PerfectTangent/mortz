@@ -1,13 +1,13 @@
+#if MORTZ_E2E
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Objectives;
 using Mortz.Core.Sim;
 
 namespace Mortz.Server.Diagnostics;
 
-/// <summary>Queues mutations and state reads for tick boundaries; enqueue from
-/// the main thread only, the driver already marshals. A mutation lands before match
-/// advancement and completes after, so AppliedTick is the first tick whose snapshot
-/// and deaths include it.</summary>
+/// <summary>Queues mutations and state reads for tick boundaries. Main thread only. A mutation
+/// lands before the match advances and completes after, so AppliedTick is the first tick whose
+/// snapshot and deaths include it.</summary>
 public sealed class E2EMatchControl : IMatchControl
 {
     private readonly List<PlacementRequest> _placements = [];
@@ -28,8 +28,6 @@ public sealed class E2EMatchControl : IMatchControl
 
     public void ReadState(Action<WorldStateOutcome> done) => _reads.Add(done);
 
-    /// <summary>Rules and arena. Constant for the match, but served on the same
-    /// queue so there is one way in and no second view of the world.</summary>
     public void ReadSetup(Action<MatchSetupOutcome> done) => _setupReads.Add(done);
 
     public void ApplyBefore(SimWorld world)
@@ -94,8 +92,7 @@ public sealed class E2EMatchControl : IMatchControl
         _readsInFlight.Clear();
     }
 
-    /// <summary>Null when the teleport happened; a message when it could not.
-    /// A missing or dead target is reported, never thrown into the tick.</summary>
+    /// <summary>Error message, or null when the teleport happened. Never throws into the tick.</summary>
     private static string? Place(SimWorld world, in PlacementRequest request)
     {
         if (!world.Players.TryGetValue(request.PeerId, out PlayerState player))
@@ -126,3 +123,4 @@ public sealed class E2EMatchControl : IMatchControl
 
     private static string Unknown(int peerId) => $"Unknown peer {peerId}.";
 }
+#endif

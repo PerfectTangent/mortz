@@ -1,0 +1,241 @@
+[gd_scene format=3 uid="uid://c1hboxabt4e4b"]
+
+[ext_resource type="Script" uid="uid://ca7dhedcdj2cq" path="res://src/Client/Menus/MainMenu.cs" id="1_ldg5h"]
+[ext_resource type="Script" uid="uid://bingu8fm6o7on" path="res://src/Client/Menus/MainMenuAmbient/MenuBackdrop.cs" id="2_ni2vt"]
+[ext_resource type="FontFile" uid="uid://d0beohx8ly6m8" path="res://Assets/Fonts/Barlow_Condensed/BarlowCondensed-Black.ttf" id="3_0l28m"]
+[ext_resource type="FontFile" uid="uid://tah7qwxd4iyq" path="res://Assets/Fonts/Metal_Mania/MetalMania-Regular.ttf" id="4_bweax"]
+[ext_resource type="PackedScene" uid="uid://dd6fbi60r5yiv" path="res://src/Client/Menus/ServerBrowser.tscn" id="5_5r7pb"]
+[ext_resource type="PackedScene" uid="uid://b86jqbl2lr84v" path="res://src/Client/Menus/SettingsScreen.tscn" id="6_q4ni7"]
+
+[sub_resource type="Animation" id="Animation_duaim"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("HomePanel:visible")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+
+[sub_resource type="Animation" id="Animation_lt8ac"]
+resource_name = "start_sequence"
+length = 3.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("HomePanel:visible")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 3),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [false, true]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_duaim"]
+_data = {
+&"RESET": SubResource("Animation_duaim"),
+&"start_sequence": SubResource("Animation_lt8ac")
+}
+
+[node name="MainMenu" type="Control" unique_id=1489092193 node_paths=PackedStringArray("_backdrop", "_homePanel", "_browser", "_settingsScreen", "_hostPanel", "_serverNameEdit", "_portEdit", "_adminPasswordEdit", "_allowJip", "_status", "_player")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_ldg5h")
+_backdrop = NodePath("MenuBackdrop")
+_homePanel = NodePath("HomePanel")
+_browser = NodePath("ServerBrowser")
+_settingsScreen = NodePath("Settings")
+_hostPanel = NodePath("MenuCenter/Menu/HostPanel")
+_serverNameEdit = NodePath("MenuCenter/Menu/HostPanel/ServerNameEdit")
+_portEdit = NodePath("MenuCenter/Menu/HostPanel/PortEdit")
+_adminPasswordEdit = NodePath("MenuCenter/Menu/HostPanel/AdminPasswordEdit")
+_allowJip = NodePath("MenuCenter/Menu/HostPanel/AllowJip")
+_status = NodePath("MenuCenter/Menu/Status")
+_player = NodePath("AnimationPlayer")
+
+[node name="MenuBackdrop" type="Control" parent="." unique_id=1868979727]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_ni2vt")
+
+[node name="Fallback" type="ColorRect" parent="MenuBackdrop" unique_id=826732430]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="MenuCenter" type="CenterContainer" parent="." unique_id=827134470]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Menu" type="VBoxContainer" parent="MenuCenter" unique_id=1661919112]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="HostPanel" type="VBoxContainer" parent="MenuCenter/Menu" unique_id=690896267]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="MenuCenter/Menu/HostPanel" unique_id=1144463359]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_0l28m")
+theme_override_font_sizes/font_size = 42
+text = "HOST GAME"
+horizontal_alignment = 1
+
+[node name="Description" type="Label" parent="MenuCenter/Menu/HostPanel" unique_id=48195315]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.65, 0.65, 1)
+text = "Start a dedicated server and join it."
+horizontal_alignment = 1
+
+[node name="ServerNameLabel" type="Label" parent="MenuCenter/Menu/HostPanel" unique_id=1729654567]
+layout_mode = 2
+text = "Server name"
+
+[node name="ServerNameEdit" type="LineEdit" parent="MenuCenter/Menu/HostPanel" unique_id=1086691518]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+placeholder_text = "Shown in the server browser"
+max_length = 40
+
+[node name="PortLabel" type="Label" parent="MenuCenter/Menu/HostPanel" unique_id=349024977]
+layout_mode = 2
+text = "Port"
+
+[node name="PortEdit" type="LineEdit" parent="MenuCenter/Menu/HostPanel" unique_id=425903224]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+placeholder_text = "Server port"
+
+[node name="AdminPasswordLabel" type="Label" parent="MenuCenter/Menu/HostPanel" unique_id=1431305810]
+layout_mode = 2
+text = "Admin password (optional)"
+
+[node name="AdminPasswordEdit" type="LineEdit" parent="MenuCenter/Menu/HostPanel" unique_id=269857959]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+placeholder_text = "Leave blank for none"
+secret = true
+
+[node name="AllowJip" type="CheckButton" parent="MenuCenter/Menu/HostPanel" unique_id=1998571867]
+layout_mode = 2
+button_pressed = true
+text = "Allow players to join matches in progress"
+
+[node name="HostConfirmButton" type="Button" parent="MenuCenter/Menu/HostPanel" unique_id=633111767]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Start server"
+
+[node name="HostBackButton" type="Button" parent="MenuCenter/Menu/HostPanel" unique_id=171883750]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Back"
+
+[node name="Status" type="Label" parent="MenuCenter/Menu" unique_id=2037985492]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.55, 0.45, 1)
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HomePanel" type="MarginContainer" parent="." unique_id=1919634768]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_bottom = 50
+metadata/_edit_use_anchors_ = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HomePanel" unique_id=109026011]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HomePanel/HBoxContainer" unique_id=763152168]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label" type="Label" parent="HomePanel/HBoxContainer/VBoxContainer" unique_id=1619911880]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_bweax")
+theme_override_font_sizes/font_size = 150
+text = "Mortz"
+vertical_alignment = 1
+
+[node name="Label2" type="Label" parent="HomePanel/HBoxContainer/VBoxContainer" unique_id=1286564743]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.50928617, 0.50928617, 0.50928617, 1)
+text = "Early development"
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="HomePanel/HBoxContainer" unique_id=1521493238]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.4
+alignment = 2
+
+[node name="JoinButton" type="Button" parent="HomePanel/HBoxContainer/VBoxContainer2" unique_id=1292033593]
+layout_mode = 2
+text = "Join game"
+
+[node name="HostButton" type="Button" parent="HomePanel/HBoxContainer/VBoxContainer2" unique_id=1581297762]
+layout_mode = 2
+text = "Host game"
+
+[node name="Settings" type="Button" parent="HomePanel/HBoxContainer/VBoxContainer2" unique_id=140986444]
+layout_mode = 2
+text = "Settings"
+
+[node name="Exit" type="Button" parent="HomePanel/HBoxContainer/VBoxContainer2" unique_id=598760290]
+layout_mode = 2
+text = "Exit"
+
+[node name="ServerBrowser" parent="." unique_id=1204551103 instance=ExtResource("5_5r7pb")]
+visible = false
+layout_mode = 1
+
+[node name="Settings" parent="." unique_id=1204551104 instance=ExtResource("6_q4ni7")]
+visible = false
+layout_mode = 1
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1690997220]
+libraries/ = SubResource("AnimationLibrary_duaim")
+
+[connection signal="pressed" from="MenuCenter/Menu/HostPanel/HostConfirmButton" to="." method="OnHostConfirmed"]
+[connection signal="pressed" from="MenuCenter/Menu/HostPanel/HostBackButton" to="." method="OnBackPressed"]
+[connection signal="pressed" from="HomePanel/HBoxContainer/VBoxContainer2/JoinButton" to="." method="OnJoinMenuPressed"]
+[connection signal="pressed" from="HomePanel/HBoxContainer/VBoxContainer2/HostButton" to="." method="OnHostMenuPressed"]
+[connection signal="pressed" from="HomePanel/HBoxContainer/VBoxContainer2/Settings" to="." method="OnSettingsPressed"]
+[connection signal="pressed" from="HomePanel/HBoxContainer/VBoxContainer2/Exit" to="." method="OnExitPressed"]

@@ -23,14 +23,14 @@ public class CompletedMatchAdmissionTests
         using TestServer server = Start(new E2EMatchControl(), true, victoryLapTicks);
         if (loadingAtEnd)
         {
-            server.Server.Connect(new(9, "waiting", 0, null));
+            server.Server.Connect(new(9, "waiting", 0));
         }
         server.Link.Messages.Clear();
 
         Finish(server);
         if (!loadingAtEnd)
         {
-            server.Server.Connect(new(9, "waiting", 0, null));
+            server.Server.Connect(new(9, "waiting", 0));
         }
         Assert.Contains(server.Link.Messages, sent => sent.Target == 9 && sent.Message is LobbyWaitMsg);
         Assert.DoesNotContain(server.Link.Messages, sent => sent.Message is SessionWinsMsg);
@@ -59,7 +59,7 @@ public class CompletedMatchAdmissionTests
         E2EMatchControl control = new();
         using TestServer server = Start(control, allowJoin, victoryLapTicks);
         int generation = server.Server.Generation;
-        server.Server.Connect(new(9, "loading", 0, null));
+        server.Server.Connect(new(9, "loading", 0));
         MatchLoadMsg load = server.Link.Last<MatchLoadMsg>();
         Assert.DoesNotContain(MatchSnapshot.Deserialize(load.InitialSnapshot).Players,
             player => player.Simulation.PeerId == 9);
@@ -99,7 +99,7 @@ public class CompletedMatchAdmissionTests
         using TestServer server = Start(new E2EMatchControl(), allowJoin, 3);
         Finish(server);
         server.Link.Messages.Clear();
-        server.Server.Connect(new(9, "waiting", 0, null));
+        server.Server.Connect(new(9, "waiting", 0));
         Assert.Contains(server.Link.Messages, sent => sent.Target == 9 && sent.Message is LobbyWaitMsg);
         Assert.DoesNotContain(server.Link.Messages, sent => sent.Target == 9 && sent.Message is MatchLoadMsg);
         server.Receive(9, new PhaseReadyMsg(server.Server.Generation));
@@ -133,7 +133,7 @@ public class CompletedMatchAdmissionTests
         Finish(server);
         Assert.Equal(ServerPhaseKind.LOBBY, server.Server.Phase);
         server.Link.Messages.Clear();
-        server.Server.Connect(new(9, "arrival", 0, null));
+        server.Server.Connect(new(9, "arrival", 0));
         Assert.Contains(server.Link.Messages, sent => sent.Target == 9 && sent.Message is LobbyLoadMsg);
         Assert.DoesNotContain(server.Link.Messages, sent => sent.Target == 9 && sent.Message is MatchLoadMsg);
     }

@@ -1,0 +1,25 @@
+[gd_scene format=3 uid="uid://cvsgjdvwcbnme"]
+
+[ext_resource type="Script" uid="uid://c4clg3b07l4dn" path="res://src/Client/ClientMain.cs" id="1_cmain"]
+[ext_resource type="PackedScene" uid="uid://c2gvkfucaibh2" path="res://src/Client/Match/GameView.tscn" id="2_gview"]
+[ext_resource type="PackedScene" uid="uid://c1hboxabt4e4b" path="res://src/Client/Menus/MainMenu.tscn" id="3_menu"]
+[ext_resource type="PackedScene" uid="uid://c2k8lsdrt5ar5" path="res://src/Client/Menus/Lobby.tscn" id="4_lobby"]
+[ext_resource type="Script" uid="uid://b46f55d4mmx7l" path="res://src/Client/Audio/Sfx.cs" id="5_sfx"]
+[ext_resource type="Resource" uid="uid://0gok5648oexn" path="res://Assets/Sounds/SoundRegistry.tres" id="6_sounds"]
+[ext_resource type="PackedScene" uid="uid://btsip6ojof2u1" path="res://src/Client/Session/ConnectedSession.tscn" id="7_csession"]
+[ext_resource type="Script" uid="uid://drn2cynsax60k" path="res://src/Client/Session/ClientSessionController.cs" id="8_session"]
+
+[node name="ClientMain" type="Node" unique_id=282168119 node_paths=PackedStringArray("_sfx")]
+script = ExtResource("1_cmain")
+_sfx = NodePath("Sfx")
+
+[node name="Sfx" type="Node" parent="." unique_id=552139458]
+script = ExtResource("5_sfx")
+_sounds = ExtResource("6_sounds")
+
+[node name="Session" type="Node" parent="." unique_id=1978618533]
+script = ExtResource("8_session")
+_gameViewScene = ExtResource("2_gview")
+_lobbyScene = ExtResource("4_lobby")
+_sessionScene = ExtResource("7_csession")
+_menuScene = ExtResource("3_menu")

@@ -1,6 +1,7 @@
 using Chickensoft.AutoInject;
 using Godot;
 using Mortz.Client.Match;
+using Mortz.Client.Net;
 using Mortz.Client.Players;
 using Mortz.Client.Replication;
 using Mortz.Client.Spectating;
@@ -8,7 +9,6 @@ using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Match.Scoring;
 using Mortz.Core.Sim;
-using Mortz.Net;
 using Mortz.Protocol.Net.Match;
 using Mortz.Runtime.Tests.Net;
 using Xunit;
@@ -26,7 +26,7 @@ public class SpectatorControllerTests : NodeServiceTest
     public SpectatorControllerTests()
     {
         GameView shell = ResourceLoader.Load<PackedScene>(
-            "res://src/Shared/Scenes/Match/GameView.tscn").Instantiate<GameView>();
+            "res://src/Client/Match/GameView.tscn").Instantiate<GameView>();
         _controller = shell.GetNode<SpectatorController>("SpectatorController");
         _hud = shell.GetNode<SpectatorHud>("Hud/SpectatorHud");
         _camera = Assert.IsType<Camera2D>(_controller.Get("_camera").AsGodotObject());

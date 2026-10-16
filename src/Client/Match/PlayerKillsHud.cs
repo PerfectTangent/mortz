@@ -1,9 +1,9 @@
 using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
+using Mortz.Client.Net;
 using Mortz.Core.Features;
 using Mortz.Extensions;
-using Mortz.Net;
 
 namespace Mortz.Client.Match;
 

@@ -76,7 +76,6 @@ public sealed class MatchPhase : ServerPhase, IBeginPhase, IObservePlayers, IRec
         MatchPhase phase = scope.Register(
             new MatchPhase(scope, seats, generation, boot, settings, control, log, transitions));
         MatchRuntime runtime = phase._runtime;
-        scope.Own(runtime.Dispose);
         TerrainHistory terrainHistory = scope.Register(new TerrainHistory());
         scope.Register(new MatchReplication(
             runtime,
@@ -122,10 +121,6 @@ public sealed class MatchPhase : ServerPhase, IBeginPhase, IObservePlayers, IRec
 
         _scope.Raise<IObserveMatchRoster>(feature => feature.RosterChanged());
         return true;
-    }
-
-    public void PlayerJoined(Player player)
-    {
     }
 
     public void PlayerLeft(Player player)

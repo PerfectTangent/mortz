@@ -1,11 +1,11 @@
 using Chickensoft.AutoInject;
 using Godot;
 using Mortz.Client.Match;
+using Mortz.Client.Net;
 using Mortz.Client.Players;
 using Mortz.Client.Spectating;
 using Mortz.Core.Match.Participation;
 using Mortz.Core.Match.Scoring;
-using Mortz.Net;
 using Mortz.Protocol.Net.Lobby;
 using Mortz.Protocol.Net.Match;
 using Mortz.Runtime.Tests.Net;
@@ -20,7 +20,7 @@ public class MatchEndPresentationTests : NodeServiceTest
     public void OneMatchEndMessageReachesBothPresentationsWithTheSameDecodedVictor()
     {
         GameView shell = ResourceLoader.Load<PackedScene>(
-            "res://src/Shared/Scenes/Match/GameView.tscn").Instantiate<GameView>();
+            "res://src/Client/Match/GameView.tscn").Instantiate<GameView>();
         WinnerBanner banner = shell.GetNode<WinnerBanner>("Hud/WinnerBanner");
         Label winnerLabel = banner.GetNode<Label>("Winner");
         SpectatorController spectator = shell.GetNode<SpectatorController>("SpectatorController");

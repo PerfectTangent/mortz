@@ -2,6 +2,7 @@ using Chickensoft.AutoInject;
 using Chickensoft.Introspection;
 using Godot;
 using Mortz.Client.Admin;
+using Mortz.Client.Content;
 using Mortz.Client.Setup;
 using Mortz.Client.Ui;
 using Mortz.Core.Features;
@@ -9,7 +10,6 @@ using Mortz.Core.Match.Configuration;
 using Mortz.Extensions;
 using Mortz.Protocol.Net;
 using Mortz.Protocol.Net.Lobby;
-using Mortz.Shared;
 
 namespace Mortz.Client.Menus;
 
@@ -209,7 +209,7 @@ public partial class LobbySettingsPanel : PanelContainer
         {
             _mapPreview.Texture = null;
             _mapStatus.Text =
-                $"Map '{selection.MapId}' is not installed locally; preview unavailable.";
+                $"Map '{selection.MapId}' isn't installed locally, so there's no preview.";
             return;
         }
 

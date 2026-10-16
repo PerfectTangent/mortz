@@ -14,8 +14,8 @@
     <ProjectReference Include="../Mortz.Server/Mortz.Server.csproj" />
     <ProjectReference Include="../Mortz.Content/Mortz.Content.csproj" />
     <ProjectReference Include="../Mortz.Net.Gns/Mortz.Net.Gns.csproj" />
-    <ProjectReference Include="../Mortz.Net.Gen/Mortz.Net.Gen.csproj" />
-    <ProjectReference Include="../Mortz.Net.Gen/Mortz.Net.Gen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Mortz.Generators/Mortz.Generators.csproj" />
+    <ProjectReference Include="../Mortz.Generators/Mortz.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <Compile Include="../Mortz.Tests/Client/FakeSessionExit.cs" Link="Client/FakeSessionExit.cs" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />

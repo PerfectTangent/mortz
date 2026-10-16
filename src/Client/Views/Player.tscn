@@ -1,0 +1,155 @@
+[gd_scene format=3 uid="uid://4ksxyg8c7l8k"]
+
+[ext_resource type="Texture2D" uid="uid://bixaxn83876w6" path="res://Assets/ScifiCritters4.PNG" id="1_el0ul"]
+[ext_resource type="Texture2D" uid="uid://dwe3tj73fx26j" path="res://Assets/BaseCannon.png" id="2_2h1fo"]
+[ext_resource type="Script" uid="uid://b7lehci78rb18" path="res://src/Client/Views/PlayerView.cs" id="3_pview"]
+[ext_resource type="Script" uid="uid://b6jvo56n8bmbd" path="res://src/Client/Views/PlayerReloadIndicator.cs" id="4_reload"]
+[ext_resource type="Texture2D" uid="uid://dtss4v1mjjkm6" path="res://Assets/ImanorBalloon.png" id="5_rvoui"]
+[ext_resource type="PackedScene" uid="uid://dwprxh00be3bd" path="res://src/Client/Views/KillingSpreeAura.tscn" id="6_4r3ks"]
+[ext_resource type="Script" uid="uid://xrq6ax5lwx5t" path="res://src/Client/Views/PlayerVfxPipeline.cs" id="7_pipeline"]
+[ext_resource type="PackedScene" uid="uid://ljo56284cej7" path="res://src/Client/Views/BleedingEffect.tscn" id="8_bleeding"]
+
+[sub_resource type="Curve" id="Curve_dash"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Gradient" id="Gradient_dash"]
+colors = PackedColorArray(0.82, 0.78, 0.7, 0.85, 0.6, 0.57, 0.5, 0)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4r3ks"]
+atlas = ExtResource("5_rvoui")
+region = Rect2(16, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kvhn5"]
+atlas = ExtResource("5_rvoui")
+region = Rect2(32, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ga83w"]
+atlas = ExtResource("5_rvoui")
+region = Rect2(48, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_78rdn"]
+atlas = ExtResource("5_rvoui")
+region = Rect2(64, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_uk5lo"]
+atlas = ExtResource("5_rvoui")
+region = Rect2(80, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_2ybii"]
+atlas = ExtResource("5_rvoui")
+region = Rect2(96, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_lmcet"]
+atlas = ExtResource("5_rvoui")
+region = Rect2(112, 16, 16, 16)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_vawe1"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4r3ks")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kvhn5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ga83w")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_78rdn")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_uk5lo")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_2ybii")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_lmcet")
+}],
+"loop": 1,
+"name": &"default",
+"speed": 5.0
+}]
+
+[node name="Player" type="Node2D" unique_id=1524314240 node_paths=PackedStringArray("_body", "_aimPivot", "_launcher", "_reloadBar", "_nameplate", "_dashDust", "_typingAnimation", "_vfx")]
+script = ExtResource("3_pview")
+_body = NodePath("PlayerSprite")
+_aimPivot = NodePath("AimPivot")
+_launcher = NodePath("AimPivot/Launcher")
+_reloadBar = NodePath("PlayerSprite/ReloadingTime")
+_nameplate = NodePath("Nameplate")
+_dashDust = NodePath("PlayerSprite/DashDust")
+_typingAnimation = NodePath("AnimatedSprite2D")
+_vfx = NodePath("Vfx")
+
+[node name="PlayerSprite" type="Sprite2D" parent="." unique_id=1209316856]
+texture = ExtResource("1_el0ul")
+hframes = 5
+vframes = 5
+region_rect = Rect2(0, 0, 32, 32)
+
+[node name="ReloadingTime" type="ProgressBar" parent="PlayerSprite" unique_id=1801305937]
+visible = false
+offset_left = -16.0
+offset_top = -16.0
+offset_right = 11.0
+offset_bottom = 11.0
+max_value = 5.0
+show_percentage = false
+script = ExtResource("4_reload")
+
+[node name="DashDust" type="CPUParticles2D" parent="PlayerSprite" unique_id=771294055]
+emitting = false
+amount = 16
+lifetime = 0.35
+one_shot = true
+explosiveness = 1.0
+spread = 180.0
+gravity = Vector2(0, 300)
+initial_velocity_min = 60.0
+initial_velocity_max = 140.0
+damping_min = 80.0
+damping_max = 120.0
+scale_amount_min = 2.5
+scale_amount_max = 4.0
+scale_amount_curve = SubResource("Curve_dash")
+color_ramp = SubResource("Gradient_dash")
+
+[node name="AimPivot" type="Node2D" parent="." unique_id=1795265278]
+
+[node name="Launcher" type="Sprite2D" parent="AimPivot" unique_id=1062109070]
+position = Vector2(20, 0)
+scale = Vector2(0.3115385, 0.29761904)
+texture = ExtResource("2_2h1fo")
+
+[node name="Muzzle" type="Marker2D" parent="AimPivot" unique_id=334312682]
+position = Vector2(40, 0)
+
+[node name="Nameplate" type="Label" parent="." unique_id=252378163]
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = -101.0
+offset_top = -32.0
+offset_right = 101.0
+offset_bottom = -9.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 10
+text = "PlayerName with 24 chars"
+horizontal_alignment = 1
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1022348885]
+visible = false
+position = Vector2(0, -38)
+sprite_frames = SubResource("SpriteFrames_vawe1")
+frame_progress = 0.44544294
+
+[node name="Vfx" type="Node2D" parent="." unique_id=169218237]
+script = ExtResource("7_pipeline")
+
+[node name="BleedingEffect" parent="Vfx" unique_id=1498957944 instance=ExtResource("8_bleeding")]
+_minimumBurstInterval = 0.30000000000000004
+_maximumBurstInterval = 0.7999999999999999
+
+[node name="KillingSpreeEffect" parent="Vfx" unique_id=912068056 instance=ExtResource("6_4r3ks")]

@@ -1,6 +1,6 @@
+using Mortz.Client.Content;
 using Mortz.Core.Match.Participation;
 using Mortz.Protocol.Net;
-using Mortz.Shared;
 
 namespace Mortz.Client.Session;
 

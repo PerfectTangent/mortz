@@ -16,10 +16,6 @@ public sealed class TypingService(FeatureScope scope, IServerLink link) : IHandl
             link.Broadcast(new TypingStateMsg(sender.PeerId, message.IsTyping));
     }
 
-    public void PlayerJoined(Player player)
-    {
-    }
-
     public void PlayerLeft(Player player)
     {
         if (_typing[player].Set(false))

@@ -23,21 +23,18 @@ public class EndingStepTests
         Explosion otherPlayer = new(10, 10, 20, OwnerId: 3, SpawnSeq: 9, ShellId: 9);
         ScoredKill elimination = fixture.WinningKill(death);
         FinalKillEvent replay = FinalKillEvent.Capture(0, elimination, death, [farther, otherPlayer, nearest]);
-        EndingOutput tick = fixture.Ending.Apply(fixture.Context, new MatchOutcome(winner, replay));
-
+        fixture.Ending.Apply(fixture.Context, new MatchOutcome(winner, replay));
 
         Assert.Equal(MatchStage.VICTORY_LAP, fixture.Context.Stage);
         Assert.Equal(winner, fixture.Ending.Winner);
-        Assert.Equal(winner, tick.Winner);
-        Assert.Equal(farther, tick.FinalKill!.Value.Explosion);
-        Assert.Equal(tick.FinalKill, fixture.Ending.FinalKill);
+        Assert.Equal(farther, fixture.Ending.FinalKill!.Value.Explosion);
     }
 
     [Fact]
     public void VictoryLapUsesItsOwnCountdownWithoutAdvancingTheWorld()
     {
         Fixture fixture = new(victoryLapTicks: 2);
-        fixture.Ending.BeginVictoryLap(fixture.Context, new Victor.Player(1));
+        fixture.Ending.Apply(fixture.Context, new MatchOutcome(new Victor.Player(1)));
 
         Assert.False(fixture.Ending.AdvanceVictoryLap(fixture.Context));
         Assert.True(fixture.Ending.AdvanceVictoryLap(fixture.Context));

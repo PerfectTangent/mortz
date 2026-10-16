@@ -19,7 +19,7 @@ public class MatchRuntimeTests
     public void AnOutcomeWithoutADeathEndsTheMatchWithoutInventingAReplay()
     {
         FeatureScope scope = new("match");
-        using MatchRuntime runtime = new(new TerrainMask(128, 128, (_, _) => false, (_, _) => false),
+        MatchRuntime runtime = new(new TerrainMask(128, 128, (_, _) => false, (_, _) => false),
             new MatchConfig
             {
                 Rules = new ModeRules
@@ -48,7 +48,7 @@ public class MatchRuntimeTests
     {
         MatchConfig editable = new();
         FeatureScope scope = new("match");
-        using MatchRuntime runtime = new(new TerrainMask(128, 128, (_, _) => false, (_, _) => false),
+        MatchRuntime runtime = new(new TerrainMask(128, 128, (_, _) => false, (_, _) => false),
             editable, 2, scope, GENERATION);
         runtime.Seat(OpenPlayer(1));
         MatchConfigSnapshot frozen = runtime.Config;
@@ -66,7 +66,7 @@ public class MatchRuntimeTests
     public void AdvanceRunsTheFullDependencyOrderedPipeline()
     {
         FeatureScope scope = new("match");
-        using MatchRuntime runtime = NewRuntime(scope);
+        MatchRuntime runtime = NewRuntime(scope);
         Player victim = OpenPlayer(1);
         runtime.Seat(victim);
         runtime.World.QueueDamage(victim.PeerId, byte.MaxValue);
@@ -84,7 +84,7 @@ public class MatchRuntimeTests
     public void AuthoredSpawnPointsReachTheWorld()
     {
         FeatureScope scope = new("match");
-        using MatchRuntime runtime = NewRuntime(scope,
+        MatchRuntime runtime = NewRuntime(scope,
             spawnPoints: [new Vec2(32, 64), new Vec2(96, 64)]);
 
         runtime.Seat(OpenPlayer(50));
@@ -98,7 +98,7 @@ public class MatchRuntimeTests
     public void LobbyTeamsCarryIntoTheMatchAndLateJoinersBalance()
     {
         FeatureScope scope = new("match");
-        using MatchRuntime runtime = NewRuntime(scope, teams: true);
+        MatchRuntime runtime = NewRuntime(scope, teams: true);
 
         runtime.Seat(OpenPlayer(1), Team.RED);
         runtime.Seat(OpenPlayer(2), Team.RED);
@@ -116,7 +116,7 @@ public class MatchRuntimeTests
     public void LobbyTeamsAreIgnoredWhenTeamsAreOff()
     {
         FeatureScope scope = new("match");
-        using MatchRuntime runtime = NewRuntime(scope);
+        MatchRuntime runtime = NewRuntime(scope);
 
         Assert.Null(runtime.Seat(OpenPlayer(1), Team.RED));
     }
@@ -125,7 +125,7 @@ public class MatchRuntimeTests
     public void SeatingSpectatingAndRemovalAreOwnedByTheRuntime()
     {
         FeatureScope scope = new("match");
-        using MatchRuntime runtime = NewRuntime(scope);
+        MatchRuntime runtime = NewRuntime(scope);
         Player seated = OpenPlayer(1);
         Player spectator = OpenPlayer(2);
 
@@ -148,7 +148,7 @@ public class MatchRuntimeTests
     public void WinnersIncludeOnlyPlayersStillSeated()
     {
         FeatureScope scope = new("match");
-        using MatchRuntime runtime = NewRuntime(scope, teams: true);
+        MatchRuntime runtime = NewRuntime(scope, teams: true);
         Player blue = OpenPlayer(1);
         Player red = OpenPlayer(2);
         Player departedBlue = OpenPlayer(3);
@@ -167,7 +167,7 @@ public class MatchRuntimeTests
     public void VictoryLapFreezesTheWorldRejectsInputsAndUsesItsOwnCountdown()
     {
         FeatureScope scope = new("match");
-        using MatchRuntime runtime = NewRuntime(scope,
+        MatchRuntime runtime = NewRuntime(scope,
             killTarget: 1,
             victoryLapTicks: 3,
             suicidePenalty: SuicidePenalty.REWARD_CLOSEST_ENEMY,
@@ -196,17 +196,6 @@ public class MatchRuntimeTests
         Assert.True(third.ReturnToLobby);
         Assert.Empty(first.MortarEvents);
         Assert.Empty(first.Explosions);
-    }
-
-    [Fact]
-    public void DisposalIsIdempotentAndClosesTheRuntime()
-    {
-        MatchRuntime runtime = NewRuntime(new FeatureScope("match"));
-
-        runtime.Dispose();
-        runtime.Dispose();
-
-        Assert.Throws<ObjectDisposedException>(() => runtime.Advance(default));
     }
 
     private static MatchRuntime NewRuntime(

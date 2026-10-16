@@ -1,4 +1,3 @@
-using Mortz.Core.Identity;
 using Mortz.Core.Match.Configuration;
 using Mortz.Core.Match.Objectives;
 using Mortz.Core.Match.Participation;
@@ -89,20 +88,6 @@ public sealed class ProtocolContractTests
         new InputPlanCompletedEvent(_planId, 120),
         new InputPlanCancelledEvent(_planId, 110),
     ];
-
-    [Fact]
-    public void PlayerJoinPreservesVerifiedAccountAndGuestIdentity()
-    {
-        VerifiedAccount?[] accounts = [null, new(AccountProvider.STEAM, ulong.MaxValue)];
-        foreach (VerifiedAccount? account in accounts)
-        {
-            PlayerJoinedEvent sample = new(7, "alice", E2EPhase.LOBBY, account);
-            EventMessage decoded = Assert.IsType<EventMessage>(
-                E2EWire.DeserializeMessage(E2EWire.Serialize(new EventMessage(sample))));
-
-            Assert.Equal(sample, Assert.IsType<PlayerJoinedEvent>(decoded.Event));
-        }
-    }
 
     [Fact]
     public void EveryRequestRoundTripsThroughGeneratedWire()

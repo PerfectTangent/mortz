@@ -13,9 +13,7 @@ public interface IServerTransport
 
     void Disconnect(int peerId, string reason);
 
-    int BroadcastSnapshot(Func<int, byte[]> dataFor, Func<int, int> ackFor);
-
-    int SendSnapshot(int peerId, byte[] data, int ack);
+    void SendSnapshot(int peerId, byte[] data, int ack);
 
     PeerPing[] PeerPings();
 

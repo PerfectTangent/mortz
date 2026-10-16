@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Management;
 using System.Runtime.Versioning;
@@ -5,28 +6,26 @@ using System.Runtime.Versioning;
 namespace Mortz.E2E.Tests.Harness;
 
 /// <summary>
-/// Kills leftovers of runs that are provably dead, and nothing else. A
-/// candidate needs our marker, a different run id, the resolved Godot binary,
-/// and a run lock nobody holds. A concurrent run's live server fails the last
-/// test, so it is left alone.
+/// Kills leftovers of provably dead runs only: our marker, a different run id, one of our
+/// binaries, and a run lock nobody holds. A concurrent run holds its lock, so it's left alone.
 /// </summary>
 public static class StaleProcessSweep
 {
     public const string MARKER = "--e2e-run";
 
-    public static IReadOnlyList<string> Run(string currentRunId, string godotExecutable)
+    public static IReadOnlyList<string> Run(string currentRunId, IReadOnlyList<string> executables)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(currentRunId);
         if (!OperatingSystem.IsWindows())
             return ["sweep skipped: not Windows"];
-        return SweepWindows(currentRunId, godotExecutable);
+        return SweepWindows(currentRunId, executables);
     }
 
     [SupportedOSPlatform("windows")]
-    private static IReadOnlyList<string> SweepWindows(string currentRunId, string godotExecutable)
+    private static IReadOnlyList<string> SweepWindows(string currentRunId, IReadOnlyList<string> executables)
     {
         List<string> actions = [];
-        string godot = Path.GetFullPath(godotExecutable);
+        string[] ours = [.. executables.Select(Path.GetFullPath)];
         using ManagementObjectSearcher searcher = new(
             "SELECT ProcessId, ExecutablePath, CommandLine FROM Win32_Process " +
             $"WHERE CommandLine LIKE '%{MARKER}%'");
@@ -37,7 +36,7 @@ public static class StaleProcessSweep
             string? executable = candidate["ExecutablePath"] as string;
             if (commandLine == null || executable == null)
                 continue;
-            if (!string.Equals(Path.GetFullPath(executable), godot, StringComparison.OrdinalIgnoreCase))
+            if (!ours.Contains(Path.GetFullPath(executable), StringComparer.OrdinalIgnoreCase))
                 continue;
             if (RunIdOf(commandLine) is not string runId || runId == currentRunId)
                 continue;
@@ -62,7 +61,7 @@ public static class StaleProcessSweep
         }
         catch (Exception exception) when (
             exception is ArgumentException or InvalidOperationException or
-                System.ComponentModel.Win32Exception)
+                Win32Exception)
         {
             return $"could not kill stale pid {processId} from dead run {runId}: {exception.Message}";
         }

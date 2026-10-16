@@ -38,7 +38,7 @@ enabled=PackedStringArray("res://addons/anthonyec.camera_preview/plugin.cfg", "r
 
 [gui]
 
-theme/custom="res://src/Shared/UI/MortzTheme.tres"
+theme/custom="res://src/Client/Ui/MortzTheme.tres"
 
 [input]
 

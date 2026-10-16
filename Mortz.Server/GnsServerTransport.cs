@@ -100,8 +100,8 @@ public sealed class GnsServerTransport : IServerTransport, IServerAdmissionTrans
                     case AdmissionHello hello:
                         _admission?.Hello(sender, hello, now);
                         break;
-                    case SteamProof proof:
-                        _admission?.Proof(sender, proof, now);
+                    case SteamProof:
+                        _admission?.Proof(sender);
                         break;
                 }
                 break;
@@ -163,20 +163,20 @@ public sealed class GnsServerTransport : IServerTransport, IServerAdmissionTrans
         Close(peerId, reason);
     }
 
-    /// <summary>Each peer's snapshot carries its own full prediction record. Other players are
-    /// compact render-only records.</summary>
-    public int BroadcastSnapshot(Func<int, byte[]> dataFor, Func<int, int> ackFor)
+    public void SendSnapshot(int peerId, byte[] data, int ack)
     {
-        int payloadBytes = 0;
-        foreach (int peerId in _gate.ValidatedPeers)
+        if (!_gate.IsValidated(peerId))
+            return;
+        byte[] frame = WireFrame.Snapshot(ack, data);
+        if (frame.Length > WireFrame.MAX_UNRELIABLE_BYTES && !_warnedLargeSnapshot)
         {
-            payloadBytes += SendSnapshotNow(peerId, dataFor(peerId), ackFor(peerId));
+            // GNS sends it reliably instead, which stalls everything behind it on loss.
+            _warnedLargeSnapshot = true;
+            _log.Warning("snapshot of {Bytes} bytes exceeds the unreliable limit of {Limit}",
+                frame.Length, WireFrame.MAX_UNRELIABLE_BYTES);
         }
-        return payloadBytes;
+        SendTo(peerId, frame, UNRELIABLE);
     }
-
-    public int SendSnapshot(int peerId, byte[] data, int ack) =>
-        _gate.IsValidated(peerId) ? SendSnapshotNow(peerId, data, ack) : 0;
 
     /// <summary>GNS's smoothed round-trip time per validated peer.</summary>
     public PeerPing[] PeerPings() =>
@@ -202,20 +202,6 @@ public sealed class GnsServerTransport : IServerTransport, IServerAdmissionTrans
                 total.RecvPackets + status.InPacketsPerSec * seconds);
         }
         return total;
-    }
-
-    private int SendSnapshotNow(int peerId, byte[] data, int ack)
-    {
-        byte[] frame = WireFrame.Snapshot(ack, data);
-        if (frame.Length > WireFrame.MAX_UNRELIABLE_BYTES && !_warnedLargeSnapshot)
-        {
-            // GNS sends it reliably instead, which stalls everything behind it on loss.
-            _warnedLargeSnapshot = true;
-            _log.Warning("snapshot of {Bytes} bytes exceeds the unreliable limit of {Limit}",
-                frame.Length, WireFrame.MAX_UNRELIABLE_BYTES);
-        }
-        SendTo(peerId, frame, UNRELIABLE);
-        return data.Length + sizeof(int); // app payload incl. ack
     }
 
     private byte[]? Envelope<TMsg>(in TMsg message) where TMsg : struct, INetMessage<TMsg>
