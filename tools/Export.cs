@@ -129,6 +129,12 @@ public static class Export
         string exePath = Path.Combine(outDir, "Mortz" + (platform == "windows" ? ".exe" : ".x86_64"));
         string preset = $"Mortz Client{(platform == "linux" ? " Linux" : "")}";
         Console.WriteLine($"==> exporting {flavor}/{platform}/{role}");
+        // for some reason, exported godot games can lose [Export] Type[] variables and everything breaks. This fixes it by
+        // doing a build before exporting the project
+        RunProcess("dotnet", ["build", Path.Combine(stage, "Mortz.csproj"), "-c", "Debug"], stage);
+        string exportCache = Path.Combine(stage, ".godot", "exported");
+        if (Directory.Exists(exportCache))
+            Directory.Delete(exportCache, recursive: true);
         RunProcess(godot, ["--headless", "--path", stage, "--editor", "--import"], stage);
         RunProcess(godot, ["--headless", "--path", stage, debug ? "--export-debug" : "--export-release", preset, exePath], stage);
         if (!File.Exists(exePath))
