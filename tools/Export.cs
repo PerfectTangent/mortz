@@ -49,7 +49,8 @@ public static class Export
 
             ExportRole(root, godot, flavor, platform, "client", debug);
             string client = PackageDirectory(root, flavor, platform, "client");
-            CopyTree(PackageDirectory(root, flavor, platform, "server"), Path.Combine(client, "server"));
+            CopyTree(PackageDirectory(root, flavor, platform, "server"), Path.Combine(client, "server"),
+                relative => relative != "content"); // remove content/ from the bundled server executable
             if (flavor == "standalone")
                 AssertStandalone(client);
         }

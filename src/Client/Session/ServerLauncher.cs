@@ -32,7 +32,7 @@ public static class ServerLauncher
         List<string> args =
         [
             "--port", port.ToString(),
-            "--content-root", editor ? ContentRoot.Resolve() : Path.Combine(directory, "content"),
+            "--content-root", ContentRoot.Resolve(),
             "--admin-password", adminPassword,
         ];
         if (serverName.Length > 0)
