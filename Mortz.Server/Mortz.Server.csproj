@@ -8,6 +8,8 @@
     <RootNamespace>Mortz.Server</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
     <PublishTrimmed>true</PublishTrimmed>
+    <PublishSingleFile>true</PublishSingleFile>
+    <DebugType>embedded</DebugType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <MortzFlavor Condition="'$(MortzFlavor)' == ''">Standalone</MortzFlavor>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
